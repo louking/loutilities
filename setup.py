@@ -16,15 +16,15 @@
 
 import distutils.core as mod_distutilscore
 
-mod_distutilscore.setup(name = 'utilities',
-    version = '0.7.0',
+mod_distutilscore.setup(name = 'loutilities',
+    version = '0.1.0',
     description = 'some generally useful utilities',
     license = 'Apache License, Version 2.0',
     author = 'Lou King',
     author_email = 'lking@pobox.com.com',
     url = '',
     packages = [
-        'utilities',
+        'loutilities',
    ],
 )
 
