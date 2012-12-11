@@ -3,6 +3,10 @@ loutilities - Lou's utilities
 
 This is a package with a few hopefully useful utilities.
 
+* kmlutils - utilities for access to kml file
+* timeu - time methods
+* wxextensions - extensions for wxPython widgets* 
+
 License
 -------
 
