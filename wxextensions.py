@@ -2,9 +2,10 @@
 ###########################################################################################
 #   wxextensions - extensions for wxPython widgets
 #
-#   Date		Author		Reason
-#   ----		------		------
+#   Date        Author      Reason
+#   ----        ------      ------
 #   12/07/12    Lou King    Create
+#   12/14/12    Lou King    Add deletecallback argument to AutoTextCtrl
 #
 #   Copyright 2012 Lou King
 #
@@ -49,7 +50,9 @@ class AutoTextCtrl(wx.TextCtrl):
     TextCtrl enhanced by associated list containing suggestions while typing
 
     :param *args: :class:`wx.TextCtrl` parameters
-    :param **kwargs: :class:`wx.TextCtrl` keyword parameters, plus items=<list of initial items suggested while typing>
+    :param **kwargs: :class:`wx.TextCtrl` keyword parameters
+    :param items: list of initial items suggested while typing, default []
+    :param delcallback: function to call when item deleted from items, default None - takes one parameter, text from deleted item
     '''
     #----------------------------------------------------------------------
     def __init__(self, *args, **kwargs):
@@ -61,6 +64,8 @@ class AutoTextCtrl(wx.TextCtrl):
         if type(items) != list:
             raise InvalidParameter, 'items must be list'
         self.setitems(items)
+        
+        self.setdelcallback(kwargs.pop('delcallback', None))
         
         self.typedText = ''
         self.itemndx = 0
@@ -81,6 +86,16 @@ class AutoTextCtrl(wx.TextCtrl):
         if '' not in self.items:
             self.items.append('')
         self.items.sort(cmp=lambda x,y: cmp(x.lower(), y.lower()))   # NOTE: '' ends up in 0 position
+        
+    #----------------------------------------------------------------------
+    def setdelcallback(self, delcallback=None):
+    #----------------------------------------------------------------------
+        '''
+        update the delcallback function, which is called when an item is deleted from items (list of suggested choices)
+
+        :param delcallback: delcallback(item) is called when an item is deleted from items list.  None to disable
+        '''
+        self.delcallback = delcallback
         
     #----------------------------------------------------------------------
     def getitems(self):
@@ -185,6 +200,8 @@ class AutoTextCtrl(wx.TextCtrl):
                 do = wx.TextDataObject()
                 do.SetText(item)
                 wx.TheClipboard.SetData(do)
+                if self.delcallback:
+                    self.delcallback(item)
                         
         # ctrl-v is a paste from TheClipboard
         # need to implement it here because TextCtrl hasn't put the data there yet

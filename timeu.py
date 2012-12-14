@@ -7,6 +7,7 @@
 #   12/10/10    L King      Create
 #   12/20/10    L King      Update doc string
 #   03/18/11    L King      Fix some doc strings
+#   12/14/12    L King      Add epoch2localdt
 #
 #   Copyright 2012 Lou King
 #
@@ -35,6 +36,10 @@ import pdb
 import datetime
 import calendar
 
+#pypi
+import tzlocal
+import pytz
+
 # ###############################################################################
 def epoch2dt (epochtime):
 # ###############################################################################
@@ -60,6 +65,21 @@ def dt2epoch (dt):
     return int(calendar.timegm((dt).timetuple()))
 
 
+# ###############################################################################
+def epoch2localdt(epochtime):
+# ###############################################################################
+    '''
+    convert from epoch time to datetime local timezone
+    
+    :param epochtime: utc time in epoch format
+    :rtype: datetime in local timezone
+    '''
+    
+    localtz = tzlocal.get_localzone()
+    utc = pytz.utc.localize(epoch2dt(epochtime))
+    localtime = utc.astimezone(localtz)
+    return localtime
+    
 # ###############################################################################
 class asctime ():
 # ###############################################################################
