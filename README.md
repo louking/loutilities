@@ -6,6 +6,7 @@ This is a package with a few hopefully useful utilities.
 * kmlutils - utilities for access to kml file
 * timeu - time methods
 * wxextensions - extensions for wxPython widgets
+* xmldict - xml / dict conversions, from http://code.activestate.com/recipes/573463-converting-xml-to-dictionary-and-back/
 
 License
 -------
