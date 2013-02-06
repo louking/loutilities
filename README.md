@@ -3,7 +3,9 @@ loutilities - Lou's utilities
 
 This is a package with a few hopefully useful utilities.
 
+* extconfigparser - extend ConfigParser.RawConfigParser option interpretation
 * kmlutils - utilities for access to kml file
+* textreader - read text out of various file types
 * timeu - time methods
 * wxextensions - extensions for wxPython widgets
 * xmldict - xml / dict conversions, from http://code.activestate.com/recipes/573463-converting-xml-to-dictionary-and-back/

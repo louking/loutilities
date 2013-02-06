@@ -8,6 +8,7 @@
 #   12/20/10    L King      Update doc string
 #   03/18/11    L King      Fix some doc strings
 #   12/14/12    L King      Add epoch2localdt
+#   01/21/13    L King      Add excel2dt
 #
 #   Copyright 2012 Lou King
 #
@@ -81,6 +82,20 @@ def epoch2localdt(epochtime):
     return localtime
     
 # ###############################################################################
+def excel2dt (exceltime):
+# ###############################################################################
+    """
+    get an datetime corresonding to an excel floating time
+    NOTE: raises TypeError if invalid exceltime format (must be int or float)
+    
+    :param exceltime: time field from excel
+    :rtype: datetime.datetime
+    """
+
+    # NOTE: __EXCELEPOCH needs to be initialized after asctime class
+    return __EXCELEPOCH + datetime.timedelta(exceltime)
+
+# ###############################################################################
 class asctime ():
 # ###############################################################################
     """
@@ -142,4 +157,10 @@ class asctime ():
 
         return datetime.datetime.strftime (epoch2dt(epoch), self.ascformat)
     
-    
+#########################################################
+# NOTE: need to initialize __EXCELEPOCH after asctime is declared
+# 12/30 is used below because excel incorrectly treats 1900 as leap year
+# here, we're assuming that time is after 1900, which seems safe
+# see http://www.lexicon.net/sjmachin/xlrd.html for more details
+__EXCELEPOCH = asctime('%Y-%m-%d').asc2dt('1899-12-30')
+
