@@ -3,6 +3,7 @@ loutilities - Lou's utilities
 
 This is a package with a few hopefully useful utilities.
 
+* csvwt - write csv from various file types
 * extconfigparser - extend ConfigParser.RawConfigParser option interpretation
 * kmlutils - utilities for access to kml file
 * textreader - read text out of various file types
