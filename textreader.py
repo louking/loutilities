@@ -29,6 +29,7 @@ textreader - read text out of various file types
 # standard
 import pdb
 import argparse
+import csv
 
 # pypi
 import xlrd
@@ -40,7 +41,7 @@ import docx
 import version
 from loutilities import *
 
-VALIDFTYPES = ['xls','xlsx','docx','txt']
+VALIDFTYPES = ['xls','xlsx','docx','txt','csv']
 DOCXTABSIZE = 8
 TXTABSIZE = 8
 
@@ -86,6 +87,12 @@ class TextReader():
             self.TXT = open(filename,'r')
             self.delimited = False
             
+        # handle txt files
+        elif self.ftype in ['csv']:
+            self._CSV = open(filename,'rb')
+            self.CSV = csv.reader(self._CSV)
+            self.delimited = True
+            
         self.delimiters = None
         self.opened = True
         
@@ -124,13 +131,18 @@ class TextReader():
 
         # handle txt files
         elif self.ftype in ['txt']:
-            line = next(self.TXT)
+            line = next(self.TXT)       # TODO: can this be self.TXT.next() ?
             line = line.expandtabs(TXTABSIZE)
             if self.delimiters:
                 splitline = self.delimit(line)
                 return splitline
             else:
                 return line
+
+        # handle txt files
+        elif self.ftype in ['csv']:
+            row = self.CSV.next()
+            return row
 
     #----------------------------------------------------------------------
     def close(self):
@@ -152,6 +164,10 @@ class TextReader():
         # handle txt files
         elif self.ftype in ['txt']:
             self.TXT.close()
+        
+        # handle txt files
+        elif self.ftype in ['csv']:
+            self._CSV.close()
         
 
     #----------------------------------------------------------------------
@@ -215,9 +231,6 @@ def main():
 
     parser = argparse.ArgumentParser(version='{0} {1}'.format('running',version.__version__))
     parser.add_argument('filename',help='name of file for testing')
-    #parser.add_argument('--nowuaccess',help='use option to inhibit wunderground access using apikey',action="store_true")
-    #parser.add_argument('-l','--loglevel',help='set logging level (default=%(default)s)',default='WARNING')
-    #parser.add_argument('-o','--logfile',help='logging output file (default=stdout)',default=sys.stdout)
     args = parser.parse_args()
     
     # act on arguments
@@ -226,7 +239,7 @@ def main():
     # open file, print some lines, then close
     ff = TextReader(filename)
     for i in range(6):
-        print(ff.readline())
+        print(ff.next())
     ff.close()
 
 # ###############################################################################
