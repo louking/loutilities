@@ -64,7 +64,15 @@ def dt2epoch (dt):
     :rtype: int (epoch time)
     """
     
-    return int(calendar.timegm((dt).timetuple()))
+    # convert to UTC
+    if dt.tzinfo:
+        UTC = pytz.timezone('UTC')
+        utcdt = dt.astimezone(UTC)
+    # if naive, assume UTC
+    else:
+        utcdt = dt
+        
+    return int(calendar.timegm((utcdt).timetuple()))
 
 #----------------------------------------------------------------------
 def epoch2localdt(epochtime):
@@ -118,6 +126,47 @@ def dt2excel (dt):
     seconds = dif.seconds + (dif.microseconds / 1000000.0)
     fracdays = seconds / (24*60*60)
     return dif.days + fracdays
+
+#----------------------------------------------------------------------
+def tzdt2utcdt(dt,tzid):
+#----------------------------------------------------------------------
+    '''
+    convert datetime of timezone id to UTC
+    
+    :param dt: datetime.datetime object
+    :param tzid: timezone id (e.g., 'America/New_York')
+    :rtype: datetime.datetime at UTC
+    '''
+    # TODO: move to timeu
+    
+    # time zone information: http://stackoverflow.com/questions/14003901/comparing-times-by-considering-time-zones
+    # also see http://appengine.sitebob.com/convert-utc-to-local-time-to-utc-in-python/
+    tz = pytz.timezone(tzid)
+    utc = pytz.timezone('UTC')
+    d_tz = tz.normalize(tz.localize(dt))
+    d_utc = d_tz.astimezone(utc)
+    return d_utc
+
+#----------------------------------------------------------------------
+def utcdt2tzdt(dt,tzid):
+#----------------------------------------------------------------------
+    '''
+    convert UTC datetime to timezone
+    
+    :param dt: datetime.datetime object
+    :param tzid: timezone id (e.g., 'America/New_York')
+    :rtype: datetime.datetime at timezone
+    '''
+    # TODO: move to timeu
+    
+    # time zone information: http://stackoverflow.com/questions/14003901/comparing-times-by-considering-time-zones
+    # also see http://appengine.sitebob.com/convert-utc-to-local-time-to-utc-in-python/
+    tz = pytz.timezone(tzid)
+    utc = pytz.timezone('UTC')
+    #d_tz = utc.normalize(dt)
+    d_tz = utc.normalize(utc.localize(dt))
+    localetime = d_tz.astimezone(tz)
+    return localetime
 
 ########################################################################
 class asctime ():

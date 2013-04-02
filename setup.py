@@ -41,6 +41,8 @@ setup(
     packages = find_packages(),
 #    include_package_data = True,
     scripts = [
+        'loutilities/apikey.py',
+        'loutilities/makerst.py',
     ],
 
     # Project uses reStructuredText, so ensure that the docutils get
@@ -51,11 +53,19 @@ setup(
 
     # If any package contains any of these file types, include them:
     data_files = ([
+            globit('loutilities', ['*.conf','*.pyc','*.pyd','*.dll','*.h','*.xlsx']),
+            globit('loutilities/doc/source', ['*.txt', '*.rst', '*.html', '*.css', '*.js', '*.png', '*.py', ]),
+            globit('loutilities/doc/build/html', ['*.txt', '*.rst', '*.html', '*.css', '*.js', '*.png', ]),
+            globit('loutilities/doc/build/html/_sources', ['*.txt', '*.rst', '*.html', '*.css', '*.js', '*.png', ]),
+            globit('loutilities/doc/build/html/_static', ['*.txt', '*.rst', '*.html', '*.css', '*.js', '*.png', ]),
+            globit('loutilities/doc/build/html/_images', ['*.png', ]),
         ]),
 
 
     entry_points = {
         'console_scripts': [
+            'apikey = loutilities.apikey:main',
+            'makerst = loutilities.makerst:main',
         ],
     },
 

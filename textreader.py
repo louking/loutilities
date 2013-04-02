@@ -229,7 +229,7 @@ class TextReader():
 def main():
 ################################################################################
 
-    parser = argparse.ArgumentParser(version='{0} {1}'.format('running',version.__version__))
+    parser = argparse.ArgumentParser(version='{0} {1}'.format('loutilities',version.__version__))
     parser.add_argument('filename',help='name of file for testing')
     args = parser.parse_args()
     
