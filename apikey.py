@@ -29,10 +29,6 @@ apikey - manage api keys for a given package
 # standard
 import pdb
 import argparse
-import os
-import os.path
-import ConfigParser
-import tempfile
 
 # pypi
 import appdirs
@@ -43,6 +39,7 @@ import appdirs
 
 # home grown
 import version
+import extconfigparser
 from loutilities import *
 
 class unknownKey(Exception): pass
@@ -74,26 +71,8 @@ class ApiKey():
         '''
 
         configdir = appdirs.user_data_dir(appname,author)
-        if not os.path.exists(configdir):
-            os.makedirs(configdir)
-        self.fname = os.path.join(configdir,'apikeys.cfg')
-        if not os.path.exists(self.fname):
-            # maybe something bad happened in the middle of an updatekey operation
-            # if so, try to recover
-            if os.path.exists(self.fname+'.save'):
-                os.rename(self.fname+'.save',self.fname)
-            # otherwise, create the empty file
-            else:
-                touch = open(self.fname,'w')
-                touch.close()
-                
-        # pull in all the existing keys
-        self.cp = ConfigParser.ConfigParser()
-        self.cp.read(self.fname)
-        
-        # create the section storing the keys if necessary
-        if not self.cp.has_section(self.keyssection):
-            self.cp.add_section(self.keyssection)
+        configfname = 'apikeys.cfg'
+        self.cf = extconfigparser.ConfigFile(configdir,configfname)
         
     #----------------------------------------------------------------------
     def getkey(self,keyname):
@@ -105,9 +84,12 @@ class ApiKey():
         :param keyname: name of key for later retrieval
         '''
         try:
-            return self.cp.get(self.keyssection,keyname)
+            return self.cf.get(self.keyssection,keyname)
         
-        except ConfigParser.NoOptionError:
+        except extconfigparser.unknownSection:
+            raise unknownKey
+        
+        except extconfigparser.unknownOption:
             raise unknownKey
         
     #----------------------------------------------------------------------
@@ -121,18 +103,7 @@ class ApiKey():
         '''
         
         # write all the keys to a temporary file
-        self.cp.set(self.keyssection,keyname,keyvalue)
-        temp = tempfile.NamedTemporaryFile(delete=False)
-        self.cp.write(temp)
-        tempname = temp.name
-        temp.close()
-        
-        # on windows, atomic rename to existing file causes error, so the old file is saved first
-        # if crash occurs in the middle of this, at least the old information isn't lost
-        # .save file will be recovered the next time the ApiKey object is created
-        os.rename(self.fname,self.fname+'.save')
-        os.rename(tempname,self.fname)
-        os.remove(self.fname+'.save')
+        self.cf.update(self.keyssection,keyname,keyvalue)
         
 #----------------------------------------------------------------------
 def main():

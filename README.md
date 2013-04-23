@@ -15,6 +15,7 @@ This is a package with a few hopefully useful utilities.
 Command line scripts
 
 * apikey - create / update key for an application
+* applytemplate - apply a template to files in a directory
 * makerst - make rst files as input for Sphinx documentation for a given package
 
 License

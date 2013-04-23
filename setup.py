@@ -42,6 +42,7 @@ setup(
 #    include_package_data = True,
     scripts = [
         'loutilities/apikey.py',
+        'loutilities/applytemplate.py',
         'loutilities/makerst.py',
     ],
 
@@ -65,6 +66,7 @@ setup(
     entry_points = {
         'console_scripts': [
             'apikey = loutilities.apikey:main',
+            'applytemplate = loutilities.applytemplate:main',
             'makerst = loutilities.makerst:main',
         ],
     },

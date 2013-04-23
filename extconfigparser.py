@@ -33,8 +33,12 @@ provide ConfigFile high level configuration file handling
 # standard
 import pdb
 import argparse
-from ConfigParser import ConfigParser,NoOptionError
+from ConfigParser import ConfigParser,NoSectionError,NoOptionError
+import tempfile
 import string
+import os
+import os.path
+
 
 # pypi
 
@@ -43,10 +47,11 @@ import string
 # home grown
 import version
 
+class unknownSection(Exception): pass
 class unknownOption(Exception): pass
 
 #----------------------------------------------------------------------
-def _parsevalue(self,value):
+def _parsevalue(value):
 #----------------------------------------------------------------------
     '''
     try to interpret value as dict, list or number
@@ -118,14 +123,16 @@ class ConfigFile():
     '''
     
     #----------------------------------------------------------------------
-    def __init__(self,configdir,configfile):
+    def __init__(self,configdir,configfname):
     #----------------------------------------------------------------------
         '''
         '''
 
         if not os.path.exists(configdir):
             os.makedirs(configdir)
-        self.fname = os.path.join(configdir,configfname)
+            
+        # use abspath in case something like '.' used, to avoid errors if caller changes working directory
+        self.fname = os.path.join(os.path.abspath(configdir),configfname)
         if not os.path.exists(self.fname):
             # maybe something bad happened in the middle of an update operation
             # if so, try to recover
@@ -136,13 +143,9 @@ class ConfigFile():
                 touch = open(self.fname,'w')
                 touch.close()
                 
-        # pull in all the existing keys
-        self.cp = ConfigParser()
+        # pull in all the existing options
+        self.cp = ExtConfigParser()
         self.cp.read(self.fname)
-        
-        # create the section storing the keys if necessary
-        if not self.cp.has_section(self.keyssection):
-            self.cp.add_section(self.keyssection)
         
     #----------------------------------------------------------------------
     def get(self,section,option):
@@ -155,10 +158,13 @@ class ConfigFile():
         :param option: name of option for later retrieval
         '''
         try:
-            return self.cp.get(section,keyname)
+            return self.cp.get(section,option)
+        
+        except NoSectionError:
+            raise unknownSection,"section '{sec}' not found in {file}".format(sec=section,file=self.fname)
         
         except NoOptionError:
-            raise unknownOption
+            raise unknownOption,"option '{opt}' not found in section '{sec}' within {file}".format(opt=option,sec=section,file=self.fname)
         
     #----------------------------------------------------------------------
     def update(self,section,option,value):
@@ -175,7 +181,7 @@ class ConfigFile():
         if not self.cp.has_section(section):
             self.cp.add_section(section)
             
-        # write all the keys to a temporary file
+        # write all the configuration to a temporary file
         self.cp.set(section,option,value)
         temp = tempfile.NamedTemporaryFile(delete=False)
         self.cp.write(temp)
@@ -184,7 +190,13 @@ class ConfigFile():
         
         # on windows, atomic rename to existing file causes error, so the old file is saved first
         # if crash occurs in the middle of this, at least the old information isn't lost
-        # .save file will be recovered the next time the ApiKey object is created
+        # .save file will be recovered the next time the ConfigFile object is created for this file
         os.rename(self.fname,self.fname+'.save')
         os.rename(tempname,self.fname)
         os.remove(self.fname+'.save')
+        
+        # reload the data.  this avoids errors if an update is made, and the data is used immediately
+        # as numeric data may be maintained after an update, which causes errors in ConfigParser.get() interpolation
+        del self.cp
+        self.cp = ExtConfigParser()
+        self.cp.read(self.fname)
