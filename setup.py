@@ -43,6 +43,7 @@ setup(
     scripts = [
         'loutilities/apikey.py',
         'loutilities/applytemplate.py',
+        'loutilities/filtercsv.py',
         'loutilities/makerst.py',
     ],
 
@@ -67,6 +68,7 @@ setup(
         'console_scripts': [
             'apikey = loutilities.apikey:main',
             'applytemplate = loutilities.applytemplate:main',
+            'filtercsv = loutilities.filtercsv:main',
             'makerst = loutilities.makerst:main',
         ],
     },

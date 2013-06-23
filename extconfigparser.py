@@ -181,8 +181,50 @@ class ConfigFile():
         if not self.cp.has_section(section):
             self.cp.add_section(section)
             
-        # write all the configuration to a temporary file
+        # update the option
         self.cp.set(section,option,value)
+
+        # write all the configuration to a temporary file
+        temp = tempfile.NamedTemporaryFile(delete=False)
+        self.cp.write(temp)
+        tempname = temp.name
+        temp.close()
+        
+        # on windows, atomic rename to existing file causes error, so the old file is saved first
+        # if crash occurs in the middle of this, at least the old information isn't lost
+        # .save file will be recovered the next time the ConfigFile object is created for this file
+        os.rename(self.fname,self.fname+'.save')
+        os.rename(tempname,self.fname)
+        os.remove(self.fname+'.save')
+        
+        # reload the data.  this avoids errors if an update is made, and the data is used immediately
+        # as numeric data may be maintained after an update, which causes errors in ConfigParser.get() interpolation
+        del self.cp
+        self.cp = ExtConfigParser()
+        self.cp.read(self.fname)
+        
+    #----------------------------------------------------------------------
+    def delopt(self,section,option):
+    #----------------------------------------------------------------------
+        '''
+        delete an option from a configuration file
+        
+        :param section: section within which option should be updated
+        :param option: name of option to be updated or created
+        '''
+        
+        # if section doesn't exist yet, done
+        if not self.cp.has_section(section):
+            return
+            
+        # if option doesn't exist yet, done
+        if not self.cp.has_option(section,option):
+            return
+            
+        # remove the option
+        self.cp.remove_option(section,option)
+
+        # write all the configuration to a temporary file
         temp = tempfile.NamedTemporaryFile(delete=False)
         self.cp.write(temp)
         tempname = temp.name

@@ -4,6 +4,7 @@ loutilities - Lou's utilities
 This is a package with a few hopefully useful utilities.
 
 * apikey - manage API keys for an application
+* bfile - binary file handler
 * csvwt - write csv from various file types
 * extconfigparser - extend ConfigParser.RawConfigParser option interpretation
 * kmlutils - utilities for access to kml file
@@ -16,6 +17,7 @@ Command line scripts
 
 * apikey - create / update key for an application
 * applytemplate - apply a template to files in a directory
+* filtercsv - filter a csv file based on indicated filter
 * makerst - make rst files as input for Sphinx documentation for a given package
 
 License
