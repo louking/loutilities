@@ -82,6 +82,7 @@ class ApiKey():
         if key doesn't exist, unknownKey is raised
         
         :param keyname: name of key for later retrieval
+        :rtype: value of key
         '''
         try:
             return self.cf.get(self.keyssection,keyname)
@@ -105,6 +106,16 @@ class ApiKey():
         # write all the keys to a temporary file
         self.cf.update(self.keyssection,keyname,keyvalue)
         
+    #----------------------------------------------------------------------
+    def list(self):
+    #----------------------------------------------------------------------
+        '''
+        Return a list of (keyname, value) pairs for each option in the given section.
+        
+        :rtype: [(keyname,value),...]
+        '''
+        return self.cf.items(self.keyssection)
+        
 #----------------------------------------------------------------------
 def main():
 #----------------------------------------------------------------------
@@ -114,9 +125,10 @@ def main():
 
     parser = argparse.ArgumentParser(version='{0} {1}'.format('loutilities',version.__version__))
     parser.add_argument('application',help='name of application for which keys are to be stored')
-    parser.add_argument('keyname',help='name of key to create/update in key configuration file')
-    parser.add_argument('keyvalue',help='value of key to be put into key configuration file')
+    parser.add_argument('keyname',help='name of key to create/update in key configuration file',nargs='?',default=None)
+    parser.add_argument('keyvalue',help='value of key to be put into key configuration file',nargs='?',default=None)
     parser.add_argument('-a','--author',help='name of software author. (default %(default)s)',default='Lou King')
+    parser.add_argument('-l','--list',action='store_true',help='print list of keyname,values.  If set, keyname, value arguments are ignored')
     args = parser.parse_args()
     
     # act on arguments
@@ -124,9 +136,20 @@ def main():
     author = args.author
     keyname = args.keyname
     keyvalue = args.keyvalue
+    plist = args.list
+    
+    if not plist and not(keyname and keyvalue):
+        print 'KEYNAME and VALUE must be supplied'
+        return
     
     apikey = ApiKey(author,application)
-    apikey.updatekey(keyname,keyvalue)
+
+    if not plist:
+        apikey.updatekey(keyname,keyvalue)
+        
+    else:
+        for keyname,value in apikey.list():
+            print '{}={}'.format(keyname,value)
     
 
 # ###############################################################################

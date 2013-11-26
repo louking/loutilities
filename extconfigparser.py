@@ -167,6 +167,20 @@ class ConfigFile():
             raise unknownOption,"option '{opt}' not found in section '{sec}' within {file}".format(opt=option,sec=section,file=self.fname)
         
     #----------------------------------------------------------------------
+    def items(self,section,**kwargs):
+    #----------------------------------------------------------------------
+        '''
+        Return a list of (name, value) pairs for each option in the given section. Optional arguments have the same meaning as for the get() method.
+        
+        Try to interpret values as int, float, boolean, list, or dict
+        '''
+        try:
+            return self.cp.items(section,**kwargs)
+        
+        except NoSectionError:
+            raise unknownSection,"section '{sec}' not found in {file}".format(sec=section,file=self.fname)
+        
+    #----------------------------------------------------------------------
     def update(self,section,option,value):
     #----------------------------------------------------------------------
         '''

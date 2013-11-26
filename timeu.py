@@ -168,6 +168,33 @@ def utcdt2tzdt(dt,tzid):
     localetime = d_tz.astimezone(tz)
     return localetime
 
+#----------------------------------------------------------------------
+def age(asof,dob):
+#----------------------------------------------------------------------
+    '''
+    get age as of a date based on birth date
+    
+    :param asof: datetime object, get age asof date based on dob birth date
+    :param dob: datetime object, get age asof date based on dob birth date
+    '''
+    return asof.year - dob.year - int((asof.month, asof.day) < (dob.month, dob.day))
+
+#----------------------------------------------------------------------
+def timesecs(asctime):
+#----------------------------------------------------------------------
+    '''
+    calculate time in seconds from string time
+    
+    :param asctime: string time
+    :rtype: float, time in seconds
+    '''
+    timefields = asctime.split(':')
+    thistime = 0.0
+    for timefield in timefields:
+        thistime *= 60
+        thistime += float(timefield)
+    return thistime
+
 ########################################################################
 class asctime ():
 ########################################################################
