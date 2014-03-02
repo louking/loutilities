@@ -24,9 +24,10 @@
 
 # standard
 import unicodedata
+import csv
 
 # pypi
-from IPython.core.debugger import Tracer; debug_here = Tracer()
+#from IPython.core.debugger import Tracer; debug_here = Tracer()
 
 # github
 
@@ -67,4 +68,20 @@ def str2num(ustr):
             return float(ustr)
         except ValueError:
             return unicode2ascii(ustr).strip()
+
+#######################################################################
+class DictReaderStr2Num(csv.DictReader):
+#######################################################################
+    '''
+    extend csv.DictReader to convert strings to numbers 
+    '''
+
+    #----------------------------------------------------------------------
+    def next(self):
+    #----------------------------------------------------------------------
+        row = csv.DictReader.next(self)
+        for key in row:
+            row[key] = str2num(row[key])
+        return row
+        
 
