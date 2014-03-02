@@ -24,7 +24,7 @@
 namesplitter - name splitting method
 =========================================
 
-name splitting, ported from the following
+name splitting, adapted from the following
 
 * https:#code.google.com/p/php-name-parser/source/browse/trunk/parser.php
 
@@ -37,7 +37,8 @@ see http:#www.w3.org/International/questions/qa-personal-names for more informat
 '''
 # standard
 import re
-import pdb
+
+# homegrown
 
 SALUTATIONS = 'mr master mister mrs miss ms dr rev fr'.split()  # NOT USED - see is_salutation
 
@@ -58,6 +59,7 @@ def split_full_name(full_name):
     # completely ignore any words in parentheses
     name_parts = []
     for word in unfiltered_name_parts:
+        if word == '': continue # special case, too many spaces
         if (word[0] != "("):
             name_parts.append(word)
 
@@ -89,13 +91,16 @@ def split_full_name(full_name):
         if (is_initial(word)):
             # is the initial the first word?  
             if (i == start):
-                # if so, do a look-ahead to see if they go by their middle name
-                # for ex: "R. Jason Smith" => "Jason Smith" & "R." is stored as an initial
-                # but "R. J. Smith" => "R. Smith" and "J." is stored as an initial
-                if (is_initial(name_parts[i+1])):
-                    fname += " "+word.upper()
-                else:
-                    initials += " "+word.upper()
+                ## if so, do a look-ahead to see if they go by their middle name
+                ## for ex: "R. Jason Smith" => "Jason Smith" & "R." is stored as an initial
+                ## but "R. J. Smith" => "R. Smith" and "J." is stored as an initial
+                #if (is_initial(name_parts[i+1])):
+                #    fname += " "+word.upper()
+                #else:
+                #    initials += " "+word.upper()
+                
+                # don't need the above logic, just store as part of first name
+                fname += " "+word.upper()
             # otherwise, just go ahead and save the initial
             else:
                 initials += " "+word.upper()
@@ -167,7 +172,8 @@ def is_initial(word):
 # detect mixed case words like "McDonald"
 # returns False if the string is all one case
 def is_camel_case(word):
-    if (re.match("|[A-Z]+|s", word) and re.match("|[a-z]+|s", word)):
+    #if (re.match(r"|[A-Z]+|s", word) and re.match(r"|[a-z]+|s", word)):
+    if (re.match(r"([A-Z]*[a-z'][a-z']*[A-Z']|[a-z']*[A-Z'][A-Z']*[a-z'])[A-Za-z]*", word)):
         return True
     return False
 
@@ -181,10 +187,67 @@ def fix_case(word):
     return word
 
 # helper def for fix_case
-def safe_ucfirst(seperator, word):
-    # uppercase words split by the seperator (ex. dashes or periods)
-    parts = word.split(seperator)
+def safe_ucfirst(separator, word):
+    # uppercase words split by the separator (ex. dashes or periods)
+    parts = word.split(separator)
     words = []
     for word in parts:
-        words.append(word if is_camel_case(word) else ucfirst(word.lower()))
-        return seperator.join(words)
+        words.append(word if is_camel_case(word) else word.lower().capitalize())
+    return separator.join(words)
+
+#----------------------------------------------------------------------
+def main():
+#----------------------------------------------------------------------
+    '''
+    test name splitting function
+    '''
+    #standard -- only needed for testing
+    import argparse
+    import csv
+    
+    # homegrown
+    import version
+
+
+    parser = argparse.ArgumentParser(version='{0} {1}'.format('loutilities',version.__version__))
+    #parser = argparse.ArgumentParser()
+    parser.add_argument('filename',help='csv file containing "name" column')
+    args = parser.parse_args()
+    
+    # act on arguments
+    filename = args.filename
+    outfile = '.'.join(filename.split('.')[:-1])+'-annotated.csv'
+
+    # get access to file, create output file
+    _IN = open(filename,'rb')
+    IN = csv.DictReader(_IN)
+    outfields = []
+    for field in IN.fieldnames:
+        outfields.append(field)
+        if field == 'name':
+            outfields += ['fname','lname','names']
+    _OUT = open(outfile,'wb')
+    OUT = csv.DictWriter(_OUT,outfields)
+    OUT.writeheader()
+    
+    try:
+        for rec in IN:
+            names = split_full_name(rec['name'])
+            rec['fname'] = ' '.join([names['fname'],names['initials']]).strip()
+            rec['lname'] = names['lname']
+            if names['suffix']:
+                rec['lname'] += ' '+names['suffix']
+            rec['lname'] = rec['lname'].strip()
+            rec['names'] = names
+            OUT.writerow(rec)
+    
+    finally:
+        _IN.close()
+        _OUT.close()
+
+
+# ###############################################################################
+# ###############################################################################
+if __name__ == "__main__":
+    main()
+

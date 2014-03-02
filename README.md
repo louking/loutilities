@@ -5,9 +5,11 @@ This is a package with a few hopefully useful utilities.
 
 * apikey - manage API keys for an application
 * bfile - binary file handler
+* csvu - csv and string utilities
 * csvwt - write csv from various file types
 * extconfigparser - extend ConfigParser.RawConfigParser option interpretation
 * kmlutils - utilities for access to kml file
+* namesplitter - name splitting method
 * textreader - read text out of various file types
 * timeu - time methods
 * wxextensions - extensions for wxPython widgets
