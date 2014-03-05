@@ -32,8 +32,6 @@ import argparse
 import csv
 
 # pypi
-import xlrd
-import docx
 
 # github
 
@@ -69,6 +67,7 @@ class TextReader():
         
         # handle excel files
         if self.ftype in ['xls','xlsx']:
+            import xlrd
             self.workbook = xlrd.open_workbook(filename)
             self.sheet = self.workbook.sheet_by_index(0)    # only first sheet is considered
             self.currrow = 0
@@ -78,6 +77,7 @@ class TextReader():
             
         # handle word files
         elif self.ftype in ['docx']:
+            import docx
             doc = docx.opendocx(filename)
             self.lines = iter(docx.getdocumenttext(doc))
             self.delimited = False
