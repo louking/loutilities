@@ -10,6 +10,7 @@ This is a package with a few hopefully useful utilities.
 * extconfigparser - extend ConfigParser.RawConfigParser option interpretation
 * kmlutils - utilities for access to kml file
 * namesplitter - name splitting method
+* renderrun - common functions for rendering information related to running
 * textreader - read text out of various file types
 * timeu - time methods
 * wxextensions - extensions for wxPython widgets
