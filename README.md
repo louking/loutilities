@@ -3,6 +3,7 @@ loutilities - Lou's utilities
 
 This is a package with a few hopefully useful utilities.
 
+* agegrade - provide age grading calculations (running)
 * apikey - manage API keys for an application
 * bfile - binary file handler
 * csvu - csv and string utilities
@@ -18,6 +19,7 @@ This is a package with a few hopefully useful utilities.
 
 Command line scripts
 
+* agegrade - update age grading table (running)
 * apikey - create / update key for an application
 * applytemplate - apply a template to files in a directory
 * filtercsv - filter a csv file based on indicated filter

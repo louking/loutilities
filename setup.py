@@ -41,6 +41,7 @@ setup(
     packages = find_packages(),
 #    include_package_data = True,
     scripts = [
+        'loutilities/agegrade.py',
         'loutilities/apikey.py',
         'loutilities/applytemplate.py',
         'loutilities/filtercsv.py',
@@ -66,6 +67,7 @@ setup(
 
     entry_points = {
         'console_scripts': [
+            'agegrade = loutilities.agegrade:main',
             'apikey = loutilities.apikey:main',
             'applytemplate = loutilities.applytemplate:main',
             'filtercsv = loutilities.filtercsv:main',
