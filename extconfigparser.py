@@ -38,7 +38,7 @@ import tempfile
 import string
 import os
 import os.path
-
+import shutil
 
 # pypi
 
@@ -208,8 +208,9 @@ class ConfigFile():
         # if crash occurs in the middle of this, at least the old information isn't lost
         # .save file will be recovered the next time the ConfigFile object is created for this file
         os.rename(self.fname,self.fname+'.save')
-        os.rename(tempname,self.fname)
+        shutil.copyfile(tempname,self.fname)    # godaddy stores temp files on a different disk
         os.remove(self.fname+'.save')
+        os.remove(tempname)
         
         # reload the data.  this avoids errors if an update is made, and the data is used immediately
         # as numeric data may be maintained after an update, which causes errors in ConfigParser.get() interpolation
@@ -248,8 +249,9 @@ class ConfigFile():
         # if crash occurs in the middle of this, at least the old information isn't lost
         # .save file will be recovered the next time the ConfigFile object is created for this file
         os.rename(self.fname,self.fname+'.save')
-        os.rename(tempname,self.fname)
+        shutil.copyfile(tempname,self.fname)    # godaddy stores temp files on a different disk
         os.remove(self.fname+'.save')
+        os.remove(tempname)
         
         # reload the data.  this avoids errors if an update is made, and the data is used immediately
         # as numeric data may be maintained after an update, which causes errors in ConfigParser.get() interpolation
