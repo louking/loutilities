@@ -47,7 +47,7 @@ rndrtim = timeu.asctime('%m/%d/%Y')
 class softwareError(Exception): pass
 
 #----------------------------------------------------------------------
-def getprecision(distance): 
+def getprecision(distance,surface='road'): 
 #----------------------------------------------------------------------
     '''
     get the precision for rendering, based on distance
@@ -55,22 +55,23 @@ def getprecision(distance):
     precision might be different for time vs. age group adjusted time
     
     :param distance: distance (miles)
+    :param surface: 'road', 'track' or 'trail', default 'road'
     :rtype: (timeprecision,agtimeprecision)
     '''
     
     meterspermile = 1609    # close enough, and this is the value used in agegrade.py
     
-    # Anything less than 5K is to 1/10ths of a second.
-    # This assumes all track races are <5K and 5K and above are on roads, and all races are hand timed
-    # This is to approximate USATF rule 165
-    # TODO: modify database to indicate if race is on track or not
-    
-    road = True
-    if distance*meterspermile < 5000 and not road:
+    # See rule 165 from http://www.usatf.org/usatf/files/f1/f101f17f-1b8b-4f1b-ac9c-d9022155aa94.pdf
+    # all hand timed track races have resolution to 0.1 seconds; all road races have resolution to 1 seconds
+    # all times are rounded up (done by caller of this method)
+    # TODO: allow configuration of timing method (hand timed vs automatically timed)
+
+    # track events
+    if surface=='track':
         timeprecision = 1
         agtimeprecision = 1
 
-    # distances > 5K or road events
+    # road and trail events
     else:
         timeprecision = 0
         agtimeprecision = 0
