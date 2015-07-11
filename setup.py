@@ -52,6 +52,7 @@ setup(
     # installed or upgraded on the target machine
     install_requires = [
 ##        'wx>=2.9.4',
+          'unicodecsv>=0.13.0',
         ],
 
     # If any package contains any of these file types, include them:

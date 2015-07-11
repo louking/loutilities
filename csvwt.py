@@ -31,11 +31,11 @@ import pdb
 import argparse
 import tempfile
 import collections
-import csv
 import os
 
 # pypi
 import xlrd
+import unicodecsv   # standard csv does not handle unicode data
 
 # github
 
@@ -131,7 +131,7 @@ class Xls2Csv(Base2Csv):
             # create output csv file and write header
             self.files[name] = '{0}/{1}.csv'.format(self.dir,name)
             OUT = open(self.files[name], 'wb')
-            writer = csv.DictWriter(OUT,outhdr)
+            writer = unicodecsv.DictWriter(OUT,outhdr)
             writer.writeheader()
             
             # copy all the rows in the original sheet to the csv file
@@ -221,7 +221,7 @@ class Db2Csv(Base2Csv):
         # create output csv file and write header
         self.files[name] = '{0}/{1}.csv'.format(self.dir,name)
         OUT = open(self.files[name], 'wb')
-        writer = csv.DictWriter(OUT,outhdr)
+        writer = unicodecsv.DictWriter(OUT,outhdr)
         writer.writeheader()
             
         # copy all the rows in the table to the csv file
