@@ -201,11 +201,11 @@ class AgeGrade():
         if gen not in ['F','M']:
             raise parameterError, 'gen must be M or F'
 
-        # number of meters in a mile -- close enough for this data set
-        mpermile = 1609
+        # number of meters in a mile
+        mpermile = 1609.344     # wavacalc15 has been corrected - now also handles integer distmiles
         
         # some known conversions
-        cdist = {26.2:42200,13.1:21100}
+        cdist = {26.2:42195,13.1:21098} # wavacalc15 has been corrected
         
         # determine distance in meters
         if distmiles in cdist:
