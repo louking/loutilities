@@ -32,6 +32,8 @@ import argparse
 import tempfile
 import collections
 import os
+from collections import OrderedDict
+import csv
 
 # pypi
 import xlrd
@@ -45,6 +47,91 @@ from sqlalchemy.orm import class_mapper # see http://www.sqlalchemy.org/ written
 # home grown
 import version
 from loutilities import *
+
+class invalidParameter(Exception): pass
+
+########################################################################
+class _objdict(dict):
+########################################################################
+    '''
+    subclass dict to make it work like an object
+
+    see http://goodcode.io/articles/python-dict-object/
+    '''
+    def __getattr__(self, name):
+        if name in self:
+            return self[name]
+        else:
+            raise AttributeError("No such attribute: " + name)
+
+    def __setattr__(self, name, value):
+        self[name] = value
+
+    def __delattr__(self, name):
+        if name in self:
+            del self[name]
+        else:
+            raise AttributeError("No such attribute: " + name)
+
+#----------------------------------------------------------------------
+def record2csv(inrecs, mapping, outfile=None): 
+#----------------------------------------------------------------------
+    '''
+    convert list of dict or object records to a csv list or file based on a specified mapping
+    
+    :param inrecs: list of dicts or objects
+    :param mapping: OrderedDict {'outfield1':'infield1', 'outfield2':outfunction(memberrec), ...} or ['inoutfield1', 'inoutfield2', ...]
+    :param outfile: optional output file
+    :rtype: lines from output file
+    '''
+
+    # analyze mapping for outfields
+    if type(mapping) == list:
+        mappingtype = list
+    elif type(mapping) in [dict, OrderedDict]:
+        mappingtype = dict
+    else:
+        raise invalidParameter, "invalid mapping type {}. mapping type must be list, dict or OrderedDict",format(type(mapping))
+
+    outfields = []
+    for outfield in mapping:
+        invalue = mapping[outfield] if mappingtype==dict else outfield
+
+        if type(invalue) not in [str,unicode] and not callable(invalue):
+            raise invalidParameter, 'invalid mapping {}. mapping values must be str or function'.format(outvalue)
+
+        outfields.append(outfield)
+
+    # create writeable list, csv file
+    outreclist = wlist()
+    coutreclist = csv.DictWriter(outreclist, outfields)
+    coutreclist.writeheader()
+
+    for inrec in inrecs:
+        # convert to object if necessary
+        if type(inrec) == dict:
+            inrec = _objdict(inrec)
+
+        outrow = {}
+        for outfield in mapping:
+            infield = mapping[outfield]
+            if type(infield) == str:
+                outvalue = getattr(inrec, infield, None)
+
+            else:
+                # a function call is requested
+                outvalue = infield(inrec)
+
+            outrow[outfield] = outvalue
+        
+        coutreclist.writerow(outrow)
+
+    # write file if desired
+    if outfile:
+        with open(outfile,'wb') as out:
+            out.writelines(outreclist)
+
+    return outreclist
 
 ########################################################################
 class Base2Csv():
