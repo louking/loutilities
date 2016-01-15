@@ -80,7 +80,7 @@ def record2csv(inrecs, mapping, outfile=None):
     convert list of dict or object records to a csv list or file based on a specified mapping
     
     :param inrecs: list of dicts or objects
-    :param mapping: OrderedDict {'outfield1':'infield1', 'outfield2':outfunction(memberrec), ...} or ['inoutfield1', 'inoutfield2', ...]
+    :param mapping: OrderedDict {'outfield1':'infield1', 'outfield2':outfunction(inrec), ...} or ['inoutfield1', 'inoutfield2', ...]
     :param outfile: optional output file
     :rtype: lines from output file
     '''
