@@ -114,7 +114,7 @@ def record2csv(inrecs, mapping, outfile=None):
 
         outrow = {}
         for outfield in mapping:
-            infield = mapping[outfield]
+            infield = mapping[outfield] if mappingtype==dict else outfield
             if type(infield) == str:
                 outvalue = getattr(inrec, infield, None)
 
