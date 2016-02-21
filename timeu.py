@@ -195,6 +195,36 @@ def timesecs(asctime):
         thistime += float(timefield)
     return thistime
 
+#----------------------------------------------------------------------
+def racetimesecs(asctime, distance, fastpace, slowpace):
+#----------------------------------------------------------------------
+    '''
+    calculate time in seconds from string time
+
+    if pace is faster than fastpace, multiply by 60
+    if pace is slower than slowpace, divide by 60
+    
+    :param asctime: string time
+    :param distance: distance in units
+    :param fastpace: fast pace in seconds per unit
+    :param slowpace: slow pace in seconds per unit
+    :rtype: float, time in seconds
+    '''
+    timefields = asctime.split(':')
+    thistime = 0.0
+    for timefield in timefields:
+        thistime *= 60
+        thistime += float(timefield)
+
+    pace = thistime / distance
+    if pace < fastpace:
+        thistime *= 60
+
+    elif pace > slowpace:
+        thistime /= 60
+
+    return thistime
+
 ########################################################################
 class asctime ():
 ########################################################################
