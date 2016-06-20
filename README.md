@@ -6,6 +6,7 @@ This is a package with a few hopefully useful utilities.
 * agegrade - provide age grading calculations (running)
 * apikey - manage API keys for an application
 * bfile - binary file handler
+* configparser - enhanced ConfigParser, provides dict and keys are case sensitive
 * csvu - csv and string utilities
 * csvwt - write csv from various file types
 * extconfigparser - extend ConfigParser.RawConfigParser option interpretation
