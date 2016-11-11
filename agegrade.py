@@ -218,7 +218,7 @@ class AgeGrade():
         minmeters = min(distlist)*1.0
         maxmeters = max(distlist)*1.0
         if distmeters < minmeters or distmeters > maxmeters:
-            raise parameterError, 'distmiles must be between {0:f0.3} and {1:f0.1}'.format(minmeters/mpermile,maxmeters/mpermile)
+            raise parameterError, 'distmiles must be between {:0.3f} and {:0.1f}'.format(minmeters/mpermile,maxmeters/mpermile)
 
         # interpolate factor and openstd based on distance for this age
         age = int(age)

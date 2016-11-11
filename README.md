@@ -15,6 +15,7 @@ This is a package with a few hopefully useful utilities.
 * renderrun - common functions for rendering information related to running
 * textreader - read text out of various file types
 * timeu - time methods
+* transform - transformation methods
 * wxextensions - extensions for wxPython widgets
 * xmldict - xml / dict conversions, from http://code.activestate.com/recipes/573463-converting-xml-to-dictionary-and-back/
 
