@@ -34,6 +34,7 @@ import csv
 import pickle
 import os.path
 import shutil
+from math import floor
 
 # pypi
 
@@ -90,6 +91,7 @@ def getagtable(agegradewb):
         for r in sheet:
             if r['dist(km)'] == '0.0': continue
             
+            # dist is rounded to the nearest meter so it can be used as a key
             dist = int(round(float(r['dist(km)'])*1000))
 
             # kludge to use only road events -- affects distances 5km and beyond (issue #55)
@@ -161,6 +163,12 @@ class AgeGrade():
         :rtype: (factor, openstd) - factor (age grade factor) is between 0 and 1, openstd (open standard) is in seconds
         '''
         
+        # round distmeters to the nearest meter as distlist keys are rounded to the nearest meter
+        # need to do this so exact match doesn't get interpolated
+        # alternate, possibly better, solution would be to use keys in millimeters rather than meters
+        # but that would require reloading the data -- that might be fine, but is a bit risky
+        distmeters = int(round(distmeters))
+
         # find surrounding Xi points, and corresponding Fi, OCi points
         distlist = self.agegradedata[gen].keys()
         distlist.sort()
@@ -254,7 +262,8 @@ class AgeGrade():
                 openstd = openstd1 + (1.0*(age-age1)/(age2-age1))*(openstd2-openstd1)
         
         # return age grade statistics
-        agpercentage = 100*(openstd/factor)/time
+        # use floor function to 2 decimal place percentage to emulate http://www.howardgrubb.co.uk/athletics/wmalookup15.html
+        agpercentage = floor(100*100*(openstd/factor)/time)/100
         agresult = time*factor
         if self.DEBUG:
             # order must match header written in self.__init__
