@@ -262,8 +262,7 @@ class AgeGrade():
                 openstd = openstd1 + (1.0*(age-age1)/(age2-age1))*(openstd2-openstd1)
         
         # return age grade statistics
-        # use floor function to 2 decimal place percentage to emulate http://www.howardgrubb.co.uk/athletics/wmalookup15.html
-        agpercentage = floor(100*100*(openstd/factor)/time)/100
+        agpercentage = 100*(openstd/factor)/time
         agresult = time*factor
         if self.DEBUG:
             # order must match header written in self.__init__
