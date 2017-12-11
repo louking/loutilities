@@ -10,9 +10,12 @@ This is a package with a few hopefully useful utilities.
 * csvu - csv and string utilities
 * csvwt - write csv from various file types
 * extconfigparser - extend ConfigParser.RawConfigParser option interpretation
+* googleauth - oauth 2.0 for google APIs
 * kmlutils - utilities for access to kml file
 * namesplitter - name splitting method
 * renderrun - common functions for rendering information related to running
+* tables - utilities for dataTables javascript support
+    * tables-files - supporting files required for tables.py -- these need to be copied to project using tables.py
 * textreader - read text out of various file types
 * timeu - time methods
 * transform - transformation methods

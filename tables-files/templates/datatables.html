@@ -1,0 +1,80 @@
+{# datatables.html is used, in conjunction with datatables.js to display a single
+   dataTable $('#datatable'), with optional Editor support
+
+   parameters:
+      pagename:     name of page to be displayed at the top of the page
+      tabledata:    data for the table, as expected by DataTables, 
+                    with additional label: field per column, used for column headings
+      tablebuttons: buttons: option value for options.dtopts
+      options:      options with the following keys
+        dtopts:     options to be passed to DataTables instance, 
+                      except for data: and buttons: options, passed in tabledata, tablebuttons
+        editoropts: options to be passed to Editor instance, 
+                    if not present, Editor will not be configured
+        updateopts: options to configure Editor select fields with, see crudapi.py for more details
+        yadcfopts:  yadcf options to be passed to yadcf 
+                    if not present, yadcf will not be configured
+
+      pagejsfiles:  list of js files for page
+      pagecssfiles: list of css files for page
+
+      chartloc:     present only if chart is to be drawn
+                    'beforeprehtml' - chart is before pretablehtml
+                    'beforetable' - chart is between pretablehtml and table
+                    'aftertable' - chart is after table
+          NOTES: - if chart is to be drawn, pagejsfiles must include script file 
+                   which has dtchart() entry point
+                 - if table should not be visible, use 'beforetable' and have dtopts 'dom': ''
+#}
+
+{% extends "layout.html" %}
+{% block pagename %}
+    {{ pagename }}
+{% endblock %}
+{% block css %}
+{% endblock %}
+{% block scripts %}
+  <script type="text/javascript">
+    $( document ).ready( function() {
+      var 
+        options = {{ options|tojson|safe }},
+        tabledata  = {{ tabledata|tojson|safe }},
+        tablebuttons = {{ tablebuttons|tojson|safe }};
+      datatables(tabledata, tablebuttons, options);
+      {% if chartloc %} 
+        datatables_chart();
+      {% endif %}
+    })
+  </script>
+  <script type="text/javascript">
+  </script>
+{% endblock %}
+{% block body %}
+  {% if chartloc == 'beforeprehtml' %}
+    <div class='dt-chart'></div>
+  {% endif %}
+  {{ pretablehtml|safe }}
+  {% if chartloc == 'beforetable' %}
+    <div class='dt-chart'></div>
+  {% endif %}
+  <table class="" id="datatable" >
+    <thead>
+      <tr>
+        {# assume select column if Editor options are provided #}
+        {% if options.editoropts is defined %}
+          <th class=""></th>
+        {% endif %}
+        {% for col in options.dtopts.columns %}
+          {% if col.label %}
+            <th class="">{{ col.label }}</th>
+          {% endif %}
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+    </tbody>
+  </table>
+  {% if chartloc == 'aftertable' %}
+    <div class='dt-chart'></div>
+  {% endif %}
+{% endblock %}

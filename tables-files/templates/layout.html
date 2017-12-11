@@ -1,0 +1,86 @@
+<!doctype html>
+<head>
+  <title>{{self.pagename()|striptags}}</title>
+  <!-- Google Analytics -->
+  <script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-22407293-1', 'auto');
+    ga('send', 'pageview');
+
+  </script>
+  <!-- End Google Analytics -->
+</head>
+<body>
+{% if not printerfriendly %}
+  <div class=heading>
+    <h1>{{_rrdb_productname|safe}}
+    {% if request.url[0:16] == "http://127.0.0.1" %} (development){% endif %}
+    {% if request.url[0:14] == "http://sandbox" %} (sandbox){% endif %}
+    </h1>
+    <div class=pagename>{{self.pagename()}}</div>
+  </div>
+  <div class=wrapper>
+    <div class=body>
+      {% if error %}<p class=error><strong>Error: {{ error }}</strong></p>{% endif %}
+      {% for message in get_flashed_messages() %}
+        <div class=flash><p>{{ message }}</p></div>
+      {% endfor %}
+      <div id="widgets" style="{display: none}"></div>
+      <div id="progressbar-container"></div>
+      {% block body %}
+      {% endblock %}
+{#       {% if addfooter %}  
+        <div class="Footer">
+          <div>
+            <a href="{{url_for('terms') }}">Terms of Service</a>
+            <a href="{{url_for('feedback')}}?next={{request.url}}">Questions/Feedback</a>
+          </div>
+          <span>&copy; 2017 loutilities (Lou King).   All rights reserved.</span>
+        </div>
+      {% endif %} #}
+    </div>
+  </div>
+{% else %}
+  <div class=body-printerfriendly>
+    {{ self.body() }}
+  </div>
+{% endif %}
+<script type="text/javascript">
+  var $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+</script>
+  
+{# see request.py for list of css, js files #}
+{% for css in _rrdb_cssfiles %}
+  <link rel=stylesheet type=text/css href="{{ css }}">
+{% endfor %}
+{% for css in pagecssfiles %}
+  <link rel=stylesheet type=text/css href="{{ css }}">
+{% endfor %}
+<style>
+  {% if request.url[0:16] == "http://127.0.0.1" %}
+    html {background: antiquewhite;}
+  {% endif %}
+  {% if request.url[0:14] == "http://sandbox" %}
+    html {background: lightcyan;}
+  {% endif %}
+</style>
+{% block css %}
+{% endblock %}
+
+<script>var _rrdb_productname = "{{ _rrdb_productname_text|safe }}";</script>
+{% for js in _rrdb_jsfiles %}
+  <script type="text/javascript" src="{{ js }}"></script>
+{% endfor %}
+{% if pagejsfiles %}
+  {% for js in pagejsfiles %}
+    <script type="text/javascript" src="{{ js }}"></script>
+  {% endfor %}
+{% endif %}
+{% block scripts %}
+{% endblock %}
+</body>
+</html>
