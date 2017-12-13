@@ -6,6 +6,8 @@
       tabledata:    data for the table, as expected by DataTables, 
                     with additional label: field per column, used for column headings
       tablebuttons: buttons: option value for options.dtopts
+      tablefiles:   if configured, will be used to initialize Editor files database
+                    See https://editor.datatables.net/manual/server#File-upload for format
       options:      options with the following keys
         dtopts:     options to be passed to DataTables instance, 
                       except for data: and buttons: options, passed in tabledata, tablebuttons
@@ -39,8 +41,11 @@
       var 
         options = {{ options|tojson|safe }},
         tabledata  = {{ tabledata|tojson|safe }},
+        tablefiles = {{ tablefiles|tojson|safe }},
         tablebuttons = {{ tablebuttons|tojson|safe }};
-      datatables(tabledata, tablebuttons, options);
+
+      datatables(tabledata, tablebuttons, options, tablefiles);
+      
       {% if chartloc %} 
         datatables_chart();
       {% endif %}

@@ -352,6 +352,7 @@ class TablesCsv(MethodView):
             raise
 
 
+#######################################################################
 #----------------------------------------------------------------------
 def _editormethod(checkaction='', formrequest=True):
 #----------------------------------------------------------------------
@@ -500,6 +501,253 @@ class CrudApi(MethodView):
     '''
 
     #----------------------------------------------------------------------
+    def __init__(self, **kwargs):
+    #----------------------------------------------------------------------
+        # the args dict has all the defined parameters to 
+        # caller supplied keyword args are used to update the defaults
+        # all arguments are made into attributes for self
+        self.kwargs = kwargs
+        args = dict(app = None,
+                    pagename = None, 
+                    endpoint = None, 
+                    eduploadoption = None,
+                    clientcolumns = None, 
+                    servercolumns = None, 
+                    files = None,
+                    idSrc = 'DT_RowId', 
+                    buttons = ['create', 'edit', 'remove', 'csv'])
+        args.update(kwargs)        
+        for key in args:
+            setattr(self, key, args[key])
+
+        # set up mapping between database and editor form
+        # self.dte = DataTablesEditor(self.dbmapping, self.formmapping)
+
+    #----------------------------------------------------------------------
+    def register(self):
+    #----------------------------------------------------------------------
+        # create supported endpoints
+        my_view = self.as_view(self.endpoint, **self.kwargs)
+        self.app.add_url_rule('/{}'.format(self.endpoint),view_func=my_view,methods=['GET',])
+        self.app.add_url_rule('/{}/rest'.format(self.endpoint),view_func=my_view,methods=['GET', 'POST'])
+        self.app.add_url_rule('/{}/rest/<int:thisid>'.format(self.endpoint),view_func=my_view,methods=['PUT', 'DELETE'])
+
+        if self.files:
+            self.files.register()
+            print 'self.files.register()'
+
+    #----------------------------------------------------------------------
+    def _renderpage(self):
+    #----------------------------------------------------------------------
+        try:
+            redirect = self.init()
+            if redirect:
+                return redirect
+            
+            # verify user can write the data, otherwise abort
+            if not self.permission():
+                self.rollback()
+                self.abort()
+            
+            # set up parameters to query, based on whether results are limited to club
+            self.beforequery()
+
+            # peel off any _update options
+            update_options = []
+            for column in self.clientcolumns:
+                if '_update' in column:
+                    update = column['_update']  # convenience alias
+                    update['url'] = url_for(update['endpoint']) + '?' + urlencode({'_wrapper':dumps(update['wrapper'])})
+                    update['name'] = column['name']
+                    update_options.append(update)
+
+            # DataTables options string, data: and buttons: are passed separately
+            dt_options = {
+                'dom': '<"H"lBpfr>t<"F"i>',
+                'columns': [
+                    {
+                        'data': None,
+                        'defaultContent': '',
+                        'className': 'select-checkbox',
+                        'orderable': False
+                    },
+                ],
+                'select': True,
+                'ordering': True,
+                'order': [1,'asc']
+            }
+            for column in self.clientcolumns:
+                dtcolumn = column.copy()
+                # pop to remove from dtcolumn
+                dtonly = dtcolumn.pop('dt', {})
+                dtcolumn.pop('ed',{})
+                dtcolumn.update(dtonly)
+                dt_options['columns'].append(dtcolumn)
+
+            # build table data
+            if self.servercolumns == None:
+                dt_options['serverSide'] = False
+                self.open()
+                tabledata = []
+                try:
+                    while(True):
+                        thisentry = self.nexttablerow()
+                        tabledata.append(thisentry)
+                except StopIteration:
+                    pass
+                self.close()
+            else:
+                dt_options['serverSide'] = True
+                tabledata = '{}/rest'.format(url_for(self.endpoint))
+
+            ed_options = {
+                'idSrc': self.idSrc,
+                'ajax': {
+                    'create': {
+                        'type': 'POST',
+                        'url':  '{}/rest'.format(url_for(self.endpoint)),
+                    },
+                    'edit': {
+                        'type': 'PUT',
+                        'url':  '{}/rest/{}'.format(url_for(self.endpoint),'_id_'),
+                    },
+                    'remove': {
+                        'type': 'DELETE',
+                        'url':  '{}/rest/{}'.format(url_for(self.endpoint),'_id_'),
+                    },
+                },
+                
+                'fields': [
+                ],
+            }
+            # TODO: these are editor field options as of Editor 1.5.6 -- do we really need to get rid of non-Editor options?
+            fieldkeys = ['className', 'data', 'def', 'entityDecode', 'fieldInfo', 'id', 'label', 'labelInfo', 'name', 'type', 'options', 'opts', 'ed']
+            for column in self.clientcolumns:
+                # pick keys which matter
+                edcolumn = { key: column[key] for key in fieldkeys if key in column}
+                # edcolumn = column.copy()
+                # pop to remove from edcolumn
+                edonly = edcolumn.pop('ed', {})
+                edcolumn.update(edonly)
+                ed_options['fields'].append(edcolumn)
+
+            # add upload, if desired
+            if self.eduploadoption:
+                ed_options['ajax']['upload'] = self.eduploadoption
+
+            # get files if indicated
+            if self.files:
+                tablefiles = self.files.list()
+                print tablefiles
+            else:
+                tablefiles = None
+
+            # commit database updates and close transaction
+            self.commit()
+
+            # render page
+            return self.render_template( pagename = self.pagename,
+                                         tabledata = tabledata, 
+                                         tablefiles = tablefiles,
+                                         tablebuttons = self.buttons,
+                                         options = {'dtopts': dt_options, 'editoropts': ed_options, 'updateopts': update_options},
+                                         writeallowed = self.permission())
+        
+        except:
+            # roll back database updates and close transaction
+            self.rollback()
+            raise
+
+    #----------------------------------------------------------------------
+    def _retrieverows(self):
+    #----------------------------------------------------------------------
+        try:
+            redirect = self.init()
+            if redirect:
+                return redirect
+            
+            # verify user can write the data, otherwise abort
+            if not self.permission():
+                self.rollback()
+                self.abort()
+                
+            # set up parameters to query
+            self.beforequery()
+
+            # columns to retrieve from database
+            columns = self.servercolumns
+
+            # get data from database
+            # TODO: verify this works with actual database, see rrwebapp/crudapi.py
+            # TODO: handle case when files are indicated
+            self.open()
+            tabledata = []
+            try:
+                while(True):
+                    thisentry = self.nexttablerow()
+                    tabledata.append(thisentry)
+            except StopIteration:
+                pass
+            self.close()
+            output_result = tabledata
+
+            # back to client
+            return jsonify(output_result)
+
+        except:
+            # roll back database updates and close transaction
+            self.rollback()
+            raise
+
+    #----------------------------------------------------------------------
+    def get(self):
+    #----------------------------------------------------------------------
+        if request.path[-4:] != 'rest':
+            return self._renderpage()
+        else:
+            return self._retrieverows()
+
+    #----------------------------------------------------------------------
+    @_editormethod(checkaction='create', formrequest=True)
+    def post(self):
+    #----------------------------------------------------------------------
+        # retrieve data from request
+        thisdata = self._data[0]
+        
+        action = get_request_action(request.form)
+        if action == 'create':
+            thisrow = self.createrow(thisdata)
+        else:
+            stophere
+            thisrow = self.upload(thisdata)
+
+        self._responsedata = [thisrow]
+
+
+    #----------------------------------------------------------------------
+    @_editormethod(checkaction='edit', formrequest=True)
+    def put(self, thisid):
+    #----------------------------------------------------------------------
+        # retrieve data from request
+        self._responsedata = []
+        thisdata = self._data[thisid]
+        
+        thisrow = self.editrow(thisid, thisdata)
+
+        self._responsedata = [thisrow]
+
+
+    #----------------------------------------------------------------------
+    @_editormethod(checkaction='remove', formrequest=False)
+    def delete(self, thisid):
+    #----------------------------------------------------------------------
+        self.deleterow(thisid)
+
+        # prepare response
+        self._responsedata = []
+
+
+    #----------------------------------------------------------------------
     # the following methods must be replaced in subclass
     #----------------------------------------------------------------------
     
@@ -613,10 +861,46 @@ class CrudApi(MethodView):
     #----------------------------------------------------------------------
         return flask.render_template('datatables.html', **kwargs)
 
-    #----------------------------------------------------------------------
-    # END of overrridden methods
-    #----------------------------------------------------------------------
 
+
+#######################################################################
+#----------------------------------------------------------------------
+def _uploadmethod():
+#----------------------------------------------------------------------
+    '''
+    decorator for CrudFiles methods used by Editor
+
+    :param methodcore: function() containing core of method to execute
+    '''
+
+    # see http://python-3-patterns-idioms-test.readthedocs.io/en/latest/PythonDecorators.html
+    def wrap(f):
+        def wrapped_f(self, *args, **kwargs):
+            try:
+                # execute core of method and send response
+                f(self,*args, **kwargs)
+
+                return dt_editor_response(**self._responsedata)
+            
+            except Exception,e:
+                cause = 'Unexpected Error: {}\n{}'.format(e,traceback.format_exc())
+                self.app.logger.error(cause)
+                return dt_editor_response(error=cause)
+
+        return wrapped_f
+    return wrap
+
+#######################################################################
+class CrudFiles(MethodView):
+#######################################################################
+    '''
+    provides files support for CrudApi
+
+    usage:
+        filesinst = CrudFiles([arguments]):
+        apiinst - CrudApi(files=filesinst, [other arguments])
+        apiinst.register()
+    '''
 
     #----------------------------------------------------------------------
     def __init__(self, **kwargs):
@@ -626,229 +910,103 @@ class CrudApi(MethodView):
         # all arguments are made into attributes for self
         self.kwargs = kwargs
         args = dict(app = None,
-                    pagename = None, 
-                    endpoint = None, 
-                    eduploadoption = None,
-                    clientcolumns = None, 
-                    servercolumns = None, 
-                    idSrc = 'DT_RowId', 
-                    buttons = ['create', 'edit', 'remove', 'csv'])
+                    uploadendpoint = None, 
+                    )
         args.update(kwargs)        
         for key in args:
             setattr(self, key, args[key])
 
-        # set up mapping between database and editor form
-        # self.dte = DataTablesEditor(self.dbmapping, self.formmapping)
-
     #----------------------------------------------------------------------
     def register(self):
     #----------------------------------------------------------------------
-        # create supported endpoints
-        my_view = self.as_view(self.endpoint, **self.kwargs)
-        self.app.add_url_rule('/{}'.format(self.endpoint),view_func=my_view,methods=['GET',])
-        self.app.add_url_rule('/{}/rest'.format(self.endpoint),view_func=my_view,methods=['GET', 'POST'])
-        self.app.add_url_rule('/{}/rest/<int:thisid>'.format(self.endpoint),view_func=my_view,methods=['PUT', 'DELETE'])
+        # # create supported endpoints
+        # list_view = self.as_view(self.listendpoint, **self.kwargs)
+        # self.app.add_url_rule('/{}'.format(self.listendpoint),view_func=list_view,methods=['GET',])
+
+        upload_view = self.as_view(self.uploadendpoint, **self.kwargs)
+        self.app.add_url_rule('/{}'.format(self.uploadendpoint),view_func=upload_view,methods=['POST',])
+
 
     #----------------------------------------------------------------------
-    def _renderpage(self):
-    #----------------------------------------------------------------------
-        try:
-            redirect = self.init()
-            if redirect:
-                return redirect
-            
-            # verify user can write the data, otherwise abort
-            if not self.permission():
-                self.rollback()
-                self.abort()
-            
-            # set up parameters to query, based on whether results are limited to club
-            self.beforequery()
-
-            # peel off any _update options
-            update_options = []
-            for column in self.clientcolumns:
-                if '_update' in column:
-                    update = column['_update']  # convenience alias
-                    update['url'] = url_for(update['endpoint']) + '?' + urlencode({'_wrapper':dumps(update['wrapper'])})
-                    update['name'] = column['name']
-                    update_options.append(update)
-
-            # DataTables options string, data: and buttons: are passed separately
-            dt_options = {
-                'dom': '<"H"lBpfr>t<"F"i>',
-                'columns': [
-                    {
-                        'data': None,
-                        'defaultContent': '',
-                        'className': 'select-checkbox',
-                        'orderable': False
-                    },
-                ],
-                'select': True,
-                'ordering': True,
-                'order': [1,'asc']
-            }
-            for column in self.clientcolumns:
-                dtcolumn = column.copy()
-                # pop to remove from dtcolumn
-                dtonly = dtcolumn.pop('dt', {})
-                dtcolumn.pop('ed',{})
-                dtcolumn.update(dtonly)
-                dt_options['columns'].append(dtcolumn)
-
-            # build table data
-            if self.servercolumns == None:
-                dt_options['serverSide'] = False
-                self.open()
-                tabledata = []
-                try:
-                    while(True):
-                        thisentry = self.nexttablerow()
-                        tabledata.append(thisentry)
-                except StopIteration:
-                    pass
-                self.close()
-            else:
-                dt_options['serverSide'] = True
-                tabledata = '{}/rest'.format(url_for(self.endpoint))
-
-            ed_options = {
-                'idSrc': self.idSrc,
-                'ajax': {
-                    'create': {
-                        'type': 'POST',
-                        'url':  '{}/rest'.format(url_for(self.endpoint)),
-                    },
-                    'edit': {
-                        'type': 'PUT',
-                        'url':  '{}/rest/{}'.format(url_for(self.endpoint),'_id_'),
-                    },
-                    'remove': {
-                        'type': 'DELETE',
-                        'url':  '{}/rest/{}'.format(url_for(self.endpoint),'_id_'),
-                    },
-                },
-                
-                'fields': [
-                ],
-            }
-            # TODO: these are editor field options as of Editor 1.5.6 -- do we really need to get rid of non-Editor options?
-            fieldkeys = ['className', 'data', 'def', 'entityDecode', 'fieldInfo', 'id', 'label', 'labelInfo', 'name', 'type', 'options', 'opts', 'ed']
-            for column in self.clientcolumns:
-                # pick keys which matter
-                edcolumn = { key: column[key] for key in fieldkeys if key in column}
-                # edcolumn = column.copy()
-                # pop to remove from edcolumn
-                edonly = edcolumn.pop('ed', {})
-                edcolumn.update(edonly)
-                ed_options['fields'].append(edcolumn)
-
-            # add upload, if desired
-            if self.eduploadoption:
-                ed_options['ajax']['upload'] = self.eduploadoption
-
-            # commit database updates and close transaction
-            self.commit()
-
-            # render page
-            return self.render_template( pagename = self.pagename,
-                                         tabledata = tabledata, 
-                                         tablebuttons = self.buttons,
-                                         options = {'dtopts': dt_options, 'editoropts': ed_options, 'updateopts': update_options},
-                                         writeallowed = self.permission())
-        
-        except:
-            # roll back database updates and close transaction
-            self.rollback()
-            raise
-
-    #----------------------------------------------------------------------
-    def _retrieverows(self):
-    #----------------------------------------------------------------------
-        try:
-            redirect = self.init()
-            if redirect:
-                return redirect
-            
-            # verify user can write the data, otherwise abort
-            if not self.permission():
-                self.rollback()
-                self.abort()
-                
-            # set up parameters to query
-            self.beforequery()
-
-            # columns to retrieve from database
-            columns = self.servercolumns
-
-            # get data from database
-            # TODO: verify this works with actual database, see rrwebapp/crudapi.py
-            self.open()
-            tabledata = []
-            try:
-                while(True):
-                    thisentry = self.nexttablerow()
-                    tabledata.append(thisentry)
-            except StopIteration:
-                pass
-            self.close()
-            output_result = tabledata
-
-            # back to client
-            return jsonify(output_result)
-
-        except:
-            # roll back database updates and close transaction
-            self.rollback()
-            raise
-
-    #----------------------------------------------------------------------
-    def get(self):
-    #----------------------------------------------------------------------
-        if request.path[-4:] != 'rest':
-            return self._renderpage()
-        else:
-            return self._retrieverows()
-
-    #----------------------------------------------------------------------
-    @_editormethod(checkaction='create,upload', formrequest=True)
+    @_uploadmethod()
     def post(self):
     #----------------------------------------------------------------------
-        # retrieve data from request
-        thisdata = self._data[0]
+        self._responsedata = self.upload()
+
+    #----------------------------------------------------------------------
+    # the following methods must be replaced in subclass
+    #----------------------------------------------------------------------
+    
+    #----------------------------------------------------------------------
+    def list(self):
+    #----------------------------------------------------------------------
+        '''
+        must be overridden
+
+        return list of files
+
+        return value must be set to the following, as defined in https://editor.datatables.net/manual/server#File-upload
+
+             {
+                table1 : {
+                            fileid1 : metadata1,
+                            fileid2 : metadata2,
+                            ...
+                         },
+                table2 : {
+                            etc.
+                         }
+             }
+
+        where:
+            tablename is name for table which will be stored in DataTables and Editor
+            fileid is scalar file identifier, e.g., database id
+            metadata is dict describing file, e.g., 
+                'filename' : filename
+                'web_path' : path to file, etc
+
         
-        action = get_request_action(request.form)
-        if action == 'create':
-            thisrow = self.createrow(thisdata)
-        else:
-            stophere
-            thisrow = self.upload(thisdata)
-
-        self._responsedata = [thisrow]
-
+        :rtype: return value as described above
+        '''
+        pass
 
     #----------------------------------------------------------------------
-    @_editormethod(checkaction='edit', formrequest=True)
-    def put(self, thisid):
+    def upload(self):
     #----------------------------------------------------------------------
-        # retrieve data from request
-        self._responsedata = []
-        thisdata = self._data[thisid]
-        
-        thisrow = self.editrow(thisid, thisdata)
+        '''
+        must be overridden
 
-        self._responsedata = [thisrow]
+        receive an uploaded file
+
+        returnvalue dict must include at least 
+        the following keys, as defined in 
+        https://editor.datatables.net/manual/server#File-upload
+
+            {
+             'upload' : {'id': fileid },
+             'files'  : {
+                        table : {
+                            fileid : metadata
+                        },
+             optkey1  : optdata1
+            ...
+            }
 
 
-    #----------------------------------------------------------------------
-    @_editormethod(checkaction='remove', formrequest=False)
-    def delete(self, thisid):
-    #----------------------------------------------------------------------
-        self.deleterow(thisid)
+        where:
+            fileid is scalar file identifier, e.g., database id
+            tablename is name for table which will be stored in DataTables and Editor
+            metadata is dict describing file, e.g., 
+                'filename' : filename
+                'web_path' : path to file, etc
+            optkeyn is optional key
 
-        # prepare response
-        self._responsedata = []
+        if optional keys are provided will be sent along with the data 
+
+        :rtype: return value as described above
+        '''
+        pass
+
 
 #----------------------------------------------------------------------
 def deepupdate(obj, val, newval):
@@ -877,5 +1035,6 @@ def deepupdate(obj, val, newval):
             thisobj = newval
 
     return thisobj
+
 
 

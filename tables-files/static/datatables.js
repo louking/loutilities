@@ -4,7 +4,7 @@
 // buttons is a JSON parsable string, as it references editor which hasn't been instantiated yet
 // options is an object with the following keys
 //     dtopts:       options to be passed to DataTables instance, 
-//                   except for data: and buttons: options, passed in tabledata, tablebuttons
+//                   except for data: and buttons: options, passed in data, buttons
 //     editoropts:   options to be passed to Editor instance, 
 //                   if not present, Editor will not be configured
 //     updateopts:   options to configure Editor select fields with
@@ -14,7 +14,7 @@
 
 var editor, _dt_table;
 
-function datatables(data, buttons, options) {
+function datatables(data, buttons, options, files) {
 
     // convert render to javascript
     if (options.dtopts.hasOwnProperty('columns')) {
@@ -51,6 +51,11 @@ function datatables(data, buttons, options) {
                     editor.dependent( options.updateopts[i].name, options.updateopts[i].url, {event:'change'} )
                 }
             }
+        }
+
+        // set Editor files if supplied
+        if (files) {
+            $.fn.dataTable.Editor.files = files
         }
     }
 
