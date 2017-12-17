@@ -1,5 +1,4 @@
 ###########################################################################################
-# datatables_utils
 #
 #       Date            Author          Reason
 #       ----            ------          ------
@@ -534,7 +533,7 @@ class CrudApi(MethodView):
 
         if self.files:
             self.files.register()
-            print 'self.files.register()'
+            if debug: print 'self.files.register()'
 
     #----------------------------------------------------------------------
     def _renderpage(self):
@@ -638,7 +637,7 @@ class CrudApi(MethodView):
             # get files if indicated
             if self.files:
                 tablefiles = self.files.list()
-                print tablefiles
+                if debug: print tablefiles
             else:
                 tablefiles = None
 
@@ -732,7 +731,7 @@ class CrudApi(MethodView):
         self._responsedata = []
         thisdata = self._data[thisid]
         
-        thisrow = self.editrow(thisid, thisdata)
+        thisrow = self.updaterow(thisid, thisdata)
 
         self._responsedata = [thisrow]
 
@@ -908,6 +907,8 @@ class CrudFiles(MethodView):
         # the args dict has all the defined parameters to 
         # caller supplied keyword args are used to update the defaults
         # all arguments are made into attributes for self
+        if debug: print 'CrudFiles.__init__() **kwargs={}'.format(kwargs)
+
         self.kwargs = kwargs
         args = dict(app = None,
                     uploadendpoint = None, 
@@ -916,12 +917,15 @@ class CrudFiles(MethodView):
         for key in args:
             setattr(self, key, args[key])
 
+        self.credentials = None
+
     #----------------------------------------------------------------------
     def register(self):
     #----------------------------------------------------------------------
         # # create supported endpoints
         # list_view = self.as_view(self.listendpoint, **self.kwargs)
         # self.app.add_url_rule('/{}'.format(self.listendpoint),view_func=list_view,methods=['GET',])
+        if debug: print 'CrudFiles.register()'
 
         upload_view = self.as_view(self.uploadendpoint, **self.kwargs)
         self.app.add_url_rule('/{}'.format(self.uploadendpoint),view_func=upload_view,methods=['POST',])
@@ -974,7 +978,7 @@ class CrudFiles(MethodView):
     def upload(self):
     #----------------------------------------------------------------------
         '''
-        must be overridden
+        must override, but this must be called
 
         receive an uploaded file
 

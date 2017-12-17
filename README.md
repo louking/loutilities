@@ -10,6 +10,7 @@ This is a package with a few hopefully useful utilities.
 * csvu - csv and string utilities
 * csvwt - write csv from various file types
 * extconfigparser - extend ConfigParser.RawConfigParser option interpretation
+* geo - utilities for lat / long and other geographic manipulation
 * googleauth - oauth 2.0 for google APIs
 * kmlutils - utilities for access to kml file
 * namesplitter - name splitting method
