@@ -72,46 +72,46 @@ class GoogleAuth(View):
     #----------------------------------------------------------------------
     def oauth2callback(self):
     #----------------------------------------------------------------------
-      # Specify the state when creating the flow in the callback so that it can
-      # verified in the authorization server response.
-      state = flask.session['state']
-
-      flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
-          self.client_secrets_file, scopes=self.scopes, state=state)
-      flow.redirect_uri = flask.url_for('oauth2callback', _external=True)
-
-      # Use the authorization server's response to fetch the OAuth 2.0 tokens.
-      authorization_response = flask.request.url
-      flow.fetch_token(authorization_response=authorization_response)
-
-      # Store credentials in the session.
-      # ACTION ITEM: In a production app, you likely want to save these
-      #              credentials in a persistent database instead.
-      credentials = flow.credentials
-      flask.session['credentials'] = credentials_to_dict(credentials)
-
-      return flask.redirect(flask.url_for(self.startendpoint))
+        # Specify the state when creating the flow in the callback so that it can
+        # verified in the authorization server response.
+        state = flask.session['state']
+  
+        flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
+            self.client_secrets_file, scopes=self.scopes, state=state)
+        flow.redirect_uri = flask.url_for('oauth2callback', _external=True)
+  
+        # Use the authorization server's response to fetch the OAuth 2.0 tokens.
+        authorization_response = flask.request.url
+        flow.fetch_token(authorization_response=authorization_response)
+  
+        # Store credentials in the session.
+        # ACTION ITEM: In a production app, you likely want to save these
+        #              credentials in a persistent database instead.
+        credentials = flow.credentials
+        flask.session['credentials'] = credentials_to_dict(credentials)
+  
+        return flask.redirect(flask.url_for(self.startendpoint))
 
 
     #----------------------------------------------------------------------
     def revoke(self):
     #----------------------------------------------------------------------
-        if 'credentials' not in flask.session:
+        credentials = get_credentials()
+
+        if credentials:
+            revoke = requests.post('https://accounts.google.com/o/oauth2/revoke',
+                params={'token': credentials.token},
+                headers = {'content-type': 'application/x-www-form-urlencoded'})
+
+            status_code = getattr(revoke, 'status_code')
+            if status_code == 200:
+                return('Credentials successfully revoked')
+            else:
+                return('An error occurred')
+
+        else:
             return ('You need to <a href="/authorize">authorize</a> before ' +
                     'testing the code to revoke credentials')
-
-        credentials = google.oauth2.credentials.Credentials(
-                                **flask.session['credentials'])
-
-        revoke = requests.post('https://accounts.google.com/o/oauth2/revoke',
-            params={'token': credentials.token},
-            headers = {'content-type': 'application/x-www-form-urlencoded'})
-
-        status_code = getattr(revoke, 'status_code')
-        if status_code == 200:
-            return('Credentials successfully revoked')
-        else:
-            return('An error occurred')
 
 
     #----------------------------------------------------------------------
@@ -125,12 +125,12 @@ class GoogleAuth(View):
 #----------------------------------------------------------------------
 def credentials_to_dict(credentials):
 #----------------------------------------------------------------------
-  return {'token': credentials.token,
-          'refresh_token': credentials.refresh_token,
-          'token_uri': credentials.token_uri,
-          'client_id': credentials.client_id,
-          'client_secret': credentials.client_secret,
-          'scopes': credentials.scopes}
+    return {'token': credentials.token,
+            'refresh_token': credentials.refresh_token,
+            'token_uri': credentials.token_uri,
+            'client_id': credentials.client_id,
+            'client_secret': credentials.client_secret,
+            'scopes': credentials.scopes}
 
 #----------------------------------------------------------------------
 def get_credentials():
