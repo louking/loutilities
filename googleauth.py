@@ -17,11 +17,16 @@ from traceback import format_exc
 import flask
 from flask.views import View
 import requests
-import jwt
+import httplib2
 
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
 from  apiclient import discovery
+
+# note as of this writing, oauth2client is deprecated. 
+# See https://github.com/GoogleCloudPlatform/google-auth-library-python/blob/master/docs/oauth2client-deprecation.rst
+# but there is no support in the replacement lib for Storage, and google claims they will maintain without adding features
+# so this is probably ok
 from oauth2client.file import Storage
 from oauth2client.client import GoogleCredentials
 
@@ -33,7 +38,7 @@ class GoogleAuth(View):
 ############################################################################
 
     #----------------------------------------------------------------------
-    def __init__( self, app, client_secrets_file, scopes, startendpoint, credfolder=None, info=None, debug=None ):
+    def __init__( self, app, client_secrets_file, scopes, startendpoint, credfolder=None, loginfo=None, logdebug=None, logerror=None ):
     #----------------------------------------------------------------------
         '''
         :param app: flask application
@@ -43,18 +48,17 @@ class GoogleAuth(View):
         :param credfolder: folder where credential Storage will be placed
         :param info: info logger function
         :param debug: debug logger function
+        :param error: debug logger function
         '''
         self.app = app
         self.client_secrets_file = client_secrets_file
         self.scopes = scopes
         self.startendpoint = startendpoint
         self.credfolder = credfolder
-        self.info = info
-        self.debug = debug
+        self.loginfo = loginfo
+        self.logdebug = logdebug
+        self.logerror = logerror
 
-    #----------------------------------------------------------------------
-    def register(self):
-    #----------------------------------------------------------------------
         # create supported endpoints
         self.app.add_url_rule('/authorize', view_func=self.authorize, methods=['GET',])
         # from https://developers.google.com/actions/identity/oauth2-code-flow
@@ -63,7 +67,6 @@ class GoogleAuth(View):
         self.app.add_url_rule('/oauth2callback', view_func=self.oauth2callback, methods=['GET',])
         # self.app.add_url_rule('/revoke', view_func=self.revoke, methods=['GET',])
         self.app.add_url_rule('/clear', view_func=self.clear_credentials, methods=['GET',])
-
 
     #----------------------------------------------------------------------
     def authorize(self):
@@ -86,28 +89,6 @@ class GoogleAuth(View):
 
         return flask.redirect(authorization_url)
 
-    # #----------------------------------------------------------------------
-    # def token(self):
-    # #----------------------------------------------------------------------
-    #     # Create flow instance to manage the OAuth 2.0 Authorization Grant Flow steps.
-    #     flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
-    #         self.client_secrets_file, scopes=self.scopes)
-
-    #     # flow.redirect_uri = flask.url_for('oauth2callback', _external=True)
-
-    #     # authorization_url, state = flow.authorization_url(
-    #     #     # Enable offline access so that you can refresh an access token without
-    #     #     # re-prompting the user for permission. Recommended for web server apps.
-    #     #     access_type='offline',
-    #     #     # Enable incremental authorization. Recommended as a best practice.
-    #     #     include_granted_scopes='true')
-
-    #     # # Store the state so the callback can verify the auth server response.
-    #     # flask.session['state'] = state
-
-    #     # return flask.redirect(authorization_url)
-
-
     #----------------------------------------------------------------------
     def oauth2callback(self):
     #----------------------------------------------------------------------
@@ -122,13 +103,11 @@ class GoogleAuth(View):
         # Use the authorization server's response to fetch the OAuth 2.0 tokens.
         authorization_response = flask.request.url
         token = flow.fetch_token(authorization_response=authorization_response)
-        if self.debug: self.debug( 'oauth2callback() token = {}'.format(token) )
+        if self.logdebug: self.logdebug( 'oauth2callback() token = {}'.format(token) )
 
         # Store credentials
-        # ACTION ITEM: In a production app, you likely want to save these
-        #              credentials in a persistent database instead.
-        # see https://github.com/GoogleCloudPlatform/google-cloud-python/issues/1412
-        # credentials = flow.credentials
+        ## first convert to GoogleCredentials so these can be saved
+        ## see https://github.com/GoogleCloudPlatform/google-cloud-python/issues/1412
         try:
             credentials = GoogleCredentials(
                 token['access_token'],
@@ -141,48 +120,35 @@ class GoogleAuth(View):
                 # revoke_uri=flow.credentials.revoke_uri, # try default
             )
             user_id = self.get_userid(credentials)
-            # user_id = credentials.it_token['sub']
         except AttributeError:
             cause = format_exc()
-            if self.debug: self.debug( 'oauth2callback() AttributeError\n{}'.format(cause) )
+            if self.logdebug: self.logdebug( 'oauth2callback() AttributeError\n{}'.format(cause) )
             credentials = flow.credentials
             user_id = None
 
-        # get information about the user. see https://developers.google.com/identity/toolkit/securetoken
-        if self.debug: self.debug( 'oauth2callback() user_id = {}'.format(user_id) )
+        if self.logdebug: self.logdebug( 'oauth2callback() user_id = {}'.format(user_id) )
 
-        # found user_id reference in http://oauth2client.readthedocs.io/en/latest/source/oauth2client.contrib.flask_util.html#module-oauth2client.contrib.flask_util
+        ## then use user_id to save in credential file
+        ## then refresh the credentials
         if user_id:
             credfile = os.path.join(self.credfolder, user_id)
             storage = Storage(credfile)
+            # do the new credentials not have a refresh token? do we already have credentials? 
+            # if so, just update the access token and expiry from new credentials into stored and resave
+            storedcred = storage.get()
+            if not credentials.refresh_token and storedcred:
+                storedcred.access_token = credentials.access_token
+                storedcred.token_expiry = credentials.token_expiry
+                credentials = storedcred
             credentials.set_store(storage)
             storage.put(credentials)
             flask.session['user_id'] = user_id
-        if self.debug: self.debug( 'oauth2callback() flask.session = {}'.format(flask.session) )
+            # refresh
+            http = httplib2.Http()
+            credentials.refresh(http)
+        if self.logdebug: self.logdebug( 'oauth2callback() flask.session = {}'.format(flask.session) )
 
         return flask.redirect(flask.url_for(self.startendpoint))
-
-
-    # #----------------------------------------------------------------------
-    # def revoke(self):
-    # #----------------------------------------------------------------------
-    #     credentials = get_credentials(self.credfolder)
-
-    #     if credentials:
-    #         revoke = requests.post('https://accounts.google.com/o/oauth2/revoke',
-    #             params={'token': credentials.token},
-    #             headers = {'content-type': 'application/x-www-form-urlencoded'})
-
-    #         status_code = getattr(revoke, 'status_code')
-    #         if status_code == 200:
-    #             return('Credentials successfully revoked')
-    #         else:
-    #             return('An error occurred')
-
-    #     else:
-    #         return ('You need to <a href="/authorize">authorize</a> before ' +
-    #                 'testing the code to revoke credentials')
-
 
     #----------------------------------------------------------------------
     def clear_credentials(self):
@@ -191,76 +157,27 @@ class GoogleAuth(View):
             del flask.session['credentials']
         if 'user_id' in flask.session:
             del flask.session['user_id']
-        return ('Credentials have been cleared')
-
-    # #----------------------------------------------------------------------
-    # def get_credentials(self):
-    # #----------------------------------------------------------------------
-    #     ##@#@# not in use
-    #     # Create flow instance to manage the OAuth 2.0 Authorization Grant Flow steps.
-    #     flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
-    #         self.client_secrets_file, scopes=self.scopes)
-    #     flow.redirect_uri = flask.url_for('oauth2callback', _external=True)
-    #     authorization_url, state = flow.authorization_url(
-    #         # Enable offline access so that you can refresh an access token without
-    #         # re-prompting the user for permission. Recommended for web server apps.
-    #         access_type='offline',
-    #         # Enable incremental authorization. Recommended as a best practice.
-    #         include_granted_scopes='true')
-
-    #     # Store the state so the callback can verify the auth server response.
-    #     flask.session['state'] = state
-
-    #     token = flow.fetch_token()        
+        return 'Credentials have been cleared from session cookie'
 
     #----------------------------------------------------------------------
     def get_userid(self, credentials):
     #----------------------------------------------------------------------
         try:
             user_id = flask.session['user_id']
-        
+            if self.logdebug: self.logdebug( 'get_userid() retrieved user_id from session cookie' )
+
         except KeyError:
             try:
                 people = discovery.build(PLUS_SERVICE, PLUS_VERSION, credentials=credentials).people()
                 profile = people.get(userId='me').execute()
                 user_id = profile['id']
-                if self.debug: self.debug( 'get_userid() profile = {}'.format(profile) )
+                if self.logdebug: self.logdebug( 'get_userid() profile from people.get = {}'.format(profile) )
             
             except google.auth.exceptions.RefreshError:
-                if self.debug: self.debug( 'invalid grant received when trying to get user profile, continuing' )
+                if self.logdebug: self.logdebug( 'invalid grant received when trying to get user profile, continuing' )
                 user_id = None
 
         return user_id
-
-        # # see https://developers.google.com/identity/toolkit/securetoken
-        # user_id = None
-        # try:
-        #     user_data = jwt.decode(token,
-        #                            issuer="https://securetoken.google.com",
-        #                            audience="running-routes-db-187616")
-        #     user_id = user_data["sub"]
-        # except jwt.InvalidTokenError:
-        #     if self.debug: self.debug( 'get_userid() Invalid token' )
-        # except jwt.ExpiredSignatureError:
-        #     if self.debug: self.debug( 'get_userid() Token has expired' )
-        # except jwt.InvalidIssuerError:
-        #     if self.debug: self.debug( 'get_userid() Token is not issued by Google' )
-        # except jwt.InvalidAudienceError:
-        #     if self.debug: self.debug( 'get_userid() Token is not valid for this endpoint' )
-
-        # return user_id
-
-
-
-#----------------------------------------------------------------------
-def credentials_to_dict(credentials):
-#----------------------------------------------------------------------
-    return {'token': credentials.token,
-            'refresh_token': credentials.refresh_token,
-            'token_uri': credentials.token_uri,
-            'client_id': credentials.client_id,
-            'client_secret': credentials.client_secret,
-            'scopes': credentials.scopes}
 
 #----------------------------------------------------------------------
 def get_credentials(credfolder):
@@ -275,14 +192,3 @@ def get_credentials(credfolder):
         credentials = None
 
     return credentials
-
-    # if 'credentials' in flask.session:
-    #     # https://stackoverflow.com/questions/29154374/how-can-i-refresh-a-stored-google-oauth-credential
-    #     credentials = google.oauth2.credentials.Credentials(
-    #                             **flask.session['credentials'])
-    #     # if credentials.access_token_expired:
-    #     #     credentials.refresh(httplib2.Http())
-    #     flask.session['credentials'] = credentials_to_dict( credentials )
-    #     return credentials
-    # else:
-    #     return None
