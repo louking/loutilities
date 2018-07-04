@@ -152,6 +152,7 @@ pip-log.txt
 # Unit test / coverage reports
 .coverage
 .tox
+htmlcov/
 
 #Translations
 *.mo
@@ -161,3 +162,5 @@ pip-log.txt
 
 # Mac crap
 .DS_Store
+
+
