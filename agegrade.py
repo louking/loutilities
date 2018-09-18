@@ -167,7 +167,8 @@ class AgeGrade():
         # need to do this so exact match doesn't get interpolated
         # alternate, possibly better, solution would be to use keys in millimeters rather than meters
         # but that would require reloading the data -- that might be fine, but is a bit risky
-        distmeters = int(round(distmeters))
+        # don't use int because need float arithmetic for interpolate
+        distmeters = round(distmeters)
 
         # find surrounding Xi points, and corresponding Fi, OCi points
         distlist = self.agegradedata[gen].keys()

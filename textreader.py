@@ -251,17 +251,17 @@ class TextReader():
         """
 
         # if true filename, type of filename is string
-        if type(filename) == str:
+        if type(filename) in [str,unicode]:
             self.ftype = filename.split('.')[-1].lower() # get extension
             self.intype = 'file'
             if self.ftype not in VALIDFTYPES:
-                raise parameterError, 'Invalid filename {0}: must have extension in {1}'.format(filename,VALIDFTYPES)
+                raise parameterError, 'Invalid filename {}: must have extension in {}'.format(filename,VALIDFTYPES)
         # otherwise assume 'filename' is list-like
         else:
             self.ftype = filetype.lower()
             self.intype = 'list'
             if self.ftype not in VALIDLTYPES:
-                raise parameterError, 'Invalid list: must use filetype in {1}'.format(VALIDLTYPES)
+                raise parameterError, 'Invalid list: must use filetype in {}'.format(VALIDLTYPES)
         
         # handle excel files
         if self.ftype in ['xls','xlsx']:
