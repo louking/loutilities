@@ -16,12 +16,13 @@ from urllib import urlencode
 
 # pypi
 import flask
-from flask import make_response, request, jsonify, url_for
+from flask import request, jsonify, url_for, current_app
 from flask.views import MethodView
 
 # homegrown
 
 class ParameterError(Exception): pass;
+class NotImplementedError(Exception): pass;
 
 debug = False
 
@@ -97,13 +98,15 @@ class DataTablesEditor():
 
     :param dbmapping: mapping dict with key for each db field, value is key in form or function(dbentry)
     :param formmapping: mapping dict with key for each form row, value is key in db row or function(form)
+    :param null2emptystring: if True translate '' from form to None for db and visa versa
     '''
 
     #----------------------------------------------------------------------
-    def __init__(self, dbmapping, formmapping):
+    def __init__(self, dbmapping, formmapping, null2emptystring=False):
     #----------------------------------------------------------------------
         self.dbmapping = dbmapping
         self.formmapping = formmapping
+        self.null2emptystring = null2emptystring
 
     #----------------------------------------------------------------------
     def get_response_data(self, dbentry):
@@ -127,6 +130,8 @@ class DataTablesEditor():
             else:
                 dbattr = self.formmapping[key]
                 data[key] = getattr(dbentry, dbattr)
+                if self.null2emptystring and data[key]==None:
+                    data[key] = ''
 
         return data
 
@@ -151,6 +156,8 @@ class DataTablesEditor():
                 key = self.dbmapping[dbattr]
                 if key in inrow:
                     setattr(dbrow, dbattr, inrow[key])
+                    if self.null2emptystring and getattr(dbrow, dbattr) == '':
+                        setattr(dbrow, dbattr, None)
                 else:
                     # ignore -- leave dbrow unchanged for this dbattr
                     pass
@@ -186,6 +193,7 @@ class TablesCsv(MethodView):
     
     :param app: flask app this is running under
     :param endpoint: endpoint parameter used by flask.url_for()
+    :param rule: rule parameter used by flask.add_url_rule() [defaults to '/' + endpoint]
     '''
 
     #----------------------------------------------------------------------
@@ -194,47 +202,38 @@ class TablesCsv(MethodView):
 
     def open(self):
         '''
-        must be overridden
-
         open source of "csv" data
         '''
-        pass
+        raise NotImplementedError
 
     def nexttablerow(self):
         '''
-        must be overridden
-
         return next record, similar to csv.DictReader - raises StopIteration
         :rtype: dict with row data for table
         '''
-        pass
+        raise NotImplementedError
 
     def close(self):
         '''
-        must be overridden
-
         close source of "csv" data
         '''
-        pass
+        raise NotImplementedError
 
     def permission(self):
         '''
-        must be overridden
-
         check for readpermission on data
         :rtype: boolean
         '''
+        raise NotImplementedError
         return False
 
     def renderpage(self, tabledata):
         '''
-        must be overridden
-
         renders flask template with appropriate parameters
         :param tabledata: list of data rows for rendering
         :rtype: flask.render_template()
         '''
-        pass
+        raise NotImplementedError
 
     #----------------------------------------------------------------------
     # these methods may be replaced
@@ -242,24 +241,18 @@ class TablesCsv(MethodView):
 
     def rollback(self):
         '''
-        may be overridden
-
         any processing which must be done on page abort or exception
         '''
-        pass
+        raise NotImplementedError
 
     def beforeget(self):
         '''
-        may be overridden
-
         any processing which needs to be done at the beginning of the get
         '''
         pass
 
     def abort(self):
         '''
-        may be overridden
-
         any processing which needs to be done to abort when forbidden (e.g., redirect)
         '''
         flask.abort(403)
@@ -274,6 +267,7 @@ class TablesCsv(MethodView):
         args = dict(app = None,
                     # pagename = None, 
                     endpoint = None, 
+                    rule = None, 
                     # dtoptions = {},
                     # readpermission = lambda: False, 
                     # columns = None, 
@@ -283,12 +277,18 @@ class TablesCsv(MethodView):
         for key in args:
             setattr(self, key, args[key])
 
+        # rule defaults to '/' + endpoint if not supplied
+        self.rule = self.rule or ('/' + self.endpoint)
+
     #----------------------------------------------------------------------
     def register(self):
     #----------------------------------------------------------------------
+        # name for view is last bit of fully named endpoint
+        name = self.endpoint.split('.')[-1]
+
         # create supported endpoints
-        my_view = self.as_view(self.endpoint, **self.kwargs)
-        self.app.add_url_rule('/{}'.format(self.endpoint),view_func=my_view,methods=['GET',])
+        my_view = self.as_view(name, **self.kwargs)
+        self.app.add_url_rule('{}'.format(self.rule),view_func=my_view,methods=['GET',])
 
     #----------------------------------------------------------------------
     def get(self):
@@ -371,6 +371,7 @@ def _editormethod(checkaction='', formrequest=True):
                 return redirect
 
             # prepare for possible errors
+            # see https://editor.datatables.net/manual/server-legacy#Server-to-client for format of self._fielderrors
             self._error = ''
             self._fielderrors = []
 
@@ -400,7 +401,7 @@ def _editormethod(checkaction='', formrequest=True):
                 if checkaction and action not in actioncheck:
                     self.rollback()
                     cause = 'unknown action "{}"'.format(action)
-                    self.app.logger.warning(cause)
+                    current_app.logger.warning(cause)
                     return dt_editor_response(error=cause)
 
                 # set up parameters to query
@@ -422,7 +423,7 @@ def _editormethod(checkaction='', formrequest=True):
                     cause = self._error
                 else:
                     cause = traceback.format_exc()
-                    self.app.logger.error(traceback.format_exc())
+                    current_app.logger.error(traceback.format_exc())
                 return dt_editor_response(data=[], error=cause, fieldErrors=self._fielderrors)
         return wrapped_f
     return wrap
@@ -489,14 +490,26 @@ class CrudApi(MethodView):
     
     **servercolumns** - if present table will be displayed through ajax get calls
 
-    :param app: flask app
+    **scriptfilter** - can be used to filter list of scripts into full pathname, version argument, etc
+
+    :param app: flask app or blueprint
     :param pagename: name to be displayed at top of html page
     :param endpoint: endpoint parameter used by flask.url_for()
+    :param rule: rule parameter used by flask.add_url_rule() [defaults to '/' + endpoint]
     :param eduploadoption: editor upload option (optional) see https://editor.datatables.net/reference/option/ajax
     :param clientcolumns: list of dicts for input to dataTables and Editor
+    :param filtercoloptions: list of clientcolumns options which are to be filtered out
     :param servercolumns: list of ColumnDT for input to sqlalchemy-datatables.DataTables
     :param idSrc: idSrc for use by Editor
     :param buttons: list of buttons for DataTable, from ['create', 'remove', 'edit', 'csv']
+
+    :param scriptfilter: function to filter pagejsfiles and pagecssfiles lists into full path / version lists
+    :param dtoptions: dict of datatables options to apply at end of options calculation
+    :param edoptions: dict of datatables editor options to apply at end of options calculation
+    :param pagejsfiles: list of javascript file paths to be included
+    :param pagecssfiles: list of css file paths to be included
+    :param templateargs: dict of arguments to pass to template - if callable arg function is called before being passed to template (no parameters)
+    :param validate: editor validation function (action, formdata), result is set to self._fielderrors
     '''
 
     #----------------------------------------------------------------------
@@ -507,17 +520,31 @@ class CrudApi(MethodView):
         # all arguments are made into attributes for self
         self.kwargs = kwargs
         args = dict(app = None,
+                    template = 'datatables.html',
                     pagename = None, 
                     endpoint = None, 
+                    rule = None, 
                     eduploadoption = None,
                     clientcolumns = None, 
+                    filtercoloptions = [],
                     servercolumns = None, 
                     files = None,
                     idSrc = 'DT_RowId', 
-                    buttons = ['create', 'edit', 'remove', 'csv'])
-        args.update(kwargs)        
+                    buttons = ['create', 'edit', 'remove', 'csv'],
+                    scriptfilter = lambda filelist: filelist,
+                    dtoptions = {},
+                    edoptions = {},
+                    pagejsfiles = [],
+                    pagecssfiles = [],
+                    templateargs = {},
+                    validate = lambda action,formdata: []
+                    )
+        args.update(kwargs)
         for key in args:
             setattr(self, key, args[key])
+
+        # rule defaults to '/' + endpoint if not supplied
+        self.rule = self.rule or ('/' + self.endpoint)
 
         # set up mapping between database and editor form
         # self.dte = DataTablesEditor(self.dbmapping, self.formmapping)
@@ -525,11 +552,14 @@ class CrudApi(MethodView):
     #----------------------------------------------------------------------
     def register(self):
     #----------------------------------------------------------------------
+        # name for view is last bit of fully named endpoint
+        name = self.endpoint.split('.')[-1]
+
         # create supported endpoints
-        my_view = self.as_view(self.endpoint, **self.kwargs)
-        self.app.add_url_rule('/{}'.format(self.endpoint),view_func=my_view,methods=['GET',])
-        self.app.add_url_rule('/{}/rest'.format(self.endpoint),view_func=my_view,methods=['GET', 'POST'])
-        self.app.add_url_rule('/{}/rest/<int:thisid>'.format(self.endpoint),view_func=my_view,methods=['PUT', 'DELETE'])
+        self.my_view = self.as_view(name, **self.kwargs)
+        self.app.add_url_rule('{}'.format(self.rule),view_func=self.my_view,methods=['GET',])
+        self.app.add_url_rule('{}/rest'.format(self.rule),view_func=self.my_view,methods=['GET', 'POST'])
+        self.app.add_url_rule('{}/rest/<int:thisid>'.format(self.rule),view_func=self.my_view,methods=['PUT', 'DELETE'])
 
         if self.files:
             self.files.register()
@@ -561,6 +591,7 @@ class CrudApi(MethodView):
                     update_options.append(update)
 
             # DataTables options string, data: and buttons: are passed separately
+            # self.dtoptions can update what we come up with
             dt_options = {
                 'dom': '<"H"lBpfr>t<"F"i>',
                 'columns': [
@@ -576,7 +607,12 @@ class CrudApi(MethodView):
                 'order': [1,'asc']
             }
             for column in self.clientcolumns:
-                dtcolumn = column.copy()
+                # dtcolumn = column.copy()
+                # if callable, call when making a copy
+                # this allows views to refresh, e.g., 'options' for select-like columns
+                # remove any column options indicated when this class called (filtercoloptions)
+                dtcolumn = { key: column[key] if not callable(column[key]) else column[key]()
+                            for key in column if key not in self.filtercoloptions}
                 # pop to remove from dtcolumn
                 dtonly = dtcolumn.pop('dt', {})
                 dtcolumn.pop('ed',{})
@@ -599,40 +635,11 @@ class CrudApi(MethodView):
                 dt_options['serverSide'] = True
                 tabledata = '{}/rest'.format(url_for(self.endpoint))
 
-            ed_options = {
-                'idSrc': self.idSrc,
-                'ajax': {
-                    'create': {
-                        'type': 'POST',
-                        'url':  '{}/rest'.format(url_for(self.endpoint)),
-                    },
-                    'edit': {
-                        'type': 'PUT',
-                        'url':  '{}/rest/{}'.format(url_for(self.endpoint),'_id_'),
-                    },
-                    'remove': {
-                        'type': 'DELETE',
-                        'url':  '{}/rest/{}'.format(url_for(self.endpoint),'_id_'),
-                    },
-                },
-                
-                'fields': [
-                ],
-            }
-            # TODO: these are editor field options as of Editor 1.5.6 -- do we really need to get rid of non-Editor options?
-            fieldkeys = ['className', 'data', 'def', 'entityDecode', 'fieldInfo', 'id', 'label', 'labelInfo', 'name', 'type', 'options', 'opts', 'ed']
-            for column in self.clientcolumns:
-                # pick keys which matter
-                edcolumn = { key: column[key] for key in fieldkeys if key in column}
-                # edcolumn = column.copy()
-                # pop to remove from edcolumn
-                edonly = edcolumn.pop('ed', {})
-                edcolumn.update(edonly)
-                ed_options['fields'].append(edcolumn)
+            # maybe user had their own ideas on what options are needed for table
+            dt_options.update(self.dtoptions)
 
-            # add upload, if desired
-            if self.eduploadoption:
-                ed_options['ajax']['upload'] = self.eduploadoption
+            # get editor options
+            ed_options = self.getedoptions()
 
             # get files if indicated
             if self.files:
@@ -646,11 +653,14 @@ class CrudApi(MethodView):
 
             # render page
             return self.render_template( pagename = self.pagename,
+                                         pagejsfiles = self.scriptfilter(self.pagejsfiles),
+                                         pagecssfiles = self.scriptfilter(self.pagecssfiles),
                                          tabledata = tabledata, 
                                          tablefiles = tablefiles,
                                          tablebuttons = self.buttons,
                                          options = {'dtopts': dt_options, 'editoropts': ed_options, 'updateopts': update_options},
-                                         writeallowed = self.permission())
+                                         writeallowed = self.permission(),
+                                         )
         
         except:
             # roll back database updates and close transaction
@@ -677,7 +687,9 @@ class CrudApi(MethodView):
             columns = self.servercolumns
 
             # get data from database
-            # TODO: verify this works with actual database, see rrwebapp/crudapi.py
+            # ### open, nexttablerow and close may create and manipulate self.output_result
+            # ### the tabledata list manipulation here is available for backwards compatibility
+            # ### at time of this writing, 
             # TODO: handle case when files are indicated
             self.open()
             tabledata = []
@@ -688,10 +700,13 @@ class CrudApi(MethodView):
             except StopIteration:
                 pass
             self.close()
-            output_result = tabledata
 
             # back to client
-            return jsonify(output_result)
+            if hasattr(self, 'output_result'):
+                return jsonify(self.output_result)
+            else:
+                output_result = tabledata
+                return jsonify(output_result)
 
         except:
             # roll back database updates and close transaction
@@ -699,9 +714,61 @@ class CrudApi(MethodView):
             raise
 
     #----------------------------------------------------------------------
+    def getedoptions(self):
+    #----------------------------------------------------------------------
+        ed_options = {
+            'idSrc': self.idSrc,
+            'ajax': {
+                'create': {
+                    'type': 'POST',
+                    'url':  '{}/rest'.format(url_for(self.endpoint)),
+                },
+                'edit': {
+                    'type': 'PUT',
+                    'url':  '{}/rest/{}'.format(url_for(self.endpoint),'_id_'),
+                },
+                'remove': {
+                    'type': 'DELETE',
+                    'url':  '{}/rest/{}'.format(url_for(self.endpoint),'_id_'),
+                },
+            },
+            
+            'fields': [
+            ],
+        }
+        # TODO: these are editor field options as of Editor 1.5.6 -- do we really need to get rid of non-Editor options?
+        fieldkeys = ['className', 'data', 'def', 'entityDecode', 'fieldInfo', 'id', 'label', 'labelInfo', 'name', 'type', 'options', 'opts', 'ed', 'separator', 'dateFormat']
+        for column in self.clientcolumns:
+            # current_app.logger.debug('getedoptions(): column = {}'.format(column))
+
+            # pick keys which matter
+            # if callable, call when making a copy
+            # this allows views to refresh, e.g., 'options' for select-like columns
+            # remove any column options indicated when this class called (filtercoloptions)
+            edcolumn = { key: column[key] if not callable(column[key]) else column[key]()
+                        for key in fieldkeys if key in column and key not in self.filtercoloptions}
+
+            # pop to remove from edcolumn
+            edonly = edcolumn.pop('ed', {})
+            edcolumn.update(edonly)
+            # current_app.logger.debug('getedoptions(): edcolumn={}'.format(edcolumn))
+            ed_options['fields'].append(edcolumn)
+
+        # add upload, if desired
+        if self.eduploadoption:
+            ed_options['ajax']['upload'] = self.eduploadoption
+
+        # maybe user had their own ideas on what options are needed for editor
+        # current_app.logger.debug('getedoptions(): self.edoptions={}'.format(self.edoptions))
+        ed_options.update(self.edoptions)
+
+        return ed_options
+
+    #----------------------------------------------------------------------
     def get(self):
     #----------------------------------------------------------------------
-        if request.path[-4:] != 'rest':
+        print 'request.path = {}'.format(request.path)
+        if request.path[-5:] != '/rest':
             return self._renderpage()
         else:
             return self._retrieverows()
@@ -713,11 +780,13 @@ class CrudApi(MethodView):
         # retrieve data from request
         thisdata = self._data[0]
         
+        self._fielderrors = self.validate('create', thisdata)
+        if self._fielderrors: raise ParameterError
+
         action = get_request_action(request.form)
         if action == 'create':
             thisrow = self.createrow(thisdata)
         else:
-            stophere
             thisrow = self.upload(thisdata)
 
         self._responsedata = [thisrow]
@@ -730,6 +799,9 @@ class CrudApi(MethodView):
         # retrieve data from request
         self._responsedata = []
         thisdata = self._data[thisid]
+        
+        self._fielderrors = self.validate('edit', thisdata)
+        if self._fielderrors: raise ParameterError
         
         thisrow = self.updaterow(thisid, thisdata)
 
@@ -754,77 +826,70 @@ class CrudApi(MethodView):
     def open(self):
     #----------------------------------------------------------------------
         '''
-        must be overridden
-
         open source of "csv" data
         '''
-        pass
+        raise NotImplementedError
 
     #----------------------------------------------------------------------
     def nexttablerow(self):
     #----------------------------------------------------------------------
         '''
-        must be overridden
-
         return next record, similar to csv.DictReader - raises StopIteration
         :rtype: dict with row data for table
         '''
-        pass
+        raise NotImplementedError
 
     #----------------------------------------------------------------------
     def close(self):
     #----------------------------------------------------------------------
         '''
-        must be overridden
-
         close source of "csv" data
         '''
-        pass
+        raise NotImplementedError
 
     #----------------------------------------------------------------------
     def permission(self):
     #----------------------------------------------------------------------
+        '''
+        check for readpermission on data
+        :rtype: boolean
+        '''
+        raise NotImplementedError
         return False
 
     #----------------------------------------------------------------------
     def createrow(self, formdata):
     #----------------------------------------------------------------------
         '''
-        must be overridden
-
         creates row in database
         
         :param formdata: data from create form
         :rtype: returned row for rendering, e.g., from DataTablesEditor.get_response_data()
         '''
-        pass
+        raise NotImplementedError
 
     #----------------------------------------------------------------------
     def updaterow(self, thisid, formdata):
     #----------------------------------------------------------------------
         '''
-        must be overridden
-
         updates row in database
         
         :param thisid: id of row to be updated
         :param formdata: data from create form
         :rtype: returned row for rendering, e.g., from DataTablesEditor.get_response_data()
         '''
-        pass
+        raise NotImplementedError
 
     #----------------------------------------------------------------------
     def deleterow(self, thisid):
     #----------------------------------------------------------------------
         '''
-        must be overridden
-
         deletes row in database
         
         :param thisid: id of row to be updated
         :rtype: returned row for rendering, e.g., from DataTablesEditor.get_response_data()
         '''
-        pass
+        raise NotImplementedError
 
     #----------------------------------------------------------------------
     # the following methods may be replaced in subclass
@@ -858,7 +923,22 @@ class CrudApi(MethodView):
     #----------------------------------------------------------------------
     def render_template(self, **kwargs):
     #----------------------------------------------------------------------
-        return flask.render_template('datatables.html', **kwargs)
+        # when class was instantiated, templateargs dict passed in, keys of which to be added to flask render_template
+        # some of these keys cannot be determined when the class was instantiated, e.g., if url_for() is needed
+        # because blueprint hadn't been instantiated yet. So these are pass as lambda: url_for(), and therefore callable
+        theseargs = {}
+        current_app.logger.debug('rendertemplate(): self.templateargs = {}'.format(self.templateargs))
+        for arg in self.templateargs:
+            current_app.logger.debug('rendertemplate(): adding {} to template args'.format(arg))
+            # maybe the template argument needs to be determined at runtime
+            if callable(self.templateargs[arg]):
+                theseargs[arg] = self.templateargs[arg]()
+            else:
+                theseargs[arg] = self.templateargs[arg]
+        theseargs.update(kwargs)
+
+        # current_app.logger.debug('flask.render_template({}, {})'.format(self.template, theseargs))
+        return flask.render_template(self.template, **theseargs)
 
 
 
@@ -883,7 +963,7 @@ def _uploadmethod():
             
             except Exception,e:
                 cause = 'Unexpected Error: {}\n{}'.format(e,traceback.format_exc())
-                self.app.logger.error(cause)
+                current_app.logger.error(cause)
                 return dt_editor_response(error=cause)
 
         return wrapped_f
@@ -912,23 +992,30 @@ class CrudFiles(MethodView):
         self.kwargs = kwargs
         args = dict(app = None,
                     uploadendpoint = None, 
+                    uploadrule = None,  # defaults to '/' + uploadendpoint
                     )
         args.update(kwargs)        
         for key in args:
             setattr(self, key, args[key])
+
+        # uploadrule defaults to '/' + uploadendpoint
+        self.uploadrule = self.uploadrule or ('/' + self.uploadendpoint)
 
         self.credentials = None
 
     #----------------------------------------------------------------------
     def register(self):
     #----------------------------------------------------------------------
+        # name for view is last bit of fully named endpoint
+        name = self.uploadendpoint.split('.')[-1]
+
         # # create supported endpoints
         # list_view = self.as_view(self.listendpoint, **self.kwargs)
         # self.app.add_url_rule('/{}'.format(self.listendpoint),view_func=list_view,methods=['GET',])
         if debug: print 'CrudFiles.register()'
 
-        upload_view = self.as_view(self.uploadendpoint, **self.kwargs)
-        self.app.add_url_rule('/{}'.format(self.uploadendpoint),view_func=upload_view,methods=['POST',])
+        upload_view = self.as_view(name, **self.kwargs)
+        self.app.add_url_rule('{}'.format(self.uploadrule),view_func=upload_view,methods=['POST',])
 
 
     #----------------------------------------------------------------------

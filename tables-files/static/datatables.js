@@ -90,7 +90,7 @@ function datatables(data, buttons, options, files) {
     }
 
     // take care of any initialization which needs to be done after datatables is initialized
-    if (afterdatatables !== undefined) {
+    if (typeof afterdatatables !== "undefined") {
         afterdatatables();
     };
 }
