@@ -20,6 +20,7 @@ from flask import request, jsonify, url_for, current_app
 from flask.views import MethodView
 
 # homegrown
+from nesteddict import NestedDict
 
 class ParameterError(Exception): pass;
 class NotImplementedError(Exception): pass;
@@ -74,13 +75,25 @@ def get_request_data(form):
     # fill in data[id][field] = value
     for formkey in form.keys():
         if formkey == 'action': continue
-        datapart,idpart,fieldpart = formkey.split('[')
+        # datapart,idpart,fieldpart = formkey.split('[')
+        formlineitems = formkey.split('[')
+        datapart,idpart = formlineitems[0:2]
         if datapart != 'data': raise ParameterError, "invalid input in request: {}".format(formkey)
 
         idvalue = int(idpart[0:-1])
-        fieldname = fieldpart[0:-1]
 
-        data[idvalue][fieldname] = form[formkey]
+        # the rest of it is the field structure, may have been [a], [a][b], etc before splitting at '['
+        fieldparts = [part[0:-1] for part in formlineitems[2:]]
+
+        # use NestedDict to handle arbitrary data field tree structure
+        fieldkey = '.'.join(fieldparts)
+        fieldlevels = NestedDict()
+        fieldlevels[fieldkey] = form[formkey]
+        data[idvalue].update(fieldlevels.to_dict())
+
+        from pprint import PrettyPrinter
+        pp = PrettyPrinter()
+        current_app.logger.debug('get_request_data(): formkey={} data={}'.format(formkey, pp.pformat(data)))
 
     # return decoded result
     return data
@@ -109,15 +122,22 @@ class DataTablesEditor():
         self.null2emptystring = null2emptystring
 
     #----------------------------------------------------------------------
-    def get_response_data(self, dbentry):
+    def get_response_data(self, dbentry, nesteddata=False):
     #----------------------------------------------------------------------
         '''
         set form values based on database model object
 
         :param dbentry: database entry (model object)
+        :param nesteddata: set to True if data coming from server is multi leveled e.g., see see https://editor.datatables.net/examples/simple/join.html)
         '''
 
-        data = {}
+        # ** use of NestedDict() may be useful for certain situations (e.g., see https://editor.datatables.net/examples/simple/join.html)
+        # ** however this has not been fully tested so is disabled by default  
+        if nesteddata:
+            # data['a.b.c'].to_dict() = data['a']['b']['c']
+            data = NestedDict()
+        else:
+            data = {}
 
         # create data fields based on formmapping
         for key in self.formmapping:
@@ -133,7 +153,10 @@ class DataTablesEditor():
                 if self.null2emptystring and data[key]==None:
                     data[key] = ''
 
-        return data
+        if nesteddata:
+            return data.to_dict()
+        else:
+            return data
 
     #----------------------------------------------------------------------
     def set_dbrow(self, inrow, dbrow):
@@ -590,38 +613,14 @@ class CrudApi(MethodView):
                     update['name'] = column['name']
                     update_options.append(update)
 
-            # DataTables options string, data: and buttons: are passed separately
-            # self.dtoptions can update what we come up with
-            dt_options = {
-                'dom': '<"H"lBpfr>t<"F"i>',
-                'columns': [
-                    {
-                        'data': None,
-                        'defaultContent': '',
-                        'className': 'select-checkbox',
-                        'orderable': False
-                    },
-                ],
-                'select': True,
-                'ordering': True,
-                'order': [1,'asc']
-            }
-            for column in self.clientcolumns:
-                # dtcolumn = column.copy()
-                # if callable, call when making a copy
-                # this allows views to refresh, e.g., 'options' for select-like columns
-                # remove any column options indicated when this class called (filtercoloptions)
-                dtcolumn = { key: column[key] if not callable(column[key]) else column[key]()
-                            for key in column if key not in self.filtercoloptions}
-                # pop to remove from dtcolumn
-                dtonly = dtcolumn.pop('dt', {})
-                dtcolumn.pop('ed',{})
-                dtcolumn.update(dtonly)
-                dt_options['columns'].append(dtcolumn)
+            # get datatable options
+            dt_options = self.getdtoptions()
+
+            # get editor options
+            ed_options = self.getedoptions()
 
             # build table data
             if self.servercolumns == None:
-                dt_options['serverSide'] = False
                 self.open()
                 tabledata = []
                 try:
@@ -632,14 +631,7 @@ class CrudApi(MethodView):
                     pass
                 self.close()
             else:
-                dt_options['serverSide'] = True
                 tabledata = '{}/rest'.format(url_for(self.endpoint))
-
-            # maybe user had their own ideas on what options are needed for table
-            dt_options.update(self.dtoptions)
-
-            # get editor options
-            ed_options = self.getedoptions()
 
             # get files if indicated
             if self.files:
@@ -714,6 +706,51 @@ class CrudApi(MethodView):
             raise
 
     #----------------------------------------------------------------------
+    def getdtoptions(self):
+    #----------------------------------------------------------------------
+
+        # DataTables options string, data: and buttons: are passed separately
+        # self.dtoptions can update what we come up with
+        dt_options = {
+            'dom': '<"H"lBpfr>t<"F"i>',
+            'columns': [
+                {
+                    'data': None,
+                    'defaultContent': '',
+                    'className': 'select-checkbox',
+                    'orderable': False
+                },
+            ],
+            'select': True,
+            'ordering': True,
+            'order': [1,'asc']
+        }
+        for column in self.clientcolumns:
+            # skip rows that are editor only
+            if 'edonly' in column: continue
+
+            # if callable, call when making a copy
+            # this allows views to refresh, e.g., 'options' for select-like columns
+            # remove any column options indicated when this class called (filtercoloptions)
+            dtcolumn = { key: column[key] if not callable(column[key]) else column[key]()
+                        for key in column if key not in self.filtercoloptions + ['dtonly']}
+            # pop to remove from dtcolumn
+            dtspecific = dtcolumn.pop('dt', {})
+            dtcolumn.pop('ed',{})
+            dtcolumn.update(dtspecific)
+            dt_options['columns'].append(dtcolumn)
+
+        if self.servercolumns == None:
+            dt_options['serverSide'] = False
+        else:
+            dt_options['serverSide'] = True
+
+        # maybe user had their own ideas on what options are needed for table
+        dt_options.update(self.dtoptions)
+
+        return dt_options
+
+    #----------------------------------------------------------------------
     def getedoptions(self):
     #----------------------------------------------------------------------
         ed_options = {
@@ -739,6 +776,9 @@ class CrudApi(MethodView):
         # TODO: these are editor field options as of Editor 1.5.6 -- do we really need to get rid of non-Editor options?
         fieldkeys = ['className', 'data', 'def', 'entityDecode', 'fieldInfo', 'id', 'label', 'labelInfo', 'name', 'type', 'options', 'opts', 'ed', 'separator', 'dateFormat']
         for column in self.clientcolumns:
+            # skip rows that are datatable only
+            if 'dtonly' in column: continue
+
             # current_app.logger.debug('getedoptions(): column = {}'.format(column))
 
             # pick keys which matter
@@ -746,11 +786,11 @@ class CrudApi(MethodView):
             # this allows views to refresh, e.g., 'options' for select-like columns
             # remove any column options indicated when this class called (filtercoloptions)
             edcolumn = { key: column[key] if not callable(column[key]) else column[key]()
-                        for key in fieldkeys if key in column and key not in self.filtercoloptions}
+                        for key in fieldkeys if key in column and key not in self.filtercoloptions + ['edonly']}
 
             # pop to remove from edcolumn
-            edonly = edcolumn.pop('ed', {})
-            edcolumn.update(edonly)
+            edspecific = edcolumn.pop('ed', {})
+            edcolumn.update(edspecific)
             # current_app.logger.debug('getedoptions(): edcolumn={}'.format(edcolumn))
             ed_options['fields'].append(edcolumn)
 
