@@ -74,11 +74,12 @@ def get_request_data(form):
 
     # fill in data[id][field] = value
     for formkey in form.keys():
-        if formkey == 'action': continue
-        # datapart,idpart,fieldpart = formkey.split('[')
+        # if formkey == 'action': continue
+        if formkey[0:5] != 'data[': continue
+
         formlineitems = formkey.split('[')
         datapart,idpart = formlineitems[0:2]
-        if datapart != 'data': raise ParameterError, "invalid input in request: {}".format(formkey)
+        # if datapart != 'data': raise ParameterError, "invalid input in request: {}".format(formkey)
 
         idvalue = int(idpart[0:-1])
 
@@ -405,6 +406,9 @@ def _editormethod(checkaction='', formrequest=True):
                     cause = 'operation not permitted for user'
                     return dt_editor_response(error=cause)
                 
+                # perform any processing required before method is executed
+                self.editor_method_prehook(request.form)
+
                 # get action
                 # TODO: modify get_request_action and get_request_data to allow either request object or form object, 
                 # and remove if/else for formrequest, e.g., action = get_request_action(request)
@@ -433,8 +437,13 @@ def _editormethod(checkaction='', formrequest=True):
                 # execute core of method
                 f(self,*args, **kwargs)
 
+                # perform any processing required after method is executed
+                self.editor_method_posthook(request.form)
+
                 # commit database updates and close transaction
                 self.commit()
+
+                # response to client                
                 return dt_editor_response(data=self._responsedata)
             
             except:
@@ -963,6 +972,9 @@ class CrudApi(MethodView):
     #----------------------------------------------------------------------
     def render_template(self, **kwargs):
     #----------------------------------------------------------------------
+        # NOTE: it is recommended that rather than replacing this method, templateargs and template class 
+        # parameters be used instead
+
         # when class was instantiated, templateargs dict passed in, keys of which to be added to flask render_template
         # some of these keys cannot be determined when the class was instantiated, e.g., if url_for() is needed
         # because blueprint hadn't been instantiated yet. So these are pass as lambda: url_for(), and therefore callable
@@ -980,6 +992,35 @@ class CrudApi(MethodView):
         # current_app.logger.debug('flask.render_template({}, {})'.format(self.template, theseargs))
         return flask.render_template(self.template, **theseargs)
 
+    #----------------------------------------------------------------------
+    def editor_method_prehook(self, form):
+    #----------------------------------------------------------------------
+        '''
+        This method is called within post() [create], put() [edit], delete() [edit] after permissions are checked
+
+        Replace this if any preprocessing is required based on the form. The form itself cannot be changed
+
+        NOTE: any updates to form validation should be done in self.validation()
+
+        parameters:
+        * form - request.form object (immutable)
+        '''
+        return
+
+    #----------------------------------------------------------------------
+    def editor_method_posthook(self, form):
+    #----------------------------------------------------------------------
+        '''
+        This method is called within post() [create], put() [edit], delete() [edit] db commit() just before database
+        commit and response to client
+
+        Use get_request_action(form) to determine which method is in progress
+        self._responsedata has data about to be returned to client
+
+        parameters:
+        * form - request.form object (immutable)
+        '''
+        return
 
 
 #######################################################################
