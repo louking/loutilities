@@ -38,7 +38,9 @@ class GoogleAuth(View):
 ############################################################################
 
     #----------------------------------------------------------------------
-    def __init__( self, app, client_secrets_file, scopes, startendpoint, credfolder=None, loginfo=None, logdebug=None, logerror=None ):
+    def __init__( self, app, client_secrets_file, scopes, startendpoint, credfolder=None, 
+                  logincallback=lambda email: None, logoutcallback=lambda: None,
+                  loginfo=None, logdebug=None, logerror=None, ):
     #----------------------------------------------------------------------
         '''
         :param app: flask application
@@ -46,15 +48,19 @@ class GoogleAuth(View):
         :param scopes: list of google scopes. see https://developers.google.com/identity/protocols/googlescopes
         :param startendpoint: endpoint to start with after authorization completed (no leading slash)
         :param credfolder: folder where credential Storage will be placed
-        :param info: info logger function
-        :param debug: debug logger function
-        :param error: debug logger function
+        :param logincallback: function(email) called when login detected
+        :param logoutcallback: function called when logout detected
+        :param loginfo: info logger function
+        :param logdebug: debug logger function
+        :param logerror: debug logger function
         '''
         self.app = app
         self.client_secrets_file = client_secrets_file
         self.scopes = scopes
         self.startendpoint = startendpoint
         self.credfolder = credfolder
+        self.logincallback = logincallback
+        self.logoutcallback = logoutcallback
         self.loginfo = loginfo
         self.logdebug = logdebug
         self.logerror = logerror
@@ -146,6 +152,10 @@ class GoogleAuth(View):
             # refresh
             http = httplib2.Http()
             credentials.refresh(http)
+
+            # take care of login specifics
+            self.logincallback(credentials.id_token['email'])
+
         if self.logdebug: self.logdebug( 'oauth2callback() flask.session = {}'.format(flask.session) )
 
         return flask.redirect(flask.url_for(self.startendpoint))
@@ -157,6 +167,10 @@ class GoogleAuth(View):
             del flask.session['credentials']
         if 'user_id' in flask.session:
             del flask.session['user_id']
+
+        # take care of logout specifics
+        self.logoutcallback()
+
         return 'Credentials have been cleared from session cookie'
 
     #----------------------------------------------------------------------
