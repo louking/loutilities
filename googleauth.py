@@ -148,7 +148,7 @@ class GoogleAuth(View):
                 credentials = storedcred
             credentials.set_store(storage)
             storage.put(credentials)
-            flask.session['user_id'] = user_id
+            flask.session['_ga_google_user_id'] = user_id
             # refresh
             http = httplib2.Http()
             credentials.refresh(http)
@@ -165,8 +165,8 @@ class GoogleAuth(View):
     #----------------------------------------------------------------------
         if 'credentials' in flask.session:
             del flask.session['credentials']
-        if 'user_id' in flask.session:
-            del flask.session['user_id']
+        if '_ga_google_user_id' in flask.session:
+            del flask.session['_ga_google_user_id']
 
         # take care of logout specifics
         self.logoutcallback()
@@ -177,7 +177,7 @@ class GoogleAuth(View):
     def get_userid(self, credentials):
     #----------------------------------------------------------------------
         try:
-            user_id = flask.session['user_id']
+            user_id = flask.session['_ga_google_user_id']
             if self.logdebug: self.logdebug( 'get_userid() retrieved user_id from session cookie' )
 
         except KeyError:
@@ -197,7 +197,7 @@ class GoogleAuth(View):
 def get_credentials(credfolder):
 #----------------------------------------------------------------------
     try:
-        user_id = flask.session['user_id']
+        user_id = flask.session['_ga_google_user_id']
         credfile = os.path.join(credfolder, user_id)
         storage = Storage(credfile)
         credentials = storage.get()
