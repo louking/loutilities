@@ -85,7 +85,7 @@ function datatables(data, buttons, options, files) {
     _dt_table = $('#datatable').DataTable ( options.dtopts );
 
     // any column filtering required? if so, define the filters
-    if (options.yadcfopts !== undefined) {
+    if ( ! $.isEmptyObject( options.yadcfopts ) ) {
         yadcf.init(_dt_table, options.yadcfopts);
     }
 

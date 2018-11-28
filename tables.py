@@ -534,10 +534,12 @@ class CrudApi(MethodView):
     :param servercolumns: list of ColumnDT for input to sqlalchemy-datatables.DataTables
     :param idSrc: idSrc for use by Editor
     :param buttons: list of buttons for DataTable, from ['create', 'remove', 'edit', 'csv']
+    :param pretablehtml: string any html which needs to go before the table
 
     :param scriptfilter: function to filter pagejsfiles and pagecssfiles lists into full path / version lists
     :param dtoptions: dict of datatables options to apply at end of options calculation
     :param edoptions: dict of datatables editor options to apply at end of options calculation
+    :param yadcfoptions: dict of yadcf options to apply at end of options calculation
     :param pagejsfiles: list of javascript file paths to be included
     :param pagecssfiles: list of css file paths to be included
     :param templateargs: dict of arguments to pass to template - if callable arg function is called before being passed to template (no parameters)
@@ -563,9 +565,11 @@ class CrudApi(MethodView):
                     files = None,
                     idSrc = 'DT_RowId', 
                     buttons = ['create', 'edit', 'remove', 'csv'],
+                    pretablehtml = '',
                     scriptfilter = lambda filelist: filelist,
                     dtoptions = {},
                     edoptions = {},
+                    yadcfoptions = {},
                     pagejsfiles = [],
                     pagecssfiles = [],
                     templateargs = {},
@@ -622,11 +626,10 @@ class CrudApi(MethodView):
                     update['name'] = column['name']
                     update_options.append(update)
 
-            # get datatable options
+            # get datatable, editor and yadcf options
             dt_options = self.getdtoptions()
-
-            # get editor options
             ed_options = self.getedoptions()
+            yadcf_options = self.getyadcfoptions()
 
             # build table data
             if self.servercolumns == None:
@@ -659,7 +662,11 @@ class CrudApi(MethodView):
                                          tabledata = tabledata, 
                                          tablefiles = tablefiles,
                                          tablebuttons = self.buttons,
-                                         options = {'dtopts': dt_options, 'editoropts': ed_options, 'updateopts': update_options},
+                                         pretablehtml = self.pretablehtml,
+                                         options = {'dtopts': dt_options, 
+                                                    'editoropts': ed_options, 
+                                                    'yadcfopts' : yadcf_options,
+                                                    'updateopts': update_options},
                                          writeallowed = self.permission(),
                                          )
         
@@ -812,6 +819,11 @@ class CrudApi(MethodView):
         ed_options.update(self.edoptions)
 
         return ed_options
+
+    #----------------------------------------------------------------------
+    def getyadcfoptions(self):
+    #----------------------------------------------------------------------
+        return self.yadcfoptions
 
     #----------------------------------------------------------------------
     def get(self):
