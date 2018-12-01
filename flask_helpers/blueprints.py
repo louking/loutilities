@@ -15,7 +15,7 @@ blueprints - blueprint helpers
 '''
 
 #------------------------------------------------------------------
-def add_url_rules(bp, cls):
+def add_url_rules(bp, cls, decorator=None, decorator_args=[]):
 #------------------------------------------------------------------
     '''
     add url rules to bp for class cls
@@ -37,8 +37,18 @@ def add_url_rules(bp, cls):
             url_rule, methods = options
         elif len(options) == 3:
             url_rule, methods, defaults = options
+
+        # decorator may be specified. 
+        # see http://flask.pocoo.org/docs/0.12/views/#decorating-views,
+        # http://scottlobdell.me/2015/04/decorators-arguments-python/
+        if not decorator:
+            view_func = cls.as_view(endpoint)
+        else:
+            view_func = decorator(*decorator_args)(cls.as_view(endpoint))
+        
+        # add url rule
         bp.add_url_rule(url_rule, endpoint=endpoint, methods=methods,
-                        defaults=defaults, view_func=cls.as_view(endpoint))
+                        defaults=defaults, view_func=view_func)
 
 #------------------------------------------------------------------
 def list_routes(app):
