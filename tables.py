@@ -520,7 +520,7 @@ class CrudApi(MethodView):
                 * 'change' - triggered when field changes - use wrapper to indicate what field(s) are updated
             * wrapper - dict which is wrapped around query response. value '_response_' indicates where query response should be placed
     
-    **servercolumns** - if present table will be displayed through ajax get calls
+    **serverside** - if true table will be displayed through ajax get calls
 
     **scriptfilter** - can be used to filter list of scripts into full pathname, version argument, etc
 
@@ -531,7 +531,7 @@ class CrudApi(MethodView):
     :param eduploadoption: editor upload option (optional) see https://editor.datatables.net/reference/option/ajax
     :param clientcolumns: list of dicts for input to dataTables and Editor
     :param filtercoloptions: list of clientcolumns options which are to be filtered out
-    :param servercolumns: list of ColumnDT for input to sqlalchemy-datatables.DataTables
+    :param serverside: set to true to use ajax to get table data
     :param idSrc: idSrc for use by Editor
     :param buttons: list of buttons for DataTable, from ['create', 'remove', 'edit', 'csv']
     :param pretablehtml: string any html which needs to go before the table
@@ -561,7 +561,7 @@ class CrudApi(MethodView):
                     eduploadoption = None,
                     clientcolumns = None, 
                     filtercoloptions = [],
-                    servercolumns = None, 
+                    serverside = False, 
                     files = None,
                     idSrc = 'DT_RowId', 
                     buttons = ['create', 'edit', 'remove', 'csv'],
@@ -632,7 +632,7 @@ class CrudApi(MethodView):
             yadcf_options = self.getyadcfoptions()
 
             # build table data
-            if self.servercolumns == None:
+            if not self.serverside:
                 self.open()
                 tabledata = []
                 try:
@@ -690,9 +690,6 @@ class CrudApi(MethodView):
                 
             # set up parameters to query
             self.beforequery()
-
-            # columns to retrieve from database
-            columns = self.servercolumns
 
             # get data from database
             # ### open, nexttablerow and close may create and manipulate self.output_result
@@ -756,10 +753,7 @@ class CrudApi(MethodView):
             dtcolumn.update(dtspecific)
             dt_options['columns'].append(dtcolumn)
 
-        if self.servercolumns == None:
-            dt_options['serverSide'] = False
-        else:
-            dt_options['serverSide'] = True
+        dt_options['serverSide'] = self.serverside
 
         # maybe user had their own ideas on what options are needed for table
         dt_options.update(self.dtoptions)
