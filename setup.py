@@ -39,11 +39,11 @@ setup(
     packages = find_packages(),
 #    include_package_data = True,
     scripts = [
-        'loutilities/agegrade.py',
-        'loutilities/apikey.py',
-        'loutilities/applytemplate.py',
-        'loutilities/filtercsv.py',
-        'loutilities/makerst.py',
+        'agegrade.py',
+        'apikey.py',
+        'applytemplate.py',
+        'filtercsv.py',
+        'makerst.py',
     ],
 
     # Project uses reStructuredText, so ensure that the docutils get
@@ -55,12 +55,12 @@ setup(
 
     # If any package contains any of these file types, include them:
     data_files = ([
-            globit('loutilities', ['*.conf','*.pyc','*.pyd','*.dll','*.h','*.xlsx']),
-            globit('loutilities/doc/source', ['*.txt', '*.rst', '*.html', '*.css', '*.js', '*.png', '*.py', ]),
-            globit('loutilities/doc/build/html', ['*.txt', '*.rst', '*.html', '*.css', '*.js', '*.png', ]),
-            globit('loutilities/doc/build/html/_sources', ['*.txt', '*.rst', '*.html', '*.css', '*.js', '*.png', ]),
-            globit('loutilities/doc/build/html/_static', ['*.txt', '*.rst', '*.html', '*.css', '*.js', '*.png', ]),
-            globit('loutilities/doc/build/html/_images', ['*.png', ]),
+            globit('.', ['*.conf','*.pyc','*.pyd','*.dll','*.h','*.xlsx']),
+            globit('doc/source', ['*.txt', '*.rst', '*.html', '*.css', '*.js', '*.png', '*.py', ]),
+            globit('doc/build/html', ['*.txt', '*.rst', '*.html', '*.css', '*.js', '*.png', ]),
+            globit('doc/build/html/_sources', ['*.txt', '*.rst', '*.html', '*.css', '*.js', '*.png', ]),
+            globit('doc/build/html/_static', ['*.txt', '*.rst', '*.html', '*.css', '*.js', '*.png', ]),
+            globit('doc/build/html/_images', ['*.png', ]),
         ]),
 
 
@@ -79,7 +79,7 @@ setup(
 
     # metadata for upload to PyPI
     description = 'some hopefully useful utilities',
-    long_description=open("loutilities/README.md").read(),
+    long_description=open("README.md").read(),
     license = 'Apache License, Version 2.0',
     author = 'Lou King',
     author_email = 'lking@pobox.com',
