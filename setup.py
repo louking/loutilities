@@ -18,7 +18,7 @@ import glob
 import pdb
 
 # home grown
-import version
+from loutilities import version
 
 from setuptools import setup, find_packages
 
@@ -39,11 +39,11 @@ setup(
     packages = find_packages(),
 #    include_package_data = True,
     scripts = [
-        'agegrade.py',
-        'apikey.py',
-        'applytemplate.py',
-        'filtercsv.py',
-        'makerst.py',
+        'loutilities/agegrade.py',
+        'loutilities/apikey.py',
+        'loutilities/applytemplate.py',
+        'loutilities/filtercsv.py',
+        'loutilities/makerst.py',
     ],
 
     # Project uses reStructuredText, so ensure that the docutils get
@@ -55,7 +55,7 @@ setup(
 
     # If any package contains any of these file types, include them:
     data_files = ([
-            globit('.', ['*.conf','*.pyc','*.pyd','*.dll','*.h','*.xlsx']),
+            globit('loutilities', ['*.conf','*.pyc','*.pyd','*.dll','*.h','*.xlsx']),
             globit('doc/source', ['*.txt', '*.rst', '*.html', '*.css', '*.js', '*.png', '*.py', ]),
             globit('doc/build/html', ['*.txt', '*.rst', '*.html', '*.css', '*.js', '*.png', ]),
             globit('doc/build/html/_sources', ['*.txt', '*.rst', '*.html', '*.css', '*.js', '*.png', ]),
