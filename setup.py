@@ -14,14 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import ez_setup
 import glob
 import pdb
 
 # home grown
 import version
 
-ez_setup.use_setuptools()
 from setuptools import setup, find_packages
 
 def globit(dir, filelist):
@@ -81,6 +79,7 @@ setup(
 
     # metadata for upload to PyPI
     description = 'some hopefully useful utilities',
+    long_description=open("loutilities/README.md").read(),
     license = 'Apache License, Version 2.0',
     author = 'Lou King',
     author_email = 'lking@pobox.com',
