@@ -783,8 +783,8 @@ class CrudApi(MethodView):
             'fields': [
             ],
         }
-        # TODO: these are editor field options as of Editor 1.5.6 -- do we really need to get rid of non-Editor options?
-        fieldkeys = ['className', 'data', 'def', 'entityDecode', 'fieldInfo', 'id', 'label', 'labelInfo', 'name', 'type', 'options', 'opts', 'ed', 'separator', 'dateFormat']
+        # TODO: these are known editor field options as of Editor 1.8.1 -- do we really need to get rid of non-Editor options?
+        fieldkeys = ['className', 'data', 'def', 'entityDecode', 'fieldInfo', 'id', 'label', 'labelInfo', 'name', 'type', 'options', 'opts', 'ed', 'separator', 'dateFormat', 'onFocus']
         for column in self.clientcolumns:
             # skip rows that are datatable only
             if 'dtonly' in column: continue
