@@ -20,7 +20,8 @@ from flask import request, jsonify, url_for, current_app
 from flask.views import MethodView
 
 # homegrown
-from nesteddict import NestedDict
+# from nesteddict import NestedDict
+from loutilities.nesteddict import NestedDict
 
 class ParameterError(Exception): pass;
 class NotImplementedError(Exception): pass;
@@ -492,11 +493,7 @@ class CrudApi(MethodView):
                },
                'dt': { options for DataTables only }
                'ed': { options for Editor only }
-              '_update' {
-                'endpoint' : <url endpoint to retrieve options from>,
-                'on' : <event>
-                'wrapper' : <wrapper for query response>
-              }
+              '_update': [see below]
             },
         ]
 
@@ -511,7 +508,7 @@ class CrudApi(MethodView):
         'dt' or 'ed' respectively to force being used for only that package, e.g., 'ed': {'render' ...} would render 
         just for the Editor, but be ignored for DataTables.
 
-        additionally the update option can be used to _update the options for any type = 'select', 'selectize'
+        additionally the update option can be used to _update the options for any type = 'select', 'select2', selectize'
 
         * _update - dict with following keys
             * endpoint - url endpoint to retrieve new options 
@@ -520,6 +517,17 @@ class CrudApi(MethodView):
                 * 'change' - triggered when field changes - use wrapper to indicate what field(s) are updated
             * wrapper - dict which is wrapped around query response. value '_response_' indicates where query response should be placed
     
+                        OR
+
+        * _update - dict with the following keys
+                'options' : function() to retrieve option tree:
+                        {'val1':<val1 Return options / JSON>,
+                         'val2':<val2 Return options / JSON>,
+                         ...}
+                    when this field changes to 'val1', val1 Return options / JSON fetched and handled by Editor
+                    see https://editor.datatables.net/reference/api/dependent(), Return options / JSON
+              }
+
     **serverside** - if true table will be displayed through ajax get calls
 
     **scriptfilter** - can be used to filter list of scripts into full pathname, version argument, etc
@@ -622,9 +630,26 @@ class CrudApi(MethodView):
             for column in self.clientcolumns:
                 if '_update' in column:
                     update = column['_update']  # convenience alias
-                    update['url'] = url_for(update['endpoint']) + '?' + urlencode({'_wrapper':dumps(update['wrapper'])})
-                    update['name'] = column['name']
-                    update_options.append(update)
+                    if 'url' in update:
+                        update['url'] = url_for(update['endpoint']) + '?' + urlencode({'_wrapper':dumps(update['wrapper'])})
+                        update['name'] = column['name']
+                        update_options.append(update)
+                    
+                    # options should be callable
+                    elif 'options' in update:
+                        # don't change column['_update']
+                        thisupdate = {}
+
+                        # pick up name from editor parameters, if present
+                        if 'ed' in column and 'name' in column['ed']:
+                            thisupdate['name'] = column['ed']['name']
+                        else:
+                            thisupdate['name'] = column['name']
+                        thisupdate['options'] = update['options']()
+                        update_options.append(thisupdate)
+
+                    else:
+                        raise ParameterError, 'invalid _update format: {}'.format(update)
 
             # get datatable, editor and yadcf options
             dt_options = self.getdtoptions()
@@ -747,9 +772,10 @@ class CrudApi(MethodView):
             # remove any column options indicated when this class called (filtercoloptions)
             dtcolumn = { key: column[key] if not callable(column[key]) else column[key]()
                         for key in column if key not in self.filtercoloptions + ['dtonly']}
-            # pop to remove from dtcolumn
+            # pop to remove certain keys from dtcolumn
             dtspecific = dtcolumn.pop('dt', {})
-            dtcolumn.pop('ed',{})
+            dtcolumn.pop('ed', {})
+            dtcolumn.pop('_update', {})
             dtcolumn.update(dtspecific)
             dt_options['columns'].append(dtcolumn)
 

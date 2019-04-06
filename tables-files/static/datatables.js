@@ -13,10 +13,52 @@
 //                   if not present, yadcf will not be configured
 
 var editor, _dt_table;
+var opttree = {};
+
+function checkeval(obj) {
+    // loop thru arrays
+    if (_.isArray(obj)) {
+        $.each(obj, function(i,val) {
+            obj[i] = checkeval(val);
+        })
+        return obj
+    
+    // loop thru objects (this can probably be combined with above)
+    } else if (_.isObject(obj)) {
+        if (obj.hasOwnProperty('eval')) {
+            return eval(obj['eval']);
+        } else {
+            $.each(obj, function(key,val) {
+                obj[key] = checkeval(val)
+            })
+            return obj
+        }
+    
+    // not array or object, so just return the item
+    } else {
+        return obj
+    }
+}
+
+// handle any updates of dependent fields.
+// opttree is set in datatables() if (options.updateopts !== undefined).
+// opttree has a key for each field with dependency, and for each possible value
+// of that field has object like that described in https://editor.datatables.net/reference/api/dependent()
+// under Return options / JSON
+function dependent_option( val, data ) {
+    options = {}
+    for (var field in opttree) {
+        if (opttree.hasOwnProperty(field)) {
+            $.extend(true, options, opttree[field][data.values[field]]);
+        }
+    }
+
+    return options;
+}
 
 function datatables(data, buttons, options, files) {
 
-    // convert render to javascript
+    // convert render to javascript -- backwards compatibility
     if (options.dtopts.hasOwnProperty('columns')) {
         for (i=0; i<options.dtopts.columns.length; i++) {
             if (options.dtopts.columns[i].hasOwnProperty('render')) {
@@ -24,7 +66,7 @@ function datatables(data, buttons, options, files) {
             }
         }        
     }
-    // convert display and render to javascript
+    // convert display and render to javascript - backwards compatibility
     if (options.editoropts !== undefined) {
         if (options.editoropts.hasOwnProperty('fields')) {
             for (i=0; i<options.editoropts.fields.length; i++) {
@@ -38,17 +80,37 @@ function datatables(data, buttons, options, files) {
         }
     }
 
+    // drill down any options with {eval : string} key, and evaluate the string
+    options = checkeval(options);
+
     // configure editor if requested
     if (options.editoropts !== undefined) {
+        // disable autocomplete / autofill by default
+        $.extend( true, $.fn.dataTable.Editor.Field.defaults, {
+          attr: {
+            autocomplete: 'off'
+          }
+        } );
+
+        // create editor instance
         $.extend(options.editoropts,{table:'#datatable'})
         editor = new $.fn.dataTable.Editor ( options.editoropts );
 
         if (options.updateopts !== undefined) {
             for (i=0; i<options.updateopts.length; i++) {
-                if (options.updateopts[i].on == 'open') {
-                    editor.dependent( options.updateopts[i].name, options.updateopts[i].url, {event:'focus'} )
-                } else if (options.updateopts[i].on == 'change') {
-                    editor.dependent( options.updateopts[i].name, options.updateopts[i].url, {event:'change'} )
+                updateopt = options.updateopts[i]
+                // handle option trees
+                if (updateopt.options != undefined) {
+                    opttree[updateopt.name] = updateopt.options;
+                    editor.dependent( updateopt.name, dependent_option );
+                    
+                // handle ajax update options
+                } else {
+                    if (updateopt.on == 'open') {
+                        editor.dependent( updateopt.name, updateopt.url, {event:'focus'} )
+                    } else if (options.updateopts[i].on == 'change') {
+                        editor.dependent( updateopt.name, updateopt.url, {event:'change'} )
+                    }
                 }
             }
         }
@@ -94,3 +156,18 @@ function datatables(data, buttons, options, files) {
         afterdatatables();
     };
 }
+
+// from https://github.com/select2/select2/issues/1246#issuecomment-17428249
+// $.ui.dialog.prototype._allowInteraction = function(e) {
+//     return !!$(e.target).closest('.ui-dialog, .ui-datepicker, .select2-drop').length;
+// };
+
+// patch for select2 search. see https://stackoverflow.com/questions/19787982/select2-plugin-and-jquery-ui-modal-dialogs
+if ($.ui && $.ui.dialog && $.ui.dialog.prototype._allowInteraction) {
+    var ui_dialog_interaction = $.ui.dialog.prototype._allowInteraction;
+    $.ui.dialog.prototype._allowInteraction = function(e) {
+        if ($(e.target).closest('.select2-dropdown').length) return true;
+        return ui_dialog_interaction.apply(this, arguments);
+    };
+}
+
