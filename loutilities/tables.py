@@ -53,7 +53,10 @@ def get_request_action(form):
     :param form: MultiDict from `request.form`
     :rtype: action - 'create', 'edit', or 'remove'
     '''
-    return form['action']
+    if 'action' in form:
+        return form['action']
+    else:
+        return None
 
 #----------------------------------------------------------------------
 def get_request_data(form):
@@ -759,6 +762,7 @@ class CrudApi(MethodView):
                     'orderable': False
                 },
             ],
+            'rowId': self.idSrc,
             'select': True,
             'ordering': True,
             'order': [1,'asc']
@@ -800,6 +804,10 @@ class CrudApi(MethodView):
                     'type': 'PUT',
                     'url':  '{}/rest/{}'.format(url_for(self.endpoint),'_id_'),
                 },
+                'editRefresh': {
+                    'type': 'PUT',
+                    'url':  '{}/rest'.format(url_for(self.endpoint)),
+                },
                 'remove': {
                     'type': 'DELETE',
                     'url':  '{}/rest/{}'.format(url_for(self.endpoint),'_id_'),
@@ -835,8 +843,8 @@ class CrudApi(MethodView):
             ed_options['ajax']['upload'] = self.eduploadoption
 
         # maybe user had their own ideas on what options are needed for editor
-        # current_app.logger.debug('getedoptions(): self.edoptions={}'.format(self.edoptions))
         ed_options.update(self.edoptions)
+        if debug: current_app.logger.debug('getedoptions(): ed_options={}'.format(ed_options))
 
         return ed_options
 
@@ -855,22 +863,30 @@ class CrudApi(MethodView):
             return self._retrieverows()
 
     #----------------------------------------------------------------------
-    @_editormethod(checkaction='create', formrequest=True)
+    @_editormethod(checkaction='create,refresh', formrequest=True)
     def post(self):
     #----------------------------------------------------------------------
         # retrieve data from request
         thisdata = self._data[0]
         
-        self._fielderrors = self.validate('create', thisdata)
+        action = get_request_action(request.form)
+        self._fielderrors = self.validate(action, thisdata)
         if self._fielderrors: raise ParameterError
 
-        action = get_request_action(request.form)
         if action == 'create':
             thisrow = self.createrow(thisdata)
+            self._responsedata = [thisrow]
+        elif action == 'refresh':
+            form = request.form
+            if 'refresh' in form and 'ids' in form:
+                self._responsedata = self.refreshrows(form['ids'])
+            else:
+                cause = 'post(): edit action without refresh parameters'
+                current_app.logger.error(cause)
+                self._error = cause
+                raise ParameterError, cause
         else:
             thisrow = self.upload(thisdata)
-
-        self._responsedata = [thisrow]
 
 
     #----------------------------------------------------------------------
@@ -947,6 +963,18 @@ class CrudApi(MethodView):
         :param formdata: data from create form
         :rtype: returned row for rendering, e.g., from DataTablesEditor.get_response_data()
         '''
+        raise NotImplementedError
+
+    #----------------------------------------------------------------------
+    def refreshrows(self, ids):
+    #----------------------------------------------------------------------
+        '''
+        refreshes rows from database
+        
+        :param ids: comma separated ids for which refresh is required
+        :rtype: returned rows for rendering, e.g., from DataTablesEditor.get_response_data()
+        '''
+        current_app.logger.debug('tables.refreshrows("{}"): reached'.format(ids))
         raise NotImplementedError
 
     #----------------------------------------------------------------------
