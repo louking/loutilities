@@ -163,4 +163,6 @@ htmlcov/
 # Mac crap
 .DS_Store
 
+# PyCharm
+.idea/
 
