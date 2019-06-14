@@ -22,17 +22,6 @@ from loutilities import version
 
 from setuptools import setup, find_packages
 
-def globit(dir, filelist):
-    outfiles = []
-    for file in filelist:
-        filepath = '{0}/{1}'.format(dir,file)
-        gfilepath = glob.glob(filepath)
-        for i in range(len(gfilepath)):
-            f = gfilepath[i][len(dir)+1:]
-            gfilepath[i] = '{0}/{1}'.format(dir,f)  # if on windows, need to replace backslash with frontslash
-            outfiles += [gfilepath[i]]
-    return (dir, outfiles)
-
 setup(
     name = "loutilities",
     version = version.__version__,
@@ -53,16 +42,8 @@ setup(
           'unicodecsv>=0.13.0',
         ],
 
-    # If any package contains any of these file types, include them:
-    data_files = ([
-            globit('loutilities', ['*.conf','*.pyc','*.pyd','*.dll','*.h','*.xlsx']),
-            globit('doc/source', ['*.txt', '*.rst', '*.html', '*.css', '*.js', '*.png', '*.py', ]),
-            globit('doc/build/html', ['*.txt', '*.rst', '*.html', '*.css', '*.js', '*.png', ]),
-            globit('doc/build/html/_sources', ['*.txt', '*.rst', '*.html', '*.css', '*.js', '*.png', ]),
-            globit('doc/build/html/_static', ['*.txt', '*.rst', '*.html', '*.css', '*.js', '*.png', ]),
-            globit('doc/build/html/_images', ['*.png', ]),
-        ]),
-
+    # include data files as appropriate
+    data_files = ([]),
 
     entry_points = {
         'console_scripts': [
