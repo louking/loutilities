@@ -1,2 +1,2 @@
 # this string is used for the version string in the documentation, as well as the egg
-__version__ = '0.14.9.dev1'
+__version__ = '0.14.9.dev3'

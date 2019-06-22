@@ -38,12 +38,13 @@ setup(
     # Project uses reStructuredText, so ensure that the docutils get
     # installed or upgraded on the target machine
     install_requires = [
-##        'wx>=2.9.4',
           'unicodecsv>=0.13.0',
         ],
 
     # include data files as appropriate
-    data_files = [],
+    package_data={
+        '': ['tables-assets/static/*', 'tables-assets/templates/*'],
+    },
 
     entry_points = {
         'console_scripts': [
