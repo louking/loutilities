@@ -43,7 +43,7 @@ setup(
         ],
 
     # include data files as appropriate
-    data_files = ([]),
+    data_files = [],
 
     entry_points = {
         'console_scripts': [

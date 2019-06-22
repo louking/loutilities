@@ -188,6 +188,11 @@ function datatables(data, buttons, options, files) {
         if ($.inArray(button, ['create', 'edit', 'editRefresh', 'remove']) >= 0) {
             button_options.push({extend:button, editor:editor});
         } else {
+            // convert button actions to javascript, // kludge for conversion from python
+            if (button.hasOwnProperty('action')) {
+                button.action = eval(button.action)
+            }
+
             button_options.push(button);
         }
     };
@@ -208,7 +213,19 @@ function datatables(data, buttons, options, files) {
 
     // any column filtering required? if so, define the filters
     if ( ! $.isEmptyObject( options.yadcfopts ) ) {
-        yadcf.init(_dt_table, options.yadcfopts);
+        // general options supplied
+        if (options.yadcfopts.hasOwnProperty('general')) {
+            // assume also has columns key
+            yadcf.init(_dt_table, options.yadcfopts.columns, options.yadcfopts.general);
+
+        // only columns options supplied
+        } else if (options.yadcfopts.hasOwnProperty('columns')) {
+            yadcf.init(_dt_table, options.yadcfopts.columns);
+
+        // legacy / backwards compatibility (just columns options
+        } else {
+            yadcf.init(_dt_table, options.yadcfopts);
+        }
     }
 
     // take care of any initialization which needs to be done after datatables is initialized

@@ -10,6 +10,7 @@ $.fn.dataTable.ext.buttons.editRefresh = {
 
         // Ajax request to refresh the data for those ids
         $.ajax( {
+            // application specific: my application has different urls for different methods
             url: config.editor.ajax().editRefresh.url,
             type: 'post',
             dataType: 'json',

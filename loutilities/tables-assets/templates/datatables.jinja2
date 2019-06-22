@@ -1,5 +1,6 @@
-{# datatables.html is used, in conjunction with datatables.js to display a single
+{# datatables.jinja2 is used, in conjunction with datatables.js to display a single
    dataTable $('#datatable'), with optional Editor support
+   to use an Editor template, extend this template and store the Editor template within editorform block
 
    parameters:
       pagename:     name of page to be displayed at the top of the page
@@ -27,14 +28,18 @@
           NOTES: - if chart is to be drawn, pagejsfiles must include script file 
                    which has dtchart() entry point
                  - if table should not be visible, use 'beforetable' and have dtopts 'dom': ''
+
+      ## TODO: should this be in this file or should there db a dbdatables.jinja2 which extends this?
+      saformjsurls: list of js urls which contain Editor standalone form code (see DbCrudApi)
 #}
 
-{% extends "layout.html" %}
+{% extends "layout.jinja2" %}
 {% block pagename %}
     {{ pagename }}
-{% endblock %}
+{% endblock pagename %}
 {% block css %}
-{% endblock %}
+{% endblock css %}
+
 {% block scripts %}
   <script type="text/javascript">
     $( document ).ready( function() {
@@ -51,9 +56,12 @@
       {% endif %}
     })
   </script>
-  <script type="text/javascript">
-  </script>
-{% endblock %}
+  
+  {% for saformurl in saformjsurls %}
+    <script type="text/javascript" src="{{ saformurl }}"></script>
+  {% endfor %}
+
+{% endblock scripts %}
 {% block body %}
   {% if chartloc == 'beforeprehtml' %}
     <div class='dt-chart'></div>
@@ -82,4 +90,6 @@
   {% if chartloc == 'aftertable' %}
     <div class='dt-chart'></div>
   {% endif %}
-{% endblock %}
+  {% block editorform %}
+  {% endblock editorform %}
+{% endblock body %}

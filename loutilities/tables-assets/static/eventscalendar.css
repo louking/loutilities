@@ -1,0 +1,96 @@
+/* override jquery-ui */
+.ui-widget-content {
+    color: black;
+}
+
+.ui-widget-content.fc-mon, 
+.ui-widget-content.fc-tue, 
+.ui-widget-content.fc-wed, 
+.ui-widget-content.fc-thu, 
+.ui-widget-content.fc-fri {
+    background:grey;
+}
+
+.ui-widget-content.fc-sat, 
+.ui-widget-content.fc-sun {
+    background:forestgreen;
+}
+
+
+.legend-table {
+    width: 100%;
+}
+
+.legend-table-frontend {
+    width: 200px;
+    border: 1px solid grey;
+    margin-top: 5px;
+    margin-left: 2px;
+}
+
+.legend-header {
+    font-weight: bold;
+    text-align: center;
+}
+
+.legend-cell {
+    width: 25%;
+}
+
+/* availability exceptions need to be between day and state styling */
+.legend-cell.contracts-available,
+.ui-widget-content.contracts-available {
+    background:forestgreen;
+    background-color:forestgreen;
+}
+
+.legend-cell.contracts-unavailable,
+.ui-widget-content.contracts-unavailable {
+    background:grey;
+    background-color:grey;
+}
+
+/* state stylings need to be after day and exception styling, to override */
+.legend-cell.contracts-committed,
+.ui-widget-content.contracts-committed {
+    background:deepskyblue;
+    background-color:deepskyblue;
+}
+
+.legend-cell.contracts-tentative,
+.ui-widget-content.contracts-tentative {
+    background:yellow;
+    background-color:yellow;
+}
+
+.legend-cell.contracts-event-uncommitted,
+.fc-event.contracts-event-uncommitted {
+    background-color: #d83abe;
+    border-color: #d83abe;
+}
+
+.legend-cell.contracts-event-blocked,
+.fc-event.contracts-event-blocked {
+    background-color: #3a87ad;
+    border-color: #3a87ad;   
+}
+
+.legend-cell.contracts-event-unblocked,
+.fc-event.contracts-event-unblocked {
+    background-color: #ba6d10;
+    border-color: #ba6d10;
+}
+
+.legend-cell.contracts-event-canceled,
+.fc-event.contracts-event-canceled {
+    background-color: #707172;
+    border-color: #707172;
+    text-decoration: line-through;
+}
+
+.legend-cell.contracts-event-exception,
+.fc-event.contracts-event-exception {
+    background-color: #171a42;
+    border-color: #171a42;
+}
+

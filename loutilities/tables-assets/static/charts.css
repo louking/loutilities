@@ -1,0 +1,40 @@
+.chart {
+  font-family: Verdana,Geneva,sans-serif;
+  font: 15px sans-serif;
+}
+
+.chart .heading {
+  font: 18px sans-serif;
+}
+
+.axis {
+  font: 12px sans-serif;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  stroke-width: 2px;
+  shape-rendering: crispEdges;
+}
+
+.x.axis path {
+  /*display: none;*/
+}
+
+.line {
+  fill: none;
+  stroke: steelblue;
+  stroke-width: 2.5px;
+}
+
+.overlay {
+  fill: none;
+  pointer-events: all;
+}
+
+.focus circle {
+  fill: none;
+  stroke: steelblue;
+}

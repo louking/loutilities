@@ -1,0 +1,22 @@
+{% extends "layout-base.jinja2" %}
+{% block nav %}
+    {# standard nav uses flask-nav #}
+    {{ nav.nav_menu.render(id='navigation', renderer='nav_renderer') }}
+{% endblock %}
+
+{% block signin %}
+{# standard signin uses google sign-in #}
+{# needed for google sign-in, see https://developers.google.com/identity/sign-in/web/server-side-flow #}
+  <script src="https://apis.google.com/js/client:platform.js?onload=start" async defer></script>
+  <script>
+    function start() {
+      gapi.load('auth2', function() {
+        auth2 = gapi.auth2.init({
+          client_id: "{{ config.GOOGLE_OAUTH_CLIENT_ID }}",
+          // Scopes to request in addition to 'profile' and 'email' -- space separated string
+          scope: 'https://www.googleapis.com/auth/drive.file'
+        });
+      });
+    }
+  </script>
+{% endblock %}
