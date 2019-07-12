@@ -1,0 +1,26 @@
+/* works with filters.py */
+
+.external-filter {
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+
+.external-filter .label {
+    font-weight: bold;
+    display: inline-block;
+}
+
+.external-filter .filter {
+    display: inline-block;
+}
+
+.filter-container {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.filter-item {
+  order: 0;
+  flex-grow: 0;
+  margin-right: 5px;
+}
