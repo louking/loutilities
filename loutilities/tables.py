@@ -1249,6 +1249,7 @@ class DteDbRelationship():
     * dbfield - field as used in the database table (not the model -- this is field in table which has list of model items)
     * uselist - set to True if using tags, otherwise field expects single entry, default True
     * searchbox - set to True if searchbox desired, default False
+    * queryparams - dict containing parameters for query to determine options, or callable which returns such a dict
 
     e.g.,
         class Parent(Base):
@@ -1281,6 +1282,7 @@ class DteDbRelationship():
                     dbfield=None,
                     uselist=True,
                     searchbox=False,  # TODO: is this needed?
+                    queryparams= {}
                     )
         args.update(kwargs)
 
@@ -1331,7 +1333,6 @@ class DteDbRelationship():
 
     # ----------------------------------------------------------------------
     def get(self, dbrow_or_id):
-    # ----------------------------------------------------------------------
         # check if id supplied, if so retrieve dbrow
         if type(dbrow_or_id) in [int, str]:
             dbrow = self.tablemodel.query().filter_by(id=dbrow_or_id).one()
@@ -1362,7 +1363,9 @@ class DteDbRelationship():
     def options(self):
         # ----------------------------------------------------------------------
         # return sorted list of items in the model
-        items = [{'label': getattr(item, self.labelfield), 'value': item.id} for item in self.fieldmodel.query.all()]
+        queryparams = self.queryparams() if callable(self.queryparams) else self.queryparams
+        items = [{'label': getattr(item, self.labelfield), 'value': item.id}
+                 for item in self.fieldmodel.query.filter_by(**queryparams).all()]
         items.sort(key=lambda k: k['label'].lower())
         return items
 
@@ -1629,9 +1632,10 @@ class DbCrudApi(CrudApi):
         model: sqlalchemy model for the table to read/write from
         dbmapping: mapping dict with key for each db field, value is key in form or function(dbentry)
         formmapping: mapping dict with key for each form row, value is key in db row or function(form)
-        queryparms: dict of query parameters relevant to this table to retrieve table or rows
+        queryparams: dict of query parameters relevant to this table to retrieve table or rows
         dtoptions: datatables options to override / add
         version_id_col: name of column which contains version id
+        checkrequired: True causes checks of columns with className: 'field_req'
 
         **dbmapping** is dict like {'dbattr_n':'formfield_n', 'dbattr_m':f(form), ...}
         **formmapping** is dict like {'formfield_n':'dbattr_n', 'formfield_m':f(dbrow), ...}
@@ -2151,16 +2155,15 @@ class DbCrudApi(CrudApi):
         if debug: current_app.logger.debug('DbCrudApi.open()')
         if debug: current_app.logger.debug('DbCrudApi.open: self.db = {}, self.model = {}'.format(self.db, self.model))
 
-        # pull in the data
-        query = self.db.session.query().select_from(self.model).filter_by(**self.queryparams)
-
         # not server table, rows will be handled in nexttablerow()
         if not self.serverside:
+            query = self.model.query.filter_by(**self.queryparams)
             self.rows = iter(query.all())
 
         # server table, this is the output to be returned, nexttablerow() is noop
         # note get_response_data transform is not done - name mapping is in self.servercolumns
         else:
+            query = self.db.session.query().select_from(self.model).filter_by(**self.queryparams)
             args = request.args.to_dict()
             rowTable = DataTables(args, query, self.servercolumns)
 
@@ -2234,10 +2237,13 @@ class DbCrudApi(CrudApi):
             self.dte.set_dbrow(formdata, dbrow)
             for field in self.uniquecols:
                 # if debug: current_app.logger.debug('DbCrudApi.validatedb(): checking field "{}":"{}"'.format(field,getattr(dbrow,field)))
-                row = self.model.query.filter_by(**{field: getattr(dbrow, field)}).one_or_none()
+                rows = self.model.query.filter_by(**self.queryparams).filter_by(**{field: getattr(dbrow, field)}).all()
                 # if we found a row that matches, flag error
 
-                if row:
+                # looking to see if we found any rows which aren't the row we're currently working on
+                # the row we are working on can be found if there's a list of subrecords hanging off of
+                # this record thru one to many relationship
+                if (len(rows) == 1 and rows[0].id != dbrow.id) or len(rows) >= 2:
                     results.append({'name': field, 'status': 'duplicate found, must be unique'})
 
             # clear out dbrow from sqlalchemy

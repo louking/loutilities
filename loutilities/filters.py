@@ -9,6 +9,20 @@
 ###########################################################################################
 '''
 filters - filters which work with tables-assets/static/filters.css
+
+Usage::
+
+    filters = filtercontainerdiv()
+    filters.append(filterdiv('filter1-id', 'Filter 1 Label'))
+    filters.append(filterdiv('filter2-id', 'Filter 2 Label'))
+
+        :
+
+    example = CrudApi(
+            :
+        pretablehtml = filters,
+            :
+    )
 '''
 
 from dominate.tags import div, span
