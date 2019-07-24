@@ -237,6 +237,71 @@ function datatables(data, buttons, options, files) {
     firstDataTableScrollAdjust();        
 }
 
+// editor button dialog feature
+function EditorButtonDialog(options) {
+    // defaults
+    this.options = {
+        content: '',
+        accordian: true,
+    }
+    Object.assign(this.options, options);
+
+    this.popup = $('<div>').append(this.options.content);
+
+    // accordian desired
+    if (this.options.accordian) {
+        this.content = this.popup.accordion({
+            heightStyle: "content",
+            animate: 30,
+        });
+        this.buttondialog = $('<div>').append(this.popup);
+
+    // just plain dialog
+    } else {
+        this.content = this.popup;
+        this.buttondialog = this.popup;
+    }
+
+    this.buttondialog.dialog({
+        dialogClass: "no-titlebar",
+        draggable: false,
+        //resizeable: false,
+        open: this.content,
+        autoOpen: false,
+        height: "auto",
+        width: 450,
+    });
+
+    this.status = 0;
+
+    this.click = function() {
+        if (this.status == 0) {
+            this.open()
+        } else {
+            this.close()
+        };
+    };
+
+    this.open = function() {
+        this.buttondialog.dialog("open");
+        this.content.show();
+        this.status = 1;
+    };
+
+    this.close = function() {
+        this.buttondialog.dialog("close");
+        this.content.hide();
+        this.status = 0;
+    };
+
+    this.position = function(position) {
+        this.buttondialog.dialog({
+            position: position,
+        });
+    }
+}
+
+
 // from https://github.com/select2/select2/issues/1246#issuecomment-17428249
 // $.ui.dialog.prototype._allowInteraction = function(e) {
 //     return !!$(e.target).closest('.ui-dialog, .ui-datepicker, .select2-drop').length;
