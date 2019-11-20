@@ -105,7 +105,8 @@ class filetrigger():
                 time.sleep(self.period)
                 files = glob.glob('{0}/*'.format(self.triggerdir))
                 files = [f for f in files if os.path.basename(f)[0:4] != 'tmp.'] # don't care about tmp.*
-                if len(files) > 1: raise invalidParameter,'multiple files found in {0}: {1}'.format(self.triggerdir,files)
+                if len(files) > 1: raise invalidParameter(
+                    'multiple files found in {0}: {1}'.format(self.triggerdir, files))
                 
                 # did we find a new file?
                 if len(files) == 1:
@@ -187,7 +188,7 @@ def main():
     (options, args) = parser.parse_args()
     
     if len(args) != 1:
-        raise invalidParameter,"requires directory parameter"
+        raise invalidParameter("requires directory parameter")
     
     directory = args.pop(0)
     directory = os.path.abspath(directory)

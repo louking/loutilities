@@ -161,10 +161,12 @@ class ConfigFile():
             return self.cp.get(section,option)
         
         except NoSectionError:
-            raise unknownSection,"section '{sec}' not found in {file}".format(sec=section,file=self.fname)
+            raise unknownSection("section '{sec}' not found in {file}".format(sec=section, file=self.fname))
         
         except NoOptionError:
-            raise unknownOption,"option '{opt}' not found in section '{sec}' within {file}".format(opt=option,sec=section,file=self.fname)
+            raise unknownOption(
+                "option '{opt}' not found in section '{sec}' within {file}".format(opt=option, sec=section,
+                                                                                   file=self.fname))
         
     #----------------------------------------------------------------------
     def items(self,section,**kwargs):
@@ -178,7 +180,7 @@ class ConfigFile():
             return self.cp.items(section,**kwargs)
         
         except NoSectionError:
-            raise unknownSection,"section '{sec}' not found in {file}".format(sec=section,file=self.fname)
+            raise unknownSection("section '{sec}' not found in {file}".format(sec=section, file=self.fname))
         
     #----------------------------------------------------------------------
     def update(self,section,option,value):

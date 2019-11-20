@@ -53,7 +53,7 @@ def main():
     if not os.path.exists(srcpath):
         srcpath = './doc'
         if not os.path.exists(srcpath):
-            print 'Could not find ./doc/source or ./doc.  Exiting'
+            print('Could not find ./doc/source or ./doc.  Exiting')
             return
     
     # keep track of files created

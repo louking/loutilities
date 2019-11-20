@@ -107,10 +107,11 @@ Example use of :class:`bfile.brecord` (note highest level is :attr:`foostruct` d
 
 # standard
 from __future__ import print_function
-import pdb
+
+import re
 import struct
 import sys
-import re
+
 
 class invalidRangeCheck(Exception): pass
 
@@ -159,7 +160,7 @@ def rangecheck (start,  fieldname, value, *range, **kwargs):
             print ('{0:06x}:\tRange Error: {1}={2} ({3}..{4})'.format(start, fieldname, value,range[0],range[1]), file=rangeerr)
 
     else:
-        raise invalidRangeCheck, 'start={0}, fieldname={1}, range={2}'.format(start,fieldname,origrange)
+        raise invalidRangeCheck('start={0}, fieldname={1}, range={2}'.format(start, fieldname, origrange))
 
 # ###############################################################################
 class Struct:
@@ -200,7 +201,7 @@ class bfile:
         
         allowedbyteorder = ['>','<','@','=','!']
         if byteorder not in allowedbyteorder:
-            raise parameterError, 'byteorder must be one of {0}'.format(allowedbyteorder)
+            raise parameterError('byteorder must be one of {0}'.format(allowedbyteorder))
 
         # some handy structures
         self.sint8 = Struct (byteorder+'b')
@@ -424,7 +425,7 @@ def exprfilter(exprstr, varprefix, varsuffix):
         elif o == ')':
             parencheck -= 1
     if parencheck != 0:
-        raise invalidCount, 'unmatched parenthesis in {0}'.format(exprstr)
+        raise invalidCount('unmatched parenthesis in {0}'.format(exprstr))
     
     # create iterator which demarcates the operators vs. the variables
     # incrementally add operators and updated variables to expression
@@ -533,7 +534,7 @@ class brecord():
                     elif f[1][SIGNNDX] == F:
                         retval[field] = BF.fget(length)
                     else:
-                        raise invalidStruct, f
+                        raise invalidStruct(f)
                     
                     # Perform range check if desired, and if field has a range to be checked, and if we're not supposed to ignore this field
                     dorangecheck = self._dorangecheck and len(f[1]) >= RNGNDX+1 and not field in self._rangeignore
@@ -590,7 +591,7 @@ class brecord():
             
             # unfortunately this doesn't provide a lot of information
             if not field in record.keys():
-                raise invalidInputKeyNotFound, field
+                raise invalidInputKeyNotFound(field)
                 
             length = f[1][LENNDX]  # take a chance -- it might be the length if a scalar field
             # For scalar fields, just put to the file
@@ -602,7 +603,7 @@ class brecord():
                 elif f[1][SIGNNDX] == F:
                     BF.fput(length, record[field])
                 else:
-                    raise invalidStruct, f
+                    raise invalidStruct(f)
             
             # If a "record field", create a handler if necessary, 
             # then put the appropriate number of those records (note this is recursive)
@@ -621,7 +622,7 @@ class brecord():
                     f[1][HNDLRNDX] = handler
                 handler = f[1][HNDLRNDX]
                 if len(record[field]) != count:
-                    raise invalidSubrecCount, '{0}, count={1}, #subrecs={2}'.format(field, count, len(record[field]))
+                    raise invalidSubrecCount('{0}, count={1}, #subrecs={2}'.format(field, count, len(record[field])))
                 
                 # put the records to the file, from the list
                 for subrec in record[field]:

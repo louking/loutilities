@@ -142,7 +142,7 @@ class TextDictReader():
                         if f not in self.field:
                             fieldsnotfound.append(f)
                     if len(fieldsnotfound) != 0:
-                        raise headerError, 'could not find fields {} in header {}'.format(fieldsnotfound,origline)
+                        raise headerError('could not find fields {} in header {}'.format(fieldsnotfound, origline))
                         
                     # sort found fields by order found within the line
                     foundfields_dec = [(self.field[f]['start'],self.field[f]) for f in self.field]
@@ -209,7 +209,7 @@ class TextDictReader():
                 
         # not good to come here
         except StopIteration:
-            raise headerError, 'header not found'
+            raise headerError('header not found')
         
     #----------------------------------------------------------------------
     def next(self):
@@ -255,13 +255,13 @@ class TextReader():
             self.ftype = filename.split('.')[-1].lower() # get extension
             self.intype = 'file'
             if self.ftype not in VALIDFTYPES:
-                raise parameterError, 'Invalid filename {}: must have extension in {}'.format(filename,VALIDFTYPES)
+                raise parameterError('Invalid filename {}: must have extension in {}'.format(filename, VALIDFTYPES))
         # otherwise assume 'filename' is list-like
         else:
             self.ftype = filetype.lower()
             self.intype = 'list'
             if self.ftype not in VALIDLTYPES:
-                raise parameterError, 'Invalid list: must use filetype in {}'.format(VALIDLTYPES)
+                raise parameterError('Invalid list: must use filetype in {}'.format(VALIDLTYPES))
         
         # handle excel files
         if self.ftype in ['xls','xlsx']:
@@ -312,7 +312,7 @@ class TextReader():
         
         # check if it is ok to read
         if not self.opened:
-            raise ValueError, 'I/O operation on a closed file'
+            raise ValueError('I/O operation on a closed file')
         
         # handle excel files
         if self.ftype in ['xls','xlsx']:
@@ -400,13 +400,13 @@ class TextReader():
         
         # do some validation
         if self.delimited:
-            raise parameterError, 'cannot set delimiters for file which is already delimited'
+            raise parameterError('cannot set delimiters for file which is already delimited')
         if type(delimiters) != list:
-            raise parameterError, 'delimiters must be a list of increasing integers'
+            raise parameterError('delimiters must be a list of increasing integers')
         lastdelimiter = -1
         for delimiter in delimiters:
             if type(delimiter) != int or delimiter <= lastdelimiter:
-                raise parameterError, 'delimiters must be a list of increasing integers'
+                raise parameterError('delimiters must be a list of increasing integers')
             lastdelimiter = delimiter
             
         self.delimiters = delimiters
@@ -423,7 +423,7 @@ class TextReader():
         """
         
         if not self.delimiters:
-            raise parameterError, 'cannot split string if delimiters not set'
+            raise parameterError('cannot split string if delimiters not set')
         
         rval = []
         for i in range(len(self.delimiters)):

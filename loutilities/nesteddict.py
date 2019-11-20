@@ -115,7 +115,7 @@ class NestedDict(dict):
             self.val = obj2dict(newval)
 
         else:
-            raise parameterError, 'invalid parameter {}: newval must be dict or object'.format(newval)
+            raise parameterError('invalid parameter {}: newval must be dict or object'.format(newval))
 
     #----------------------------------------------------------------------
     def to_dict(self):

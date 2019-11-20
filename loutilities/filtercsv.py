@@ -91,7 +91,7 @@ def main():
         filt = [filt]
     for f in filt:
         if type(f) != dict:
-            raise invalidParameter,'FILTER must be dict or list of dicts'
+            raise invalidParameter('FILTER must be dict or list of dicts')
     
     # get the header line, which is always sent to the output file
     hdr = sys.stdin.next()

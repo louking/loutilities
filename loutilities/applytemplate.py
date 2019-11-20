@@ -62,21 +62,18 @@ NOTE: all white space at the beginning of each line is deleted when applied to t
 '''
 
 # standard
-import pdb
 import argparse
 import glob
 import os.path
-import ConfigParser
 
+import ConfigParser
 # pypi
 import pystache
-
-# github
-
-# other
-
 # home grown
 import version
+
+# github
+# other
 
 TEMPLATESEC = 'template'
 SUBSEC = 'substitutions'

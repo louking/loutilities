@@ -501,7 +501,7 @@ def _editormethod(checkaction='', formrequest=True):
     :param formrequest: True if request action, data is in form (False for 'remove' action)
     '''
     # see http://python-3-patterns-idioms-test.readthedocs.io/en/latest/PythonDecorators.html
-    if debug: print '_editormethod(checkaction={}, formrequest={})'.format(checkaction, formrequest)
+    if debug: print('_editormethod(checkaction={}, formrequest={})'.format(checkaction, formrequest))
     def wrap(f):
         def wrapped_f(self, *args, **kwargs):
             redirect = self.init()
@@ -533,7 +533,7 @@ def _editormethod(checkaction='', formrequest=True):
                 else:
                     action = request.args['action']
 
-                if debug: print 'checkaction = {}'.format(checkaction)
+                if debug: print('checkaction = {}'.format(checkaction))
                 # checkaction needs to be list
                 if checkaction:
                     actioncheck = checkaction.split(',')
@@ -723,7 +723,7 @@ class CrudApi(MethodView):
 
         if self.files:
             self.files.register()
-            if debug: print 'self.files.register()'
+            if debug: print('self.files.register()')
 
     #----------------------------------------------------------------------
     def _renderpage(self):
@@ -765,7 +765,7 @@ class CrudApi(MethodView):
                         update_options.append(thisupdate)
 
                     else:
-                        raise ParameterError, 'invalid _update format: {}'.format(update)
+                        raise ParameterError('invalid _update format: {}'.format(update))
 
             # get datatable, editor and yadcf options
             dt_options = self.getdtoptions()
@@ -789,7 +789,7 @@ class CrudApi(MethodView):
             # get files if indicated
             if self.files:
                 tablefiles = self.files.list()
-                if debug: print tablefiles
+                if debug: print(tablefiles)
             else:
                 tablefiles = None
 
@@ -970,7 +970,7 @@ class CrudApi(MethodView):
     #----------------------------------------------------------------------
     def get(self):
     #----------------------------------------------------------------------
-        print 'request.path = {}'.format(request.path)
+        print('request.path = {}'.format(request.path))
         if request.path[-5:] != '/rest':
             return self._renderpage()
         else:
@@ -998,7 +998,7 @@ class CrudApi(MethodView):
                 cause = 'post(): edit action without refresh parameters'
                 current_app.logger.error(cause)
                 self._error = cause
-                raise ParameterError, cause
+                raise ParameterError(cause)
         else:
             thisrow = self.upload(thisdata)
 
@@ -1223,7 +1223,7 @@ def _uploadmethod():
 
                 return dt_editor_response(**self._responsedata)
             
-            except Exception,e:
+            except Exception as e:
                 cause = 'Unexpected Error: {}\n{}'.format(e,traceback.format_exc())
                 current_app.logger.error(cause)
                 return dt_editor_response(error=cause)
@@ -1290,7 +1290,7 @@ class DteDbRelationship():
         reqdfields = ['fieldmodel', 'labelfield', 'formfield', 'dbfield']
         for field in reqdfields:
             if not args[field]:
-                raise ParameterError, '{} parameters are all required'.format(', '.join(reqdfields))
+                raise ParameterError('{} parameters are all required'.format(', '.join(reqdfields)))
 
         # set arguments as class attributes
         for key in args:
@@ -1425,7 +1425,7 @@ class DteDbSubrec():
         reqdfields = ['model', 'field', 'subfield', 'formfield']
         for field in reqdfields:
             if not args[field]:
-                raise ParameterError, '{} parameters are all required'.format(', '.join(reqdfields))
+                raise ParameterError('{} parameters are all required'.format(', '.join(reqdfields)))
 
         # set arguments as class attributes
         for key in args:
@@ -1487,7 +1487,7 @@ class DteDbBool():
         reqdfields = ['formfield', 'dbfield']
         for field in reqdfields:
             if not args[field]:
-                raise ParameterError, '{} parameters are all required'.format(', '.join(reqdfields))
+                raise ParameterError('{} parameters are all required'.format(', '.join(reqdfields)))
 
         # set arguments as class attributes
         for key in args:
@@ -1589,7 +1589,7 @@ class DteDbDependent():
         reqdfields = ['model', 'modelfield', 'depmodel', 'depmodelfield', 'depvaluefield']
         for field in reqdfields:
             if not args[field]:
-                raise ParameterError, '{} parameters are all required'.format(', '.join(reqdfields))
+                raise ParameterError('{} parameters are all required'.format(', '.join(reqdfields)))
 
         # set arguments as class attributes
         for key in args:
@@ -1813,7 +1813,7 @@ class DbCrudApi(CrudApi):
             else:
                 if type(treatment) != dict or len(treatment) != 1 or treatment.keys()[0] not in ['boolean',
                                                                                                  'relationship']:
-                    raise ParameterError, 'invalid treatment: {}'.format(treatment)
+                    raise ParameterError('invalid treatment: {}'.format(treatment))
 
                 # handle boolean treatment
                 if 'boolean' in treatment:
@@ -2171,7 +2171,7 @@ class DbCrudApi(CrudApi):
 
             # check for errors
             if 'error' in output:
-                raise ParameterError, output['error']
+                raise ParameterError(output['error'])
 
             # # transform rowTable.output_result()['data'] using get_response_data
             # ## loop through data
@@ -2396,7 +2396,7 @@ class DbCrudApiRolePermissions(DbCrudApi):
 
         # Caller should use roles_accepted OR roles_required but not both
         if self.roles_accepted and self.roles_required:
-            raise ParameterError, 'use roles_accepted OR roles_required but not both'
+            raise ParameterError('use roles_accepted OR roles_required but not both')
 
         # assure None or [ 'role1', ... ]
         if self.roles_accepted and type(self.roles_accepted) != list:
@@ -2455,7 +2455,7 @@ class CrudFiles(MethodView):
         # the args dict has all the defined parameters to 
         # caller supplied keyword args are used to update the defaults
         # all arguments are made into attributes for self
-        if debug: print 'CrudFiles.__init__() **kwargs={}'.format(kwargs)
+        if debug: print('CrudFiles.__init__() **kwargs={}'.format(kwargs))
 
         self.kwargs = kwargs
         args = dict(app = None,
@@ -2480,7 +2480,7 @@ class CrudFiles(MethodView):
         # # create supported endpoints
         # list_view = self.as_view(self.listendpoint, **self.kwargs)
         # self.app.add_url_rule('/{}'.format(self.listendpoint),view_func=list_view,methods=['GET',])
-        if debug: print 'CrudFiles.register()'
+        if debug: print('CrudFiles.register()')
 
         upload_view = self.as_view(name, **self.kwargs)
         self.app.add_url_rule('{}'.format(self.uploadrule),view_func=upload_view,methods=['POST',])

@@ -28,25 +28,25 @@ agegrade - calculate age grade statistics
 '''
 
 # standard
-import pdb
 import argparse
 import csv
-import pickle
 import os.path
+import pickle
 import shutil
-from math import floor
-
-# pypi
-
-# github
 
 # home grown
-import version
-from config import *
-from loutilities import csvwt
+from . import version
+from .config import *
+
+from . import csvwt
+
+
+# pypi
+# github
 
 # exceptions for this module.  See __init__.py for package exceptions
 class missingConfiguration(Exception): pass
+class parameterError(Exception): pass
 
 #----------------------------------------------------------------------
 def getagtable(agegradewb):
@@ -144,7 +144,7 @@ class AgeGrade():
         else:
             pathn = os.path.join(CONFIGDIR,'agegrade.cfg')
             if not os.path.exists(pathn):
-                raise missingConfiguration, 'agegrade configuration not found, run agegrade.py to configure'
+                raise missingConfiguration('agegrade configuration not found, run agegrade.py to configure')
             
             C = open(pathn)
             self.agegradedata = pickle.load(C)
@@ -208,7 +208,7 @@ class AgeGrade():
         # check for some input errors
         gen = gen.upper()
         if gen not in ['F','M']:
-            raise parameterError, 'gen must be M or F'
+            raise parameterError('gen must be M or F')
 
         # number of meters in a mile
         mpermile = 1609.344     # wavacalc15 has been corrected - now also handles integer distmiles
@@ -227,7 +227,8 @@ class AgeGrade():
         minmeters = min(distlist)*1.0
         maxmeters = max(distlist)*1.0
         if distmeters < minmeters or distmeters > maxmeters:
-            raise parameterError, 'distmiles must be between {:0.3f} and {:0.1f}'.format(minmeters/mpermile,maxmeters/mpermile)
+            raise parameterError(
+                'distmiles must be between {:0.3f} and {:0.1f}'.format(minmeters / mpermile, maxmeters / mpermile))
 
         # interpolate factor and openstd based on distance for this age
         age = int(age)
@@ -289,12 +290,12 @@ def main():
 
     # must have one of the options
     if not args.agworkbook and not args.agconfigfile:
-        print 'one of --agworkbook or --agconfigfile must be specified'
+        print('one of --agworkbook or --agconfigfile must be specified')
         return
         
     # can't have both of the options
     if args.agworkbook and args.agconfigfile:
-        print 'only one of --agworkbook or --agconfigfile should be specified'
+        print('only one of --agworkbook or --agconfigfile should be specified')
         return
 
     # configuration file will be here    
@@ -315,16 +316,17 @@ def main():
             test = pickle.load(C)
             C.close()
         except IOError:
-            print '{0}: not found'.format(args.agconfigfile)
+            print('{0}: not found'.format(args.agconfigfile))
             return
         except KeyError:
-            print '{0}: invalid format'.format(args.agconfigfile)
+            print('{0}: invalid format'.format(args.agconfigfile))
             return
             
         shutil.copyfile(args.agconfigfile,pathn)
-        
-    print 'updated {0}'.format(pathn)
-    
+
+    print('updated {0}'.format(pathn))
+
+
 # ##########################################################################################
 #	__main__
 # ##########################################################################################

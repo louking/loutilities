@@ -160,7 +160,7 @@ def rendertime(dbtime,precision,useceiling=True):
         
         # retttime should have leading 0.  remove it
         if rettime[0] != '0':
-            raise softwareError,'formatted adjusted time fraction does not have leading 0: {0}'.format(adjtime)
+            raise softwareError('formatted adjusted time fraction does not have leading 0: {0}'.format(adjtime))
         rettime = rettime[1:]
         
     else:

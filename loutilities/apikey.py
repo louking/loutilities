@@ -27,20 +27,17 @@ apikey - manage api keys for a given package
 '''
 
 # standard
-import pdb
 import argparse
 
 # pypi
-import appdirs
+import .appdirs
+import .extconfigparser
+# home grown
+import .version
+
 
 # github
-
 # other
-
-# home grown
-import version
-import extconfigparser
-from loutilities import *
 
 class unknownKey(Exception): pass
 
@@ -139,7 +136,7 @@ def main():
     plist = args.list
     
     if not plist and not(keyname and keyvalue):
-        print 'KEYNAME and VALUE must be supplied'
+        print('KEYNAME and VALUE must be supplied')
         return
     
     apikey = ApiKey(author,application)
@@ -149,8 +146,8 @@ def main():
         
     else:
         for keyname,value in apikey.list():
-            print '{}={}'.format(keyname,value)
-    
+            print('{}={}'.format(keyname, value))
+
 
 # ###############################################################################
 # ###############################################################################

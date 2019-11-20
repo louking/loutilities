@@ -91,14 +91,16 @@ def record2csv(inrecs, mapping, outfile=None):
     elif type(mapping) in [dict, OrderedDict]:
         mappingtype = dict
     else:
-        raise invalidParameter, "invalid mapping type {}. mapping type must be list, dict or OrderedDict",format(type(mapping))
+        raise invalidParameter(
+            "invalid mapping type {}. mapping type must be list, dict or OrderedDict").with_traceback(
+            format(type(mapping)))
 
     outfields = []
     for outfield in mapping:
         invalue = mapping[outfield] if mappingtype==dict else outfield
 
         if type(invalue) not in [str,unicode] and not callable(invalue):
-            raise invalidParameter, 'invalid mapping {}. mapping values must be str or function'.format(outvalue)
+            raise invalidParameter('invalid mapping {}. mapping values must be str or function'.format(outvalue))
 
         outfields.append(outfield)
 
@@ -297,10 +299,10 @@ class Db2Csv(Base2Csv):
                     # assumes only one level
                     for subk in k:
                         if type(subk) != str:
-                            raise parameterError, '{0}: invalid hdrmap {1}'.format(filename,hdrmap)
+                            raise parameterError('{0}: invalid hdrmap {1}'.format(filename, hdrmap))
                         outhdr.append(subk)
                 else:
-                    raise parameterError, '{0}: invalid hdrmap {1}'.format(filename,hdrmap)
+                    raise parameterError('{0}: invalid hdrmap {1}'.format(filename, hdrmap))
         else:
             hdrmap = dict(zip(inhdr,inhdr))
             outhdr = inhdr

@@ -62,7 +62,7 @@ class AutoTextCtrl(wx.TextCtrl):
         '''
         items = kwargs.pop('items', [])    # default for items is empty list
         if type(items) != list:
-            raise InvalidParameter, 'items must be list'
+            raise InvalidParameter('items must be list')
         self.setitems(items)
         
         self.setdelcallback(kwargs.pop('delcallback', None))
