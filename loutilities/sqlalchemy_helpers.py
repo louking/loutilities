@@ -24,7 +24,6 @@ from sqlalchemy.orm import object_mapper
 # other
 
 # home grown
-import version
 
 class dbConsistencyError(Exception): pass
 class parameterError(Exception): pass

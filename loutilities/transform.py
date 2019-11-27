@@ -9,7 +9,7 @@
 ###########################################################################################
 
 # homegrown
-from csvu import str2num
+from .csvu import str2num
 
 ###########################################################################################
 class Transform():
@@ -60,7 +60,7 @@ class Transform():
                     value = source[sourceattr]
 
             # maybe convert to number or boolean before saving in target
-            if type(value) in [str, unicode]:
+            if isinstance(value, str):
                 value = str2num(value)
                 if value in ['false', 'False']:
                     value = False

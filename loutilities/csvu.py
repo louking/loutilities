@@ -44,7 +44,7 @@ def unicode2ascii(ustr):
     :param ustr: unicode or str
     :rtype: str
     '''
-    if type(ustr) == str:
+    if isinstance(ustr, str):
         return ustr
     else:
         return unicodedata.normalize('NFKD',ustr).encode('ascii','ignore')
@@ -77,9 +77,9 @@ class DictReaderStr2Num(csv.DictReader):
     '''
 
     #----------------------------------------------------------------------
-    def next(self):
+    def __next__(self):
     #----------------------------------------------------------------------
-        row = csv.DictReader.next(self)
+        row = csv.DictReader.__next__(self)
         for key in row:
             row[key] = str2num(row[key])
         return row

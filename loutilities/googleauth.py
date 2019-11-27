@@ -14,9 +14,8 @@
 import os.path
 
 #pypi
-from flask import jsonify, url_for, redirect, session, request
+from flask import jsonify, url_for, session, request, abort
 from flask.views import View
-import requests
 import httplib2
 from oauth2client import client
 

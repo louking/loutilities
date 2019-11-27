@@ -17,7 +17,6 @@ Provides filetrigger class, which can be used to process a file when it discover
 """
 
 # standard libraries
-import pdb
 from optparse import OptionParser
 import time
 import glob

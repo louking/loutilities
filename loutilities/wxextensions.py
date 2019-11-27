@@ -28,7 +28,6 @@ wxextensions - extensions for wxPython widgets
 '''
 
 # standard
-import pdb
 import optparse
 
 # pypi
@@ -36,11 +35,11 @@ import optparse
 # github
 
 # other
-import wx   # http://wxpython.org/download.php - 2.9 minimum
-from wx.lib.agw.persist.persistencemanager import PersistenceManager, PersistentObject
-from wx.lib.agw.persist.persist_handlers import AbstractHandler, TLWHandler
+import wx   # https://wxpython.org/pages/downloads/ - 2.9 minimum
 
 # home grown
+
+class InvalidParameter(Exception): pass
 
 ########################################################################
 class AutoTextCtrl(wx.TextCtrl):
@@ -61,7 +60,7 @@ class AutoTextCtrl(wx.TextCtrl):
         remember items, instantiate TextCtrl using supplied parameters
         '''
         items = kwargs.pop('items', [])    # default for items is empty list
-        if type(items) != list:
+        if not isinstance(items, list):
             raise InvalidParameter('items must be list')
         self.setitems(items)
         

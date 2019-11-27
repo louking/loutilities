@@ -106,7 +106,7 @@ Example use of :class:`bfile.brecord` (note highest level is :attr:`foostruct` d
 """
 
 # standard
-from __future__ import print_function
+
 
 import re
 import struct
@@ -142,11 +142,11 @@ def rangecheck (start,  fieldname, value, *range, **kwargs):
     origrange = range
     
     # if one value supplied, might be a tuple.  If a tuple, detuple it
-    if len(range) == 1 and type(range[0]) == tuple:
+    if len(range) == 1 and isinstance(range[0], tuple):
         range = range[0]
         
     # if range[0] is a list or a set, then ignore range[1]
-    if type(range[0]) == list or type(range[0]) == set:
+    if isinstance(range[0], list) or isinstance(range[0], set):
         if not value in range[0]:
             iset = range[0]
             pset = format(iset)[0:maxwidth]
@@ -155,7 +155,7 @@ def rangecheck (start,  fieldname, value, *range, **kwargs):
             print ('{0:06x}:\tRange Error: {1}={2} ({3})'.format(start, fieldname, value, pset), file=rangeerr)
     
     # If range[0] is int or float then it means min, and range[1] is max, else ignore
-    elif type(range[0]) == int or type(range[0]) == float:
+    elif isinstance(range[0], int) or isinstance(range[0], float):
         if value < range[0] or value > range[1]:
             print ('{0:06x}:\tRange Error: {1}={2} ({3}..{4})'.format(start, fieldname, value,range[0],range[1]), file=rangeerr)
 
@@ -388,9 +388,9 @@ class bfile:
 # ###############################################################################
 # Keep these constants, exceptions and functions with brecord class
 # ###############################################################################
-(NDXNDX,LENNDX,SIGNNDX,RNGNDX) = range(4)      # LENNDX points at an int
-(NDXNDX,CNTFNDX,STRUCNDX,HNDLRNDX) = range(4)    # CNTFNDX points at a string
-(U,TS,S,F) = range(4)   # U = unsigned, TS = timestamp, S = signed, F = float
+(NDXNDX,LENNDX,SIGNNDX,RNGNDX) = list(range(4))      # LENNDX points at an int
+(NDXNDX,CNTFNDX,STRUCNDX,HNDLRNDX) = list(range(4))    # CNTFNDX points at a string
+(U,TS,S,F) = list(range(4))   # U = unsigned, TS = timestamp, S = signed, F = float
 
 class invalidSubrecCount(Exception): pass
 class invalidStruct(Exception): pass
@@ -483,7 +483,7 @@ class brecord():
         
         fieldlist = []
         r = self.recstruct  # local convenience
-        for field in r.keys():
+        for field in list(r.keys()):
             fieldlist += [(r[field][NDXNDX], (field, r[field]))]  # pull out the field index, to sort
         fieldlist.sort()
         
@@ -507,7 +507,7 @@ class brecord():
         # dump requested fields if this dictionary has them
         def _dumperrfields(d,fields):
             dumpstr = ''
-            for f in d.keys():
+            for f in list(d.keys()):
                 if f in fields:
                     dumpstr += '{0}={1}, '.format(f,d[f])
             if len(dumpstr) > 0:
@@ -525,7 +525,7 @@ class brecord():
             start = BF.currloc()    # for rangecheck, need to know the number of bytes processed in the file
             
             # For scalar fields, just get from the file
-            if type(length) == int:
+            if isinstance(length, int):
                 try:
                     if f[1][SIGNNDX] == U or f[1][SIGNNDX] == TS:
                         retval[field] = BF.uget(length)
@@ -590,12 +590,12 @@ class brecord():
             field = f[0]
             
             # unfortunately this doesn't provide a lot of information
-            if not field in record.keys():
+            if not field in list(record.keys()):
                 raise invalidInputKeyNotFound(field)
                 
             length = f[1][LENNDX]  # take a chance -- it might be the length if a scalar field
             # For scalar fields, just put to the file
-            if type(length) == int:
+            if isinstance(length, int):
                 if f[1][SIGNNDX] == U or f[1][SIGNNDX] == TS:
                     BF.uput(length, record[field])
                 elif f[1][SIGNNDX] == S:
@@ -645,7 +645,7 @@ class brecord():
             
             length = f[1][LENNDX]  # take a chance -- it might be the length if a scalar field
             # For scalar fields, just put to the file
-            if type(length) == int:
+            if isinstance(length, int):
                 if f[1][SIGNNDX] == TS:
                     retval[field] = True    # flag timestamp fields
                 else:
@@ -683,7 +683,7 @@ class brecord():
             
             length = f[1][LENNDX]  # take a chance -- it might be the length if a scalar field
             # For scalar fields, just put to the file
-            if type(length) == int:
+            if isinstance(length, int):
                 retval[field] = False
             
             # If a "record field", create a handler if necessary, 
@@ -718,7 +718,7 @@ class brecord():
             
             length = f[1][LENNDX]  # take a chance -- it might be the length if a scalar field
             # For scalar fields, just put to the file
-            if type(length) == int:
+            if isinstance(length, int):
                 retval += [field]
             
             # If a "record field", create a handler if necessary, 

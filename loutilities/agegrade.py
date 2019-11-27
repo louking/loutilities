@@ -171,8 +171,7 @@ class AgeGrade():
         distmeters = round(distmeters)
 
         # find surrounding Xi points, and corresponding Fi, OCi points
-        distlist = self.agegradedata[gen].keys()
-        distlist.sort()
+        distlist = sorted(list(self.agegradedata[gen].keys()))
         lastd = distlist[0]
         for i in range(1,len(distlist)):
             if distmeters <= distlist[i]:
@@ -223,7 +222,7 @@ class AgeGrade():
             distmeters = distmiles*mpermile
         
         # check distance within range.  Make min and max float so exception format specification works
-        distlist = self.agegradedata[gen].keys()
+        distlist = list(self.agegradedata[gen].keys())
         minmeters = min(distlist)*1.0
         maxmeters = max(distlist)*1.0
         if distmeters < minmeters or distmeters > maxmeters:

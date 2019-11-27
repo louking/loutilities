@@ -12,7 +12,7 @@ from collections import defaultdict
 import traceback
 from copy import deepcopy, copy
 from json import dumps
-from urllib import urlencode
+from urllib.parse import urlencode
 from threading import RLock
 import sys
 
@@ -20,16 +20,15 @@ import sys
 import flask
 from flask import request, jsonify, url_for, current_app, make_response
 from flask.views import MethodView
-from sqlalchemy import func, types, cast, case
+from sqlalchemy import func, types, cast
 from sqlalchemy.types import TypeDecorator
 from datatables import DataTables as BaseDataTables, ColumnDT
 
 # homegrown
 from loutilities.nesteddict import NestedDict
-from loutilities.timeu import asctime
 
-class ParameterError(Exception): pass;
-class NotImplementedError(Exception): pass;
+class ParameterError(Exception): pass
+class NotImplementedError(Exception): pass
 class staleData(Exception): pass
 
 debug = False
@@ -142,7 +141,7 @@ def get_request_data(form):
     data = defaultdict(lambda: {})
 
     # fill in data[id][field] = value
-    for formkey in form.keys():
+    for formkey in list(form.keys()):
         # if formkey == 'action': continue
         if formkey[0:5] != 'data[': continue
 
@@ -1811,7 +1810,7 @@ class DbCrudApi(CrudApi):
 
             # special treatment required
             else:
-                if type(treatment) != dict or len(treatment) != 1 or treatment.keys()[0] not in ['boolean',
+                if not isinstance(treatment, dict) or len(treatment) != 1 or list(treatment.keys())[0] not in ['boolean',
                                                                                                  'relationship']:
                     raise ParameterError('invalid treatment: {}'.format(treatment))
 
@@ -2194,7 +2193,7 @@ class DbCrudApi(CrudApi):
 
         # not server table, need to do translation
         if not self.serverside:
-            dbrecord = self.rows.next()
+            dbrecord = next(self.rows)
             return self.dte.get_response_data(dbrecord)
 
         # server table
@@ -2225,7 +2224,7 @@ class DbCrudApi(CrudApi):
             for col in self.clientcolumns:
                 field = col['data']
                 if 'className' in col and 'field_req' in col['className'].split(' '):
-                    if not isinstance(formdata[field], basestring) and 'id' in formdata[field]:
+                    if not isinstance(formdata[field], str) and 'id' in formdata[field]:
                         if not formdata[field]['id']:
                             results.append({'name': '{}.id'.format(field), 'status': 'please select'})
                     elif not formdata[field]:
@@ -2399,9 +2398,9 @@ class DbCrudApiRolePermissions(DbCrudApi):
             raise ParameterError('use roles_accepted OR roles_required but not both')
 
         # assure None or [ 'role1', ... ]
-        if self.roles_accepted and type(self.roles_accepted) != list:
+        if self.roles_accepted and not isinstance(self.roles_accepted, list):
             self.roles_accepted = [self.roles_accepted]
-        if self.roles_required and type(self.roles_required) != list:
+        if self.roles_required and not isinstance(self.roles_required, list):
             self.roles_required = [self.roles_required]
 
     # ----------------------------------------------------------------------
@@ -2581,11 +2580,11 @@ def deepupdate(obj, val, newval):
     '''
     thisobj = deepcopy(obj)
 
-    if type(thisobj) == dict:
+    if isinstance(thisobj, dict):
         for k in thisobj:
             thisobj[k] = deepupdate(thisobj[k], val, newval)
 
-    elif type(thisobj) == list:
+    elif isinstance(thisobj, list):
         for k in range(len(thisobj)):
             thisobj[k] = deepupdate(thisobj[k], val, newval)
 

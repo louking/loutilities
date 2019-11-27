@@ -29,7 +29,6 @@ Provides methods to write KML files
 
 # standard
 from xml.dom.minidom import getDOMImplementation as domimpl
-import pdb
 
 # home grown
 # NONE
@@ -86,18 +85,18 @@ class kmldoc():
             * Note: attrtree can contain embedded ellists or attrtrees
         """
         
-        if type(attrs) == dict:
+        if isinstance(attrs, dict):
             for attr in attrs:
                 atel = self.doc.createElement(attr)
                 
                 # dict means that this has attr name/value pairs which needs to be appended
-                if type(attrs[attr]) == dict:
+                if isinstance(attrs[attr], dict):
                     self.appendChildAttrs(atel, attrs[attr])
                 
                 # list might have dict as above, or elements, which need to be appended
-                elif type(attrs[attr]) == list:
+                elif isinstance(attrs[attr], list):
                     for elattr in attrs[attr]:
-                        if type(elattr) == dict:
+                        if isinstance(elattr, dict):
                             self.appendChildAttrs(atel, elattr)
                         else:
                             atel.appendChild(elattr)
@@ -107,9 +106,9 @@ class kmldoc():
                     atel.appendChild(self.doc.createTextNode(attrs[attr]))
                 element.appendChild(atel)
         
-        elif type(attrs) == list:
+        elif isinstance(attrs, list):
             for elattr in attrs:
-                if type(elattr) == dict:
+                if isinstance(elattr, dict):
                     self.appendChildAttrs(element, elattr)
                 else:
                     element.appendChild(elattr)

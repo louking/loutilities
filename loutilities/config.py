@@ -28,7 +28,6 @@ config - configuration constants
 '''
 
 # standard
-import os
 import os.path
 
 # pypi

@@ -27,8 +27,6 @@ makerst - make a bunch of autodoc rst files
 '''
 
 # standard
-import pdb
-import argparse
 import os.path
 import glob
 
@@ -39,8 +37,6 @@ import glob
 # other
 
 # home grown
-import version
-from loutilities import *
 
 #----------------------------------------------------------------------
 def main():

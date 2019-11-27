@@ -27,7 +27,6 @@ textreader - read text out of various file types
 '''
 
 # standard
-import pdb
 import argparse
 import csv
 
@@ -36,8 +35,7 @@ import csv
 # github
 
 # home grown
-import version
-from loutilities import *
+from . import version
 
 # valid file types
 VALIDFTYPES = ['xls','xlsx','docx','txt','csv']
@@ -49,6 +47,7 @@ TXTABSIZE = 8
 
 # exceptions for this module.  See __init__.py for package exceptions
 class headerError(Exception): pass
+class parameterError(Exception): pass
 
 ########################################################################
 class TextDictReader():
@@ -84,14 +83,14 @@ class TextDictReader():
     
         foundhdr = False
         delimited = self.file.getdelimited()
-        fields = self.fieldxform.keys()
+        fields = list(self.fieldxform.keys())
         MINMATCHES = len(self.reqdfields)
 
         # catch StopIteration, which means header wasn't found in the file
         try:
             # loop for each line until header found
             while True:
-                origline = self.file.next()
+                origline = next(self.file)
                 fieldsfound = 0
                 line = []
                 if not delimited:
@@ -114,7 +113,7 @@ class TextDictReader():
                         for linendx in range(len(line)):                        
                             # match over the end of the line is no match
                             # m is either a string or a list of strings
-                            if type(m) == str:
+                            if isinstance(m, str):
                                 m = [m]         # make single string into list
                             if linendx+len(m)>len(line):
                                 continue
@@ -145,8 +144,7 @@ class TextDictReader():
                         raise headerError('could not find fields {} in header {}'.format(fieldsnotfound, origline))
                         
                     # sort found fields by order found within the line
-                    foundfields_dec = [(self.field[f]['start'],self.field[f]) for f in self.field]
-                    foundfields_dec.sort()
+                    foundfields_dec = sorted([(self.field[f]['start'],self.field[f]) for f in self.field])
                     self.foundfields = [ff[1] for ff in foundfields_dec] # get rid of sorting decorator
                         
                     # here we have decided it is a header line
@@ -212,20 +210,20 @@ class TextDictReader():
             raise headerError('header not found')
         
     #----------------------------------------------------------------------
-    def next(self):
+    def __next__(self):
     #----------------------------------------------------------------------
         '''
         return dict with generic headers and associated data from file
         '''
         
         # get next raw line from the file
-        rawline = self.file.next()
+        rawline = next(self.file)
         
         # pick columns which are associated with generic headers
         filteredline = [rawline[i] for i in range(len(rawline)) if i in self.fieldcols]
         
         # create dict association, similar to csv.DictReader
-        result = dict(zip(self.fieldhdrs,filteredline))
+        result = dict(list(zip(self.fieldhdrs,filteredline)))
                    
         # and return result
         return result
@@ -251,7 +249,7 @@ class TextReader():
         """
 
         # if true filename, type of filename is string
-        if type(filename) in [str,unicode]:
+        if isinstance(filename, str):
             self.ftype = filename.split('.')[-1].lower() # get extension
             self.intype = 'file'
             if self.ftype not in VALIDFTYPES:
@@ -301,7 +299,7 @@ class TextReader():
         self.opened = True
         
     #----------------------------------------------------------------------
-    def next(self):
+    def __next__(self):
     #----------------------------------------------------------------------
         """
         read next line from TextReader file
@@ -345,7 +343,7 @@ class TextReader():
 
         # handle txt files
         elif self.ftype in ['csv']:
-            row = self.CSV.next()
+            row = next(self.CSV)
             return row
 
     #----------------------------------------------------------------------
@@ -401,11 +399,11 @@ class TextReader():
         # do some validation
         if self.delimited:
             raise parameterError('cannot set delimiters for file which is already delimited')
-        if type(delimiters) != list:
+        if not isinstance(delimiters, list):
             raise parameterError('delimiters must be a list of increasing integers')
         lastdelimiter = -1
         for delimiter in delimiters:
-            if type(delimiter) != int or delimiter <= lastdelimiter:
+            if not isinstance(delimiter, int) or delimiter <= lastdelimiter:
                 raise parameterError('delimiters must be a list of increasing integers')
             lastdelimiter = delimiter
             
@@ -447,7 +445,7 @@ def main():
     # open file, print some lines, then close
     ff = TextReader(filename)
     for i in range(6):
-        print(ff.next())
+        print(next(ff))
     ff.close()
 
 # ###############################################################################

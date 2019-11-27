@@ -66,11 +66,12 @@ import argparse
 import glob
 import os.path
 
-import ConfigParser
 # pypi
+from configparser import ConfigParser
 import pystache
+
 # home grown
-import version
+from . import version
 
 # github
 # other
@@ -99,7 +100,7 @@ def main():
     # process each file
     for f in files:
         # file is a config file
-        cfg = ConfigParser.ConfigParser()
+        cfg = ConfigParser()
         cfg.read(f)
         
         templatefile = cfg.get(TEMPLATESEC,'templatefile')

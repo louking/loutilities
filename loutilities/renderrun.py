@@ -29,7 +29,6 @@ renderrun - common functions for rendering information related to running
 '''
 
 # standard
-import pdb
 import math
 
 # pypi
@@ -39,7 +38,7 @@ import math
 # other
 
 # home grown
-import timeu
+from . import timeu
 
 dbtime = timeu.asctime('%Y-%m-%d')
 rndrtim = timeu.asctime('%m/%d/%Y')

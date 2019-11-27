@@ -29,18 +29,14 @@ boolexpr - parse boolean expressions
 '''
 
 # standard
-import pdb
-import argparse
 
 # pypi
-import pyparsing as pp    # note 1.5.7 is latest which works with python 2.x
 
 # github
 
 # other
 
 # home grown
-import version
 
 class invalidParameter(Exception): pass
 

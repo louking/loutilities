@@ -33,7 +33,6 @@ Usage::
 '''
 
 # standard
-import pdb
 import argparse
 import csv
 import textwrap
@@ -47,7 +46,7 @@ import sys
 # other
 
 # home grown
-import version
+from . import version
 
 class invalidParameter(Exception): pass
 
@@ -87,19 +86,19 @@ def main():
     # normalize filter to list of dicts
     #print 'FILTER={}'.format(args.filter)
     filt = json.loads(args.filter)
-    if type(filt) != list:
+    if not isinstance(filt, list):
         filt = [filt]
     for f in filt:
-        if type(f) != dict:
+        if not isinstance(f, dict):
             raise invalidParameter('FILTER must be dict or list of dicts')
     
     # get the header line, which is always sent to the output file
-    hdr = sys.stdin.next()
+    hdr = next(sys.stdin)
     sys.stdout.write(hdr)
 
     # use csv to get a list of the hdr, to handle any errant commas
     H = csv.reader([hdr])
-    hdrlist = H.next()
+    hdrlist = next(H)
     
     # parse the rest of stdin as a DictReader, stdout as DictWriter
     IN = csv.DictReader(sys.stdin,fieldnames=hdrlist)
@@ -112,7 +111,7 @@ def main():
             match = True
             
             # AND function -- all within dict must match
-            for col in f.keys():
+            for col in list(f.keys()):
                 if f[col] != line[col]:
                     match = False
                     break

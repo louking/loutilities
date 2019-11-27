@@ -29,7 +29,7 @@ def add_url_rules(bp, cls, decorator=None, decorator_args=[]):
                 defaults    optional dict with defaults for other rules with the same endpoint
                             see http://werkzeug.pocoo.org/docs/0.14/routing/#werkzeug.routing.Rule
     '''
-    for endpoint, options in cls.url_rules.iteritems():
+    for endpoint, options in cls.url_rules.items():
         url_rule = options
         methods = ('GET',)
         defaults = {}
@@ -57,7 +57,7 @@ def list_routes(app):
     debug to list routes for app
     '''
     # adapted from http://flask.pocoo.org/snippets/117/
-    import urllib
+    from urllib import parse
     from flask import url_for
     output = []
     for rule in app.url_map.iter_rules():
@@ -68,7 +68,7 @@ def list_routes(app):
 
         methods = ','.join(rule.methods)
         url = url_for(rule.endpoint, **options)
-        line = urllib.unquote("{:50s} {:20s} {}".format(rule.endpoint, methods, url))
+        line = parse.unquote("{:50s} {:20s} {}".format(rule.endpoint, methods, url))
         output.append(line)
     
     for line in sorted(output):

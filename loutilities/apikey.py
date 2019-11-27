@@ -30,10 +30,10 @@ apikey - manage api keys for a given package
 import argparse
 
 # pypi
-import .appdirs
-import .extconfigparser
+import appdirs
 # home grown
-import .version
+from . import version
+from . import extconfigparser
 
 
 # github

@@ -13,7 +13,7 @@ class ApiResource(MethodView):
     def as_blueprint(cls, name=None):
         name = name or cls.endpoint
         bp = Blueprint(name, cls.__module__, url_prefix=cls.url_prefix)
-        for endpoint, options in cls.url_rules.items():
+        for endpoint, options in list(cls.url_rules.items()):
             url_rule = options
             methods = ('GET',)
             defaults = {}

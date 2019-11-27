@@ -31,21 +31,18 @@ provide ConfigFile high level configuration file handling
 '''
 
 # standard
-import pdb
-import argparse
-from ConfigParser import ConfigParser,NoSectionError,NoOptionError
 import tempfile
 import string
 import os
 import os.path
 import shutil
+from configparser import ConfigParser, NoSectionError, NoOptionError
 
 # pypi
 
 # github
 
 # home grown
-import version
 
 class unknownSection(Exception): pass
 class unknownOption(Exception): pass

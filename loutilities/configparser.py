@@ -11,12 +11,16 @@
 '''
 configparser - enhanced ConfigParser
 ===================================================
-uses ConfigParser.SafeConfigParser to parse INI file, but preserves case for keys
+uses pypi's configparser.ConfigParser.SafeConfigParser to parse INI file, but preserves case for keys
 '''
 
+# standard
 from collections import OrderedDict
-from ConfigParser import SafeConfigParser
-config = SafeConfigParser()
+from configparser import ConfigParser
+
+# pypi
+
+config = ConfigParser()
 
 # preserve case for keys, see https://docs.python.org/3/library/configparser.html#configparser.optionxform
 config.optionxform = lambda option: option

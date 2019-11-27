@@ -45,10 +45,10 @@ import unicodecsv   # standard csv does not handle unicode data
 from sqlalchemy.orm import class_mapper # see http://www.sqlalchemy.org/ written with 0.8.0b2
 
 # home grown
-import version
-from loutilities import *
+from . import version
 
 class invalidParameter(Exception): pass
+class parameterError(Exception): pass
 
 ########################################################################
 class _objdict(dict):
@@ -86,7 +86,7 @@ def record2csv(inrecs, mapping, outfile=None):
     '''
 
     # analyze mapping for outfields
-    if type(mapping) == list:
+    if isinstance(mapping, list):
         mappingtype = list
     elif type(mapping) in [dict, OrderedDict]:
         mappingtype = dict
@@ -99,8 +99,8 @@ def record2csv(inrecs, mapping, outfile=None):
     for outfield in mapping:
         invalue = mapping[outfield] if mappingtype==dict else outfield
 
-        if type(invalue) not in [str,unicode] and not callable(invalue):
-            raise invalidParameter('invalid mapping {}. mapping values must be str or function'.format(outvalue))
+        if not isinstance(invalue, str) and not callable(invalue):
+            raise invalidParameter('invalid mapping {}. mapping values must be str or function'.format(invalue))
 
         outfields.append(outfield)
 
@@ -111,13 +111,13 @@ def record2csv(inrecs, mapping, outfile=None):
 
     for inrec in inrecs:
         # convert to object if necessary
-        if type(inrec) == dict:
+        if isinstance(inrec, dict):
             inrec = _objdict(inrec)
 
         outrow = {}
         for outfield in mapping:
             infield = mapping[outfield] if mappingtype==dict else outfield
-            if type(infield) == str:
+            if isinstance(infield, str):
                 outvalue = getattr(inrec, infield, None)
 
             else:
@@ -150,6 +150,7 @@ class Base2Csv():
         '''
         '''
 
+        self.filename = filename
         self.tempdir = False
         if outdir is None:
             self.tempdir = True
@@ -199,7 +200,7 @@ class Xls2Csv(Base2Csv):
         '''
         
         # create outdir if necessary, self.out, self.files
-        Base2Csv.__init__(self,outdir)
+        super().__init__(filename, outdir=outdir)
         
         # go through each sheet, and save as csv file
         # from http://www.gossamer-threads.com/lists/python/python/833610
@@ -214,7 +215,7 @@ class Xls2Csv(Base2Csv):
                 # NOTE: this has the effect of filtering input columns
                 outhdr = [hdrmap[k] for k in hdrmap]
             else:
-                hdrmap = dict(zip(inhdr,inhdr))
+                hdrmap = dict(list(zip(inhdr,inhdr)))
                 outhdr = inhdr
                 
             # create output csv file and write header
@@ -224,8 +225,8 @@ class Xls2Csv(Base2Csv):
             writer.writeheader()
             
             # copy all the rows in the original sheet to the csv file
-            for row in xrange(1,sheet.nrows):
-                inrow = dict(zip(inhdr,sheet.row_values(row)))
+            for row in range(1,sheet.nrows):
+                inrow = dict(list(zip(inhdr,sheet.row_values(row))))
                 outrow = {}
                 for incol in inhdr:
                     if incol in hdrmap:
@@ -254,7 +255,7 @@ class Db2Csv(Base2Csv):
         '''
         
         # create outdir if necessary, self.out, self.files
-        Base2Csv.__init__(self,outdir)
+        super().__init__('', outdir=outdir)
         
     #----------------------------------------------------------------------
     def addtable(self,name,session,model,hdrmap=None,**kwargs):
@@ -293,18 +294,18 @@ class Db2Csv(Base2Csv):
             outhndlr = [hdrmap[k] for k in hdrmap]
             outhdr = []
             for k in outhndlr:
-                if type(k) == str:
+                if isinstance(k, str):
                     outhdr.append(k)
-                elif type(k) == dict:
+                elif isinstance(k, dict):
                     # assumes only one level
                     for subk in k:
-                        if type(subk) != str:
-                            raise parameterError('{0}: invalid hdrmap {1}'.format(filename, hdrmap))
+                        if not isinstance(subk, str):
+                            raise parameterError('{0}: invalid hdrmap {1}'.format(self.filename, hdrmap))
                         outhdr.append(subk)
                 else:
-                    raise parameterError('{0}: invalid hdrmap {1}'.format(filename, hdrmap))
+                    raise parameterError('{0}: invalid hdrmap {1}'.format(self.filename, hdrmap))
         else:
-            hdrmap = dict(zip(inhdr,inhdr))
+            hdrmap = dict(list(zip(inhdr,inhdr)))
             outhdr = inhdr
 
         # create output csv file and write header
@@ -319,7 +320,7 @@ class Db2Csv(Base2Csv):
             for incol in inhdr:
                 if incol in hdrmap:
                     outcol = hdrmap[incol]
-                    if type(outcol) == str:
+                    if isinstance(outcol, str):
                         outrow[outcol] = getattr(inrow,incol)
                     # must be dict, call function(session,value) to determine value transformation
                     else:

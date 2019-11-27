@@ -206,7 +206,7 @@ def main():
     import csv
     
     # homegrown
-    import version
+    from . import version
 
 
     parser = argparse.ArgumentParser(version='{0} {1}'.format('loutilities',version.__version__))
