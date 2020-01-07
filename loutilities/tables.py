@@ -221,6 +221,8 @@ class DataTablesEditor():
     formmapping is dict like {'formfield_n':'dbattr_n', 'formfield_m':f(dbrow), ...}
     if order of operation is importand use OrderedDict
 
+    If dbattr key == '__skip__', then don't try to update the db with this field
+
     :param dbmapping: mapping dict with key for each db field, value is key in form or function(dbentry)
     :param formmapping: mapping dict with key for each form row, value is key in db row or function(form)
     :param null2emptystring: if True translate '' from form to None for db and visa versa
@@ -261,6 +263,10 @@ class DataTablesEditor():
             # simple map from dbentry field
             else:
                 dbattr = self.formmapping[key]
+
+                # skip if indicated
+                if dbattr == '__skip__': continue
+
                 data[key] = getattr(dbentry, dbattr)
                 if self.null2emptystring and data[key]==None:
                     data[key] = ''
@@ -647,6 +653,8 @@ class CrudApi(MethodView):
     :param app: flask app or blueprint
     :param pagename: name to be displayed at top of html page
     :param endpoint: endpoint parameter used by flask.url_for()
+    :param endpoint_values: values dict for endpoint, default {}, substitution as _value_, e.g., {'value':'_value_'}
+        this can be used for permission grouping in url, e.g., /admin/_value_/endpoint
     :param rule: rule parameter used by flask.add_url_rule() [defaults to '/' + endpoint]
     :param eduploadoption: editor upload option (optional) see https://editor.datatables.net/reference/option/ajax
     :param clientcolumns: list of dicts for input to dataTables and Editor
@@ -676,7 +684,8 @@ class CrudApi(MethodView):
         args = dict(app = None,
                     template = 'datatables.html',
                     pagename = None, 
-                    endpoint = None, 
+                    endpoint = None,
+                    endpointvalues = {},
                     rule = None, 
                     eduploadoption = None,
                     clientcolumns = None, 
@@ -911,19 +920,19 @@ class CrudApi(MethodView):
             'ajax': {
                 'create': {
                     'type': 'POST',
-                    'url':  '{}/rest'.format(url_for(self.endpoint)),
+                    'url':  '{}/rest'.format(url_for(self.endpoint, **self.endpointvalues)),
                 },
                 'edit': {
                     'type': 'PUT',
-                    'url':  '{}/rest/{}'.format(url_for(self.endpoint),'_id_'),
+                    'url':  '{}/rest/{}'.format(url_for(self.endpoint, **self.endpointvalues),'_id_'),
                 },
                 'editRefresh': {
                     'type': 'PUT',
-                    'url':  '{}/rest'.format(url_for(self.endpoint)),
+                    'url':  '{}/rest'.format(url_for(self.endpoint, **self.endpointvalues)),
                 },
                 'remove': {
                     'type': 'DELETE',
-                    'url':  '{}/rest/{}'.format(url_for(self.endpoint),'_id_'),
+                    'url':  '{}/rest/{}'.format(url_for(self.endpoint, **self.endpointvalues),'_id_'),
                 },
             },
             
@@ -2366,7 +2375,7 @@ class DbCrudApi(CrudApi):
 
 #####################################################
 class DbCrudApiRolePermissions(DbCrudApi):
-    #####################################################
+#####################################################
     '''
     This class extends DbCrudApi which, in turn, extends CrudApi. This extension uses flask_security
     to do role checking for the current user.
@@ -2378,6 +2387,7 @@ class DbCrudApiRolePermissions(DbCrudApi):
         roles_accepted: None, 'role', ['role1', 'role2', ...] - user must have at least one of the specified roles
         roles_required: None, 'role', ['role1', 'role2', ...] - user must have all of the specified roles
     '''
+    from flask_security import current_user
 
     # ----------------------------------------------------------------------
     def __init__(self, **kwargs):
@@ -2460,6 +2470,7 @@ class CrudFiles(MethodView):
         args = dict(app = None,
                     uploadendpoint = None, 
                     uploadrule = None,  # defaults to '/' + uploadendpoint
+                    endpointvalues = {},
                     )
         args.update(kwargs)        
         for key in args:
@@ -2482,7 +2493,7 @@ class CrudFiles(MethodView):
         if debug: print('CrudFiles.register()')
 
         upload_view = self.as_view(name, **self.kwargs)
-        self.app.add_url_rule('{}'.format(self.uploadrule),view_func=upload_view,methods=['POST',])
+        self.app.add_url_rule('{}'.format(self.uploadrule, **self.endpointvalues),view_func=upload_view,methods=['POST',])
 
 
     #----------------------------------------------------------------------

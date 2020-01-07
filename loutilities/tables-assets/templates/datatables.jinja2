@@ -26,10 +26,10 @@
                     'beforetable' - chart is between pretablehtml and table
                     'aftertable' - chart is after table
           NOTES: - if chart is to be drawn, pagejsfiles must include script file 
-                   which has dtchart() entry point
+                   which has datatables_chart() entry point
                  - if table should not be visible, use 'beforetable' and have dtopts 'dom': ''
 
-      ## TODO: should this be in this file or should there db a dbdatables.jinja2 which extends this?
+      ## TODO: should this be in this file or should there be a dbdatables.jinja2 which extends this?
       saformjsurls: list of js urls which contain Editor standalone form code (see DbCrudApi)
 #}
 
@@ -78,7 +78,7 @@
           <th class=""></th>
         {% endif %}
         {% for col in options.dtopts.columns %}
-          {% if col.label %}
+          {% if col.label is defined %}
             <th class="">{{ col.label }}</th>
           {% endif %}
         {% endfor %}

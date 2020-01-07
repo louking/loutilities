@@ -6,12 +6,23 @@
     var $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
   </script>
 
+{% block prescripts %}
+{% endblock %}
+
 {# font for branding, see branding.css #}
 <link href="https://fonts.googleapis.com/css?family=Kanit:800&display=swap" rel="stylesheet">
 {# see assets.py for list of css, js files #}
-{% assets "admin_css" %}
-  <link rel=stylesheet type=text/css href="{{ ASSET_URL }}">
-{% endassets %}
+{% if assets_css %}
+  {% assets assets_css %}
+    <link rel=stylesheet type=text/css href="{{ ASSET_URL }}">
+  {% endassets %}
+{# backwards compatibility #}
+{% else %}
+    {% assets "admin_css" %}
+      <link rel=stylesheet type=text/css href="{{ ASSET_URL }}">
+    {% endassets %}
+{% endif %}
+{# backwards compatibility #}
 {% for css in pagecssfiles %}
   <link rel=stylesheet type=text/css href="{{ css }}">
 {% endfor %}
@@ -29,9 +40,17 @@
 {% endblock %}
 
 <script>var _productname = "{{ _productname_text|safe }}";</script>
-{% assets "admin_js" %}
-    <script type="text/javascript" src="{{ ASSET_URL }}"></script>
-{% endassets %}
+{% if assets_js %}
+    {% assets assets_js %}
+        <script type="text/javascript" src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+{# backwards compatibility #}
+{% else %}
+    {% assets "admin_js" %}
+        <script type="text/javascript" src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+{% endif %}
+{# backwards compatibility #}
 {% for js in pagejsfiles %}
   <script type="text/javascript" src="{{ js }}"></script>
 {% endfor %}
