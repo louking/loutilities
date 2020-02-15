@@ -160,9 +160,10 @@ def get_request_data(form):
         fieldlevels[fieldkey] = form[formkey]
         data[idvalue].update(fieldlevels.to_dict())
 
-        from pprint import PrettyPrinter
-        pp = PrettyPrinter()
-        current_app.logger.debug('get_request_data(): formkey={} data={}'.format(formkey, pp.pformat(data)))
+        if debug:
+            from pprint import PrettyPrinter
+            pp = PrettyPrinter()
+            current_app.logger.debug('get_request_data(): formkey={} data={}'.format(formkey, pp.pformat(data)))
 
     # return decoded result
     return data
@@ -672,6 +673,7 @@ class CrudApi(MethodView):
     :param pagecssfiles: list of css file paths to be included
     :param templateargs: dict of arguments to pass to template - if callable arg function is called before being passed to template (no parameters)
     :param validate: editor validation function (action, formdata), result is set to self._fielderrors
+    :param multiselect: if True, allow selection of multiple rows, default False
     '''
 
     #----------------------------------------------------------------------
@@ -703,6 +705,7 @@ class CrudApi(MethodView):
                     pagecssfiles = [],
                     templateargs = {},
                     validate = lambda action,formdata: [],
+                    multiselect = False,
                     addltemplateargs = {},
                     )
         args.update(kwargs)
@@ -885,7 +888,7 @@ class CrudApi(MethodView):
                 },
             ],
             'rowId': self.idSrc,
-            'select': True,
+            'select': 'single' if not self.multiselect else 'os',
             'ordering': True,
             'order': [1,'asc']
         }
@@ -1257,6 +1260,7 @@ class DteDbRelationship():
     * dbfield - field as used in the database table (not the model -- this is field in table which has list of model items)
     * uselist - set to True if using tags, otherwise field expects single entry, default True
     * searchbox - set to True if searchbox desired, default False
+    * nullable - set to True if item can give null (unselected) return, default False (only applies for usellist=False)
     * queryparams - dict containing parameters for query to determine options, or callable which returns such a dict
 
     e.g.,
@@ -1289,7 +1293,8 @@ class DteDbRelationship():
                     formfield=None,
                     dbfield=None,
                     uselist=True,
-                    searchbox=False,  # TODO: is this needed?
+                    searchbox=False,
+                    nullable=False,
                     queryparams= {}
                     )
         args.update(kwargs)
@@ -1372,8 +1377,11 @@ class DteDbRelationship():
         # ----------------------------------------------------------------------
         # return sorted list of items in the model
         queryparams = self.queryparams() if callable(self.queryparams) else self.queryparams
-        items = [{'label': getattr(item, self.labelfield), 'value': item.id}
-                 for item in self.fieldmodel.query.filter_by(**queryparams).all()]
+        items = []
+        if self.nullable:
+            items += [{'label': '<none>', 'value': None}]
+        items += [{'label': getattr(item, self.labelfield), 'value': item.id}
+                  for item in self.fieldmodel.query.filter_by(**queryparams).all()]
         items.sort(key=lambda k: k['label'].lower())
         return items
 
