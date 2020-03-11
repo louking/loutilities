@@ -48,6 +48,13 @@ UNIQUIFIER_LEN = 255
 # common roles
 ROLE_SUPER_ADMIN = 'super-admin'
 
+# applications
+APP_CONTRACTS = 'contracts'
+APP_MEMBERS = 'members'
+APP_ROUTES = 'routes'
+APP_SCORES = 'scores'
+APP_ALL = [APP_CONTRACTS, APP_MEMBERS, APP_ROUTES, APP_SCORES]
+
 userinterest_table = Table('users_interests', Base.metadata,
                            Column('user_id', Integer, ForeignKey('user.id')),
                            Column('interest_id', Integer, ForeignKey('interest.id')),
@@ -79,6 +86,7 @@ class Application(Base):
     __tablename__ = 'application'
     __bind_key__ = 'users'
     id              = Column(Integer(), primary_key=True)
+    version_id      = Column(Integer, nullable=False, default=1)
     application     = Column(String(APPLICATION_LEN))
 
 # user role management

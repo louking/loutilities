@@ -22,7 +22,7 @@ from flask_security.recoverable import send_reset_password_instructions
 
 # homegrown
 from . import bp
-from loutilities.user.model import db, User, Role, Interest
+from loutilities.user.model import db, User, Role, Interest, Application
 from loutilities.tables import DbCrudApiRolePermissions
 from loutilities.tables import get_request_action
 
@@ -153,8 +153,8 @@ role.register()
 # interests endpoint
 ###########################################################################################
 
-interest_dbattrs = 'id,interest,description,users,public'.split(',')
-interest_formfields = 'rowid,interest,description,users,public'.split(',')
+interest_dbattrs = 'id,interest,description,users,public,applications'.split(',')
+interest_formfields = 'rowid,interest,description,users,public,applications'.split(',')
 interest_dbmapping = dict(zip(interest_dbattrs, interest_formfields))
 interest_formmapping = dict(zip(interest_formfields, interest_dbattrs))
 
@@ -190,6 +190,11 @@ interest = DbCrudApiRolePermissions(
                           '_treatment' : { 'boolean' : { 'formfield':'public', 'dbfield':'public' } },
                           'ed':{ 'def':'yes' },
                         },
+                        {'data': 'applications', 'name': 'applications', 'label': 'Applications',
+                         '_treatment': {'relationship': {'fieldmodel': Application, 'labelfield': 'application',
+                                                         'formfield': 'applications', 'dbfield': 'applications',
+                                                         'uselist': True}}
+                         },
                         {'data': 'users', 'name': 'users', 'label': 'Users',
                          '_treatment': {'relationship': {'fieldmodel': User, 'labelfield': 'email',
                                                          'formfield': 'users', 'dbfield': 'users',
@@ -208,4 +213,52 @@ interest = DbCrudApiRolePermissions(
                                   },
                     )
 interest.register()
+
+##########################################################################################
+# applications endpoint
+###########################################################################################
+
+application_dbattrs = 'id,application'.split(',')
+application_formfields = 'rowid,application'.split(',')
+application_dbmapping = dict(zip(application_dbattrs, application_formfields))
+application_formmapping = dict(zip(application_formfields, application_dbattrs))
+
+def application_validate(action, formdata):
+    results = []
+
+    for field in ['application']:
+        if formdata[field] and not slug(formdata[field]):
+            results.append({ 'name' : field, 'status' : 'invalid slug: must be only alpha, numeral, hyphen' })
+
+    return results
+
+application = DbCrudApiRolePermissions(
+                    app = bp,   # use blueprint instead of app
+                    db = db,
+                    model = Application,
+                    version_id_col = 'version_id',  # optimistic concurrency control
+                    applications_accepted = 'super-admin',
+                    template = 'datatables.jinja2',
+                    pagename = 'applications', 
+                    endpoint = 'userrole.applications',
+                    rule = '/applications',
+                    dbmapping = application_dbmapping, 
+                    formmapping = application_formmapping, 
+                    clientcolumns = [
+                        { 'data': 'application', 'name': 'application', 'label': 'Application', '_unique': True,
+                          'className': 'field_req',
+                          },
+                    ],
+                    validate = application_validate,
+                    servercolumns = None,  # not server side
+                    idSrc = 'rowid', 
+                    buttons = ['create', 'editRefresh', 'remove'],
+                    dtoptions = {
+                                        'scrollCollapse': True,
+                                        'scrollX': True,
+                                        'scrollXInner': "100%",
+                                        'scrollY': True,
+                                  },
+                    )
+application.register()
 

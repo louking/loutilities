@@ -27,7 +27,8 @@ from loutilities.user import create_app
 from loutilities.user.settings import Development
 from loutilities.user.model import db
 from loutilities.user.applogging import setlogging
-from loutilities.user.model import User, Role
+from loutilities.user.model import User, Role, Interest, Application
+from loutilities.user.model import APP_ALL
 
 class parameterError(Exception): pass
 
@@ -45,11 +46,33 @@ def init_db(defineowner=True):
         {'name':'super-admin',    'description':'everything'},
     ]
 
+    interests = [
+        {'interest':'fsrc', 'description':'Frederick Steeplechasers Running Club', 'public':True}
+    ]
+
     # initialize roles, remembering what roles we have
     allroles = {}
     for userrole in userroles:
         rolename = userrole['name']
         allroles[rolename] = Role.query.filter_by(name=rolename).one_or_none() or user_datastore.create_role(**userrole)
+
+    # initialize applications, remembering what applications we have
+    allapps = []
+    for app in APP_ALL:
+        thisapp = Application(application=app)
+        db.session.add(thisapp)
+        db.session.flush()
+        allapps.append(thisapp)
+
+    allinterests = []
+    # initialize interests, remembering what interests we have
+    # common interests are associated with all applications
+    for interest in interests:
+        thisinterest = Interest(**interest)
+        for thisapp in allapps:
+            thisinterest.applications.append(thisapp)
+        db.session.flush()
+        allinterests.append(thisinterest)
 
     # define owner if desired
     if defineowner:
@@ -65,6 +88,9 @@ def init_db(defineowner=True):
                 user_datastore.add_role_to_user(owner, allroles[rolename])
         db.session.flush()
         owner = User.query.filter_by(email=rootuser).one()
+        if not owner.interests:
+            for thisinterest in allinterests:
+                owner.interests.append(thisinterest)
 
     # and we're done, let's accept what we did
     db.session.commit()
