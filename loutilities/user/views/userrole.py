@@ -18,13 +18,13 @@ userrole - manage application users and roles
 # pypi
 from validators.slug import slug
 from validators.email import email
+from flask import g
 from flask_security.recoverable import send_reset_password_instructions
 
 # homegrown
 from . import bp
 from loutilities.user.model import db, User, Role, Interest, Application
-from loutilities.tables import DbCrudApiRolePermissions
-from loutilities.tables import get_request_action
+from loutilities.tables import DbCrudApiRolePermissions, get_request_action, SEPARATOR
 
 ##########################################################################################
 # users endpoint
@@ -38,9 +38,22 @@ user_formmapping = dict(zip(user_formfields, user_dbattrs))
 def user_validate(action, formdata):
     results = []
 
-    for field in ['email']:
-        if formdata[field] and not email(formdata[field]):
-            results.append({ 'name' : field, 'status' : 'invalid email: correct format is like john.doe@example.com' })
+    if formdata['email'] and not email(formdata['email']):
+        results.append({ 'name' : 'email', 'status' : 'invalid email: correct format is like john.doe@example.com' })
+
+    # check apps which user will have access to
+    apps = set()
+    if formdata['roles'] and 'id' in formdata['roles'] and formdata['roles']['id'] != '':
+        roleidsstring = formdata['roles']['id']
+        roleids = roleidsstring.split(SEPARATOR)
+        for roleid in roleids:
+            thisrole = Role.query.filter_by(id=roleid).one()
+            apps |= set(thisrole.applications)
+
+    # this app must be one of user's roles
+    if g.loutility not in apps:
+        # need to use name='roles.id' because this field is _treatment:{relationship}
+        results.append({'name': 'roles.id', 'status': 'give user at least one role which works for this application'})
 
     return results
 
@@ -100,7 +113,7 @@ user = UserCrudApi(
                     validate = user_validate,
                     servercolumns = None,  # not server side
                     idSrc = 'rowid', 
-                    buttons = ['create', 'editRefresh', 'remove'],
+                    buttons = ['create', 'editRefresh'],
                     dtoptions = {
                                         'scrollCollapse': True,
                                         'scrollX': True,
@@ -114,8 +127,8 @@ user.register()
 # roles endpoint
 ###########################################################################################
 
-role_dbattrs = 'id,name,description'.split(',')
-role_formfields = 'rowid,name,description'.split(',')
+role_dbattrs = 'id,name,description,applications'.split(',')
+role_formfields = 'rowid,name,description,applications'.split(',')
 role_dbmapping = dict(zip(role_dbattrs, role_formfields))
 role_formmapping = dict(zip(role_formfields, role_dbattrs))
 
@@ -136,7 +149,12 @@ role = DbCrudApiRolePermissions(
                           'className': 'field_req',
                           },
                         { 'data': 'description', 'name': 'description', 'label': 'Description' },
-                    ], 
+                        {'data': 'applications', 'name': 'applications', 'label': 'Applications',
+                         '_treatment': {'relationship': {'fieldmodel': Application, 'labelfield': 'application',
+                                                         'formfield': 'applications', 'dbfield': 'applications',
+                                                         'uselist': True}}
+                         },
+                    ],
                     servercolumns = None,  # not server side
                     idSrc = 'rowid', 
                     buttons = ['create', 'editRefresh', 'remove'],

@@ -12,6 +12,9 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_security import UserMixin, RoleMixin
 
+# gist
+from .audit_mixin import AuditMixin
+
 # set up database - SQLAlchemy() must be done after app.config SQLALCHEMY_* assignments
 db = SQLAlchemy()
 Table = db.Table
@@ -45,9 +48,6 @@ NAME_LEN = 256
 PASSWORD_LEN = 255
 UNIQUIFIER_LEN = 255
 
-# common roles
-ROLE_SUPER_ADMIN = 'super-admin'
-
 # applications
 APP_CONTRACTS = 'contracts'
 APP_MEMBERS = 'members'
@@ -64,6 +64,12 @@ userinterest_table = Table('users_interests', Base.metadata,
 appinterest_table = Table('apps_interests', Base.metadata,
                            Column('application_id', Integer, ForeignKey('application.id')),
                            Column('interest_id', Integer, ForeignKey('interest.id')),
+                           info={'bind_key': 'users'},
+                          )
+
+approle_table = Table('apps_roles', Base.metadata,
+                           Column('application_id', Integer, ForeignKey('application.id')),
+                           Column('role_id', Integer, ForeignKey('role.id')),
                            info={'bind_key': 'users'},
                           )
 
@@ -107,8 +113,11 @@ class Role(Base, RoleMixin):
     version_id          = Column(Integer, nullable=False, default=1)
     name                = Column(String(ROLENAME_LEN), unique=True)
     description         = Column(String(USERROLEDESCR_LEN))
+    applications        = relationship("Application",
+                                       secondary=approle_table,
+                                       backref=backref("roles"))
 
-class User(Base, UserMixin):
+class User(Base, UserMixin, AuditMixin):
     __tablename__ = 'user'
     __bind_key__ = 'users'
     id                  = Column(Integer, primary_key=True)
@@ -127,3 +136,45 @@ class User(Base, UserMixin):
     confirmed_at        = Column( DateTime() )
     roles               = relationship('Role', secondary='roles_users',
                           backref=backref('users', lazy='dynamic'))
+
+class ManageLocalUser():
+    def __init__(self, db, localusermodel):
+        '''
+        operations on localuser model for callers of User model
+        localuser model must use AuditMixin
+
+        :param db: SQLAlchemy instance used by caller
+        :param localusermodel: localuser model class
+        '''
+        self.db = db
+        self.localusermodel = localusermodel
+        # see https://stackoverflow.com/questions/21301452/get-table-name-by-table-class-in-sqlalchemy
+        self.localusertable = localusermodel.__table__.name
+
+    def update(self):
+        '''
+        keep localuser table consistent with external db User table
+        '''
+        # don't try to update before table exists
+        if not db.engine.has_table(self.localusertable): return
+
+        # alllocal will be used to determine what localuser model rows need to be deactivated
+        # this detects deletions in User table
+
+        alllocal = {}
+        for localuser in self.localusermodel.query.all():
+            alllocal[localuser.user_id] = localuser
+        for user in User.query.all():
+            # remove from deactivate list; update active status
+            if user.id in alllocal:
+                localuser = alllocal.pop(user.id)
+                localuser.active = user.active
+            # needs to be added
+            else:
+                newlocal = self.localusermodel(user_id=user.id, active=user.active)
+                self.db.session.add(newlocal)
+        # all remaining in alllocal need to be deactivated
+        for user_id in alllocal:
+            localuser = self.localusermodel.query.filter_by(user_id=user_id).one()
+            localuser.active = False
+        self.db.session.commit()

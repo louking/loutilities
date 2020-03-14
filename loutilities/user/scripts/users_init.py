@@ -15,9 +15,7 @@ run from 3 levels up, like python -m loutilities.user.scripts.users_init
 '''
 # standard
 from os.path import join, dirname
-from glob import glob
-from shutil import rmtree
-from csv import DictReader, DictWriter
+from copy import deepcopy
 
 # pypi
 
@@ -29,6 +27,7 @@ from loutilities.user.model import db
 from loutilities.user.applogging import setlogging
 from loutilities.user.model import User, Role, Interest, Application
 from loutilities.user.model import APP_ALL
+from loutilities.user.roles import all_roles
 
 class parameterError(Exception): pass
 
@@ -42,27 +41,32 @@ def init_db(defineowner=True):
 
     # special processing for user roles because need to remember the roles when defining the owner
     # define user roles here
-    userroles = [
-        {'name':'super-admin',    'description':'everything'},
-    ]
 
     interests = [
         {'interest':'fsrc', 'description':'Frederick Steeplechasers Running Club', 'public':True}
     ]
 
-    # initialize roles, remembering what roles we have
-    allroles = {}
-    for userrole in userroles:
-        rolename = userrole['name']
-        allroles[rolename] = Role.query.filter_by(name=rolename).one_or_none() or user_datastore.create_role(**userrole)
-
     # initialize applications, remembering what applications we have
     allapps = []
+    appname2db = {}
     for app in APP_ALL:
         thisapp = Application(application=app)
         db.session.add(thisapp)
         db.session.flush()
         allapps.append(thisapp)
+        appname2db[app] = thisapp
+
+    # initialize roles, remembering what roles we have
+    combinedroles = {}
+    local_all_roles = deepcopy(all_roles)
+    for approles in local_all_roles:
+        for approle in approles:
+            apps = approle.pop('apps')
+            rolename = approle['name']
+            thisrole = Role.query.filter_by(name=rolename).one_or_none() or user_datastore.create_role(**approle)
+            for thisapp in apps:
+                thisrole.applications.append(appname2db[thisapp])
+            combinedroles[rolename] = thisrole
 
     allinterests = []
     # initialize interests, remembering what interests we have
@@ -84,8 +88,8 @@ def init_db(defineowner=True):
         owner = User.query.filter_by(email=rootuser).first()
         if not owner:
             owner = user_datastore.create_user(email=rootuser, password=hash_password(rootpw), name=name, given_name=given_name)
-            for rolename in allroles:
-                user_datastore.add_role_to_user(owner, allroles[rolename])
+            for rolename in combinedroles:
+                user_datastore.add_role_to_user(owner, combinedroles[rolename])
         db.session.flush()
         owner = User.query.filter_by(email=rootuser).one()
         if not owner.interests:
