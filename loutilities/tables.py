@@ -525,9 +525,6 @@ def _editormethod(checkaction='', formrequest=True):
                     self.rollback()
                     cause = 'operation not permitted for user'
                     return dt_editor_response(error=cause)
-                
-                # perform any processing required before method is executed
-                self.editor_method_prehook(request.form)
 
                 # get action
                 # TODO: modify get_request_action and get_request_data to allow either request object or form object, 
@@ -538,6 +535,10 @@ def _editormethod(checkaction='', formrequest=True):
                     self._data = get_request_data(request.form)
                 else:
                     action = request.args['action']
+                self.action = action
+
+                # perform any processing required before method is executed
+                self.editor_method_prehook(request.form)
 
                 if debug: print('checkaction = {}'.format(checkaction))
                 # checkaction needs to be list
@@ -563,7 +564,10 @@ def _editormethod(checkaction='', formrequest=True):
                 # commit database updates and close transaction
                 self.commit()
 
-                # response to client                
+                # perform any processing required after method is executed, after commit
+                self.editor_method_postcommit(request.form)
+
+                # response to client
                 return dt_editor_response(data=self._responsedata)
             
             except:
@@ -1194,6 +1198,8 @@ class CrudApi(MethodView):
 
         NOTE: any updates to form validation should be done in self.validation()
 
+        self.action has action
+
         parameters:
         * form - request.form object (immutable)
         '''
@@ -1208,6 +1214,23 @@ class CrudApi(MethodView):
 
         Use get_request_action(form) to determine which method is in progress
         self._responsedata has data about to be returned to client
+        self.action has action
+
+        parameters:
+        * form - request.form object (immutable)
+        '''
+        return
+
+    #----------------------------------------------------------------------
+    def editor_method_postcommit(self, form):
+    #----------------------------------------------------------------------
+        '''
+        This method is called within post() [create], put() [edit], delete() [edit] db commit() just after database
+        commit and before response to client
+
+        Use get_request_action(form) to determine which method is in progress
+        self._responsedata has data about to be returned to client
+        self.action has action
 
         parameters:
         * form - request.form object (immutable)

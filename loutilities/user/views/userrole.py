@@ -70,58 +70,72 @@ class UserCrudApi(DbCrudApiRolePermissions):
             user = User.query.filter_by(id=self.created_id).one()
             send_reset_password_instructions(user)
 
-user = UserCrudApi(
-                    app = bp,   # use blueprint instead of app
-                    db = db,
-                    model = User, 
-                    version_id_col = 'version_id',  # optimistic concurrency control
-                    roles_accepted = 'super-admin',
-                    template = 'datatables.jinja2',
-                    pagename = 'users', 
-                    endpoint = 'userrole.users',
-                    rule = '/users',
-                    dbmapping = user_dbmapping, 
-                    formmapping = user_formmapping, 
-                    clientcolumns = [
-                        { 'data': 'email', 'name': 'email', 'label': 'Email', '_unique': True,
-                          'className': 'field_req',
-                          },
-                        { 'data': 'given_name', 'name': 'given_name', 'label': 'First Name',
-                          'className': 'field_req',
-                          },
-                        { 'data': 'name', 'name': 'name', 'label': 'Full Name',
-                          'className': 'field_req',
-                          },
-                        { 'data': 'roles', 'name': 'roles', 'label': 'Roles',
-                          '_treatment' : { 'relationship' : { 'fieldmodel':Role, 'labelfield':'name', 'formfield':'roles', 'dbfield':'roles', 'uselist':True } }
-                        },
-                        {'data': 'interests', 'name': 'interests', 'label': 'Interests',
-                         '_treatment': {'relationship': {'fieldmodel': Interest, 'labelfield': 'description',
-                                                         'formfield': 'interests', 'dbfield': 'interests',
-                                                         'uselist': True}}
-                        },
-                        { 'data': 'active', 'name': 'active', 'label': 'Active',
-                          '_treatment' : { 'boolean' : { 'formfield':'active', 'dbfield':'active' } },
-                          'ed':{ 'def':'yes' }, 
-                        },
-                        { 'data': 'last_login_at', 'name': 'last_login_at', 'label': 'Last Login At', 'type': 'readonly' },
-                        { 'data': 'current_login_at', 'name': 'current_login_at', 'label': 'Current Login At', 'type': 'readonly' },
-                        { 'data': 'last_login_ip', 'name': 'last_login_ip', 'label': 'Last Login IP', 'type': 'readonly' },
-                        { 'data': 'current_login_ip', 'name': 'current_login_ip', 'label': 'Current Login IP', 'type': 'readonly' },
-                        { 'data': 'login_count', 'name': 'login_count', 'label': 'Login Count', 'type': 'readonly' },
-                    ], 
-                    validate = user_validate,
-                    servercolumns = None,  # not server side
-                    idSrc = 'rowid', 
-                    buttons = ['create', 'editRefresh'],
-                    dtoptions = {
-                                        'scrollCollapse': True,
-                                        'scrollX': True,
-                                        'scrollXInner': "100%",
-                                        'scrollY': True,
-                                  },
-                    )
-user.register()
+class UserView(UserCrudApi):
+    def __init__(self, **kwargs):
+        '''
+        application MUST instantiate UserView
+
+        application should override editor_method_postcommit(self, form) to call
+        loutilities.model.ManageLocalUser(db, appname, localusermodel, localinterestmodel).update()
+        '''
+        self.kwargs = kwargs
+        args = dict(
+            app=bp,  # use blueprint instead of app
+            db=db,
+            model=User,
+            version_id_col='version_id',  # optimistic concurrency control
+            roles_accepted='super-admin',
+            template='datatables.jinja2',
+            pagename='users',
+            endpoint='userrole.users',
+            rule='/users',
+            dbmapping=user_dbmapping,
+            formmapping=user_formmapping,
+            clientcolumns=[
+                {'data': 'email', 'name': 'email', 'label': 'Email', '_unique': True,
+                 'className': 'field_req',
+                 },
+                {'data': 'given_name', 'name': 'given_name', 'label': 'First Name',
+                 'className': 'field_req',
+                 },
+                {'data': 'name', 'name': 'name', 'label': 'Full Name',
+                 'className': 'field_req',
+                 },
+                {'data': 'roles', 'name': 'roles', 'label': 'Roles',
+                 '_treatment': {'relationship': {'fieldmodel': Role, 'labelfield': 'name', 'formfield': 'roles',
+                                                 'dbfield': 'roles', 'uselist': True}}
+                 },
+                {'data': 'interests', 'name': 'interests', 'label': 'Interests',
+                 '_treatment': {'relationship': {'fieldmodel': Interest, 'labelfield': 'description',
+                                                 'formfield': 'interests', 'dbfield': 'interests',
+                                                 'uselist': True}}
+                 },
+                {'data': 'active', 'name': 'active', 'label': 'Active',
+                 '_treatment': {'boolean': {'formfield': 'active', 'dbfield': 'active'}},
+                 'ed': {'def': 'yes'},
+                 },
+                {'data': 'last_login_at', 'name': 'last_login_at', 'label': 'Last Login At', 'type': 'readonly'},
+                {'data': 'current_login_at', 'name': 'current_login_at', 'label': 'Current Login At',
+                 'type': 'readonly'},
+                {'data': 'last_login_ip', 'name': 'last_login_ip', 'label': 'Last Login IP', 'type': 'readonly'},
+                {'data': 'current_login_ip', 'name': 'current_login_ip', 'label': 'Current Login IP',
+                 'type': 'readonly'},
+                {'data': 'login_count', 'name': 'login_count', 'label': 'Login Count', 'type': 'readonly'},
+            ],
+            validate=user_validate,
+            servercolumns=None,  # not server side
+            idSrc='rowid',
+            buttons=['create', 'editRefresh'],
+            dtoptions={
+                'scrollCollapse': True,
+                'scrollX': True,
+                'scrollXInner': "100%",
+                'scrollY': True,
+            },
+        )
+        args.update(kwargs)
+        super().__init__(**args)
+
 
 ##########################################################################################
 # roles endpoint
@@ -185,52 +199,62 @@ def interest_validate(action, formdata):
 
     return results
 
-interest = DbCrudApiRolePermissions(
-                    app = bp,   # use blueprint instead of app
-                    db = db,
-                    model = Interest,
-                    version_id_col = 'version_id',  # optimistic concurrency control
-                    interests_accepted = 'super-admin',
-                    template = 'datatables.jinja2',
-                    pagename = 'interests', 
-                    endpoint = 'userrole.interests',
-                    rule = '/interests',
-                    dbmapping = interest_dbmapping, 
-                    formmapping = interest_formmapping, 
-                    clientcolumns = [
-                        { 'data': 'description', 'name': 'description', 'label': 'Description', '_unique': True,
-                          'className': 'field_req',
-                          },
-                        { 'data': 'interest', 'name': 'interest', 'label': 'Slug', '_unique': True,
-                          'className': 'field_req',
-                          },
-                        { 'data': 'public', 'name': 'public', 'label': 'Public',
-                          '_treatment' : { 'boolean' : { 'formfield':'public', 'dbfield':'public' } },
-                          'ed':{ 'def':'yes' },
-                        },
-                        {'data': 'applications', 'name': 'applications', 'label': 'Applications',
-                         '_treatment': {'relationship': {'fieldmodel': Application, 'labelfield': 'application',
-                                                         'formfield': 'applications', 'dbfield': 'applications',
-                                                         'uselist': True}}
-                         },
-                        {'data': 'users', 'name': 'users', 'label': 'Users',
-                         '_treatment': {'relationship': {'fieldmodel': User, 'labelfield': 'email',
-                                                         'formfield': 'users', 'dbfield': 'users',
-                                                         'uselist': True}}
-                         },
-                    ],
-                    validate = interest_validate,
-                    servercolumns = None,  # not server side
-                    idSrc = 'rowid', 
-                    buttons = ['create', 'editRefresh', 'remove'],
-                    dtoptions = {
-                                        'scrollCollapse': True,
-                                        'scrollX': True,
-                                        'scrollXInner': "100%",
-                                        'scrollY': True,
-                                  },
-                    )
-interest.register()
+class InterestView(DbCrudApiRolePermissions):
+    def __init__(self, **kwargs):
+        '''
+        application MUST instantiate InterestView
+
+        application should override editor_method_postcommit(self, form) to call
+        loutilities.model.ManageLocalUser(db, appname, localusermodel, localinterestmodel).update()
+        '''
+        self.kwargs = kwargs
+        args = dict(
+            app=bp,  # use blueprint instead of app
+            db=db,
+            model=Interest,
+            version_id_col='version_id',  # optimistic concurrency control
+            interests_accepted='super-admin',
+            template='datatables.jinja2',
+            pagename='interests',
+            endpoint='userrole.interests',
+            rule='/interests',
+            dbmapping=interest_dbmapping,
+            formmapping=interest_formmapping,
+            clientcolumns=[
+                {'data': 'description', 'name': 'description', 'label': 'Description', '_unique': True,
+                 'className': 'field_req',
+                 },
+                {'data': 'interest', 'name': 'interest', 'label': 'Slug', '_unique': True,
+                 'className': 'field_req',
+                 },
+                {'data': 'public', 'name': 'public', 'label': 'Public',
+                 '_treatment': {'boolean': {'formfield': 'public', 'dbfield': 'public'}},
+                 'ed': {'def': 'yes'},
+                 },
+                {'data': 'applications', 'name': 'applications', 'label': 'Applications',
+                 '_treatment': {'relationship': {'fieldmodel': Application, 'labelfield': 'application',
+                                                 'formfield': 'applications', 'dbfield': 'applications',
+                                                 'uselist': True}}
+                 },
+                {'data': 'users', 'name': 'users', 'label': 'Users',
+                 '_treatment': {'relationship': {'fieldmodel': User, 'labelfield': 'email',
+                                                 'formfield': 'users', 'dbfield': 'users',
+                                                 'uselist': True}}
+                 },
+            ],
+            validate=interest_validate,
+            servercolumns=None,  # not server side
+            idSrc='rowid',
+            buttons=['create', 'editRefresh', 'remove'],
+            dtoptions={
+                'scrollCollapse': True,
+                'scrollX': True,
+                'scrollXInner': "100%",
+                'scrollY': True,
+            },
+        )
+        args.update(kwargs)
+        super().__init__(**args)
 
 ##########################################################################################
 # applications endpoint

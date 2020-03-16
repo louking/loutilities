@@ -12,9 +12,6 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_security import UserMixin, RoleMixin
 
-# gist
-from .audit_mixin import AuditMixin
-
 # set up database - SQLAlchemy() must be done after app.config SQLALCHEMY_* assignments
 db = SQLAlchemy()
 Table = db.Table
@@ -117,7 +114,7 @@ class Role(Base, RoleMixin):
                                        secondary=approle_table,
                                        backref=backref("roles"))
 
-class User(Base, UserMixin, AuditMixin):
+class User(Base, UserMixin):
     __tablename__ = 'user'
     __bind_key__ = 'users'
     id                  = Column(Integer, primary_key=True)
@@ -137,24 +134,26 @@ class User(Base, UserMixin, AuditMixin):
     roles               = relationship('Role', secondary='roles_users',
                           backref=backref('users', lazy='dynamic'))
 
-class ManageLocalUser():
-    def __init__(self, db, localusermodel):
+class ManageLocalTables():
+    def __init__(self, db, appname, localusermodel, localinterestmodel):
         '''
         operations on localuser model for callers of User model
-        localuser model must use AuditMixin
 
         :param db: SQLAlchemy instance used by caller
-        :param localusermodel: localuser model class
+        :param appname: name of application, must match Application.application
+        :param localusermodel: model class for User, in the slave database
+        :param localinterestmodel: model class for Interest, in the slave database
         '''
         self.db = db
         self.localusermodel = localusermodel
         # see https://stackoverflow.com/questions/21301452/get-table-name-by-table-class-in-sqlalchemy
         self.localusertable = localusermodel.__table__.name
+        self.localinterestmodel = localinterestmodel
+        self.localinteresttable = localinterestmodel.__table__.name
 
-    def update(self):
-        '''
-        keep localuser table consistent with external db User table
-        '''
+        self.application = Application.query.filter_by(application=appname).one()
+
+    def _updateuser(self):
         # don't try to update before table exists
         if not db.engine.has_table(self.localusertable): return
 
@@ -177,4 +176,36 @@ class ManageLocalUser():
         for user_id in alllocal:
             localuser = self.localusermodel.query.filter_by(user_id=user_id).one()
             localuser.active = False
+
+    def _updateinterest(self):
+        # don't try to update before table exists
+        if not db.engine.has_table(self.localinteresttable): return
+
+        # alllocal will be used to determine what localinterest model rows need to be deleted
+        # this detects deletions in Interest table
+        alllocal = {}
+        for localinterest in self.localinterestmodel.query.all():
+            alllocal[localinterest.interest_id] = localinterest
+        for interest in Interest.query.all():
+            # if this interest isn't for this application, ignore
+            if self.application not in interest.applications: continue
+
+            # remove from delete list; update active status
+            if interest.id in alllocal:
+                discard = alllocal.pop(interest.id)
+            # needs to be added
+            else:
+                newlocal = self.localinterestmodel(interest_id=interest.id)
+                self.db.session.add(newlocal)
+        # all remaining in alllocal need to be deleted
+        for interest_id in alllocal:
+            localinterest = self.localinterestmodel.query.filter_by(interest_id=interest_id).one()
+            self.db.session.delete(localinterest)
+
+    def update(self):
+        '''
+        keep localuser and localinterest tables consistent with external db User table
+        '''
+        self._updateuser()
+        self._updateinterest()
         self.db.session.commit()
