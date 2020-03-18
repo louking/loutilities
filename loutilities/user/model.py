@@ -74,7 +74,6 @@ class Interest(Base):
     __tablename__ = 'interest'
     __bind_key__ = 'users'
     id                  = Column(Integer(), primary_key=True)
-    version_id          = Column(Integer, nullable=False, default=1)
     interest            = Column(String(INTEREST_LEN))
     users               = relationship("User",
                                        secondary=userinterest_table,
@@ -85,12 +84,21 @@ class Interest(Base):
     description         = Column(String(DESCR_LEN))
     public              = Column(Boolean)
 
+    version_id = Column(Integer, nullable=False, default=1)
+    __mapper_args__ = {
+        'version_id_col': version_id
+    }
+
 class Application(Base):
     __tablename__ = 'application'
     __bind_key__ = 'users'
     id              = Column(Integer(), primary_key=True)
-    version_id      = Column(Integer, nullable=False, default=1)
     application     = Column(String(APPLICATION_LEN))
+
+    version_id = Column(Integer, nullable=False, default=1)
+    __mapper_args__ = {
+        'version_id_col': version_id
+    }
 
 # user role management
 # adapted from
@@ -107,18 +115,21 @@ class Role(Base, RoleMixin):
     __tablename__ = 'role'
     __bind_key__ = 'users'
     id                  = Column(Integer(), primary_key=True)
-    version_id          = Column(Integer, nullable=False, default=1)
     name                = Column(String(ROLENAME_LEN), unique=True)
     description         = Column(String(USERROLEDESCR_LEN))
     applications        = relationship("Application",
                                        secondary=approle_table,
                                        backref=backref("roles"))
 
+    version_id = Column(Integer, nullable=False, default=1)
+    __mapper_args__ = {
+        'version_id_col': version_id
+    }
+
 class User(Base, UserMixin):
     __tablename__ = 'user'
     __bind_key__ = 'users'
     id                  = Column(Integer, primary_key=True)
-    version_id          = Column(Integer, nullable=False, default=1)
     email               = Column( String(EMAIL_LEN), unique=True )  # = username
     password            = Column( String(PASSWORD_LEN) )
     name                = Column( String(NAME_LEN) )
@@ -133,6 +144,11 @@ class User(Base, UserMixin):
     confirmed_at        = Column( DateTime() )
     roles               = relationship('Role', secondary='roles_users',
                           backref=backref('users', lazy='dynamic'))
+
+    version_id = Column(Integer, nullable=False, default=1)
+    __mapper_args__ = {
+        'version_id_col': version_id
+    }
 
 class ManageLocalTables():
     def __init__(self, db, appname, localusermodel, localinterestmodel):

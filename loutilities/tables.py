@@ -1725,9 +1725,10 @@ class DbCrudApi(CrudApi):
         **serverside** - if present table will be displayed through ajax get calls
 
         **version_id_col** - if present edits to this table are protected using optimistic concurrency control
+          * https://docs.sqlalchemy.org/en/13/orm/versioning.html
           * see https://en.wikipedia.org/wiki/Optimistic_concurrency_control
           * also https://martinfowler.com/eaaCatalog/optimisticOfflineLock.html
-          * this column is automaticalled added to dbmapping, formmapping and clientcolumns
+          * this column is automatically added to dbmapping, formmapping and clientcolumns
           * e.g., for version_id_col='version_id', database model for this table should have code like
                 ```
                 version_id          = Column(Integer, nullable=False)
