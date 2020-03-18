@@ -2,11 +2,13 @@ $.fn.dataTable.ext.buttons.editRefresh = {
     extend: 'edit',
     text: 'Edit',
     action: function (e, dt, node, config) {
+        var that = this;
         this.processing( true );
+
+        config.editor._event( 'preEditRefresh', [dt, config.editor.s.action] )
 
         // Get currently selected row ids
         var selectedRows = dt.rows({selected:true}).ids();
-        var that = this;
 
         // Ajax request to refresh the data for those ids
         $.ajax( {
@@ -35,7 +37,7 @@ $.fn.dataTable.ext.buttons.editRefresh = {
                 if (json.error) {
                     // this is application specific
                     // not sure if there's a generic way to find the current editor instance
-                    editor.error('ERROR retrieving row from server:<br>' + json.error);
+                    config.editor.error('ERROR retrieving row from server:<br>' + json.error);
                 }
             }
         } );

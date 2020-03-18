@@ -18,6 +18,8 @@ function register_group_for_editor(groupname, groupselectselector) {
         editor.ajax(newconfig);
     }
 
+    // need on 'preEditRefresh' to translate interest for editRefresh button
+    editor.on( 'preEditRefresh', translate_interest);
     // need on 'preSubmit' to translate interest for resubmission of form, e.g., after error occurs
     editor.on( 'preSubmit', translate_interest);
     // need on 'open' to translate interest for file uploads, as there's no 'preSubmit' for these
