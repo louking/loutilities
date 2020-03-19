@@ -91,6 +91,6 @@ function register_group(groupname, groupselectselector, groupargappendselector) 
             args = deparam(basequery[1]);
         }
         args[groupname] = group;
-        location.href = $(this).attr('href') + '?' + $.param(args);
+        location.href = basequery[0] + '?' + $.param(args);
     });
 }
