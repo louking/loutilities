@@ -1277,10 +1277,14 @@ class DteDbRelationship():
 
     * tablemodel - name of model for the table
     * fieldmodel - name of model comprises list in dbfield
-    * labelfield - field in model which is used to be displayed to the user
-    * valuefield - field in model which is used as value for select and to retrieve record, passed on Editor interface, default 'id' - needs to be a key for model record
+    * labelfield - field in fieldmodel which is used to be displayed to the user
+    * valuefield - field in fieldmodel which is used as value for select and to retrieve record, passed on Editor interface,
+    *    default 'id' - needs to be a key for model record
     * formfield - field as used on the form
-    * dbfield - field as used in the database table (not the model -- this is field in table which has list of model items)
+    * dbfield - field as used in the database table (not the model -- this is field in tablemodel which has list of
+         fieldmodel items)
+    * viadbattr - (optional) if fieldmodel is in a separate database, the select options of fieldmodel.valuefield
+         can be mapped via a local table. Specify the "via" mapping attribute here, e.g., LocalUser.user_id
     * uselist - set to True if using tags, otherwise field expects single entry, default True
     * searchbox - set to True if searchbox desired, default False
     * nullable - set to True if item can give null (unselected) return, default False (only applies for usellist=False)
@@ -1301,6 +1305,40 @@ class DteDbRelationship():
         TODO: add more detail here -- this is confusing
 
         children = DteDbRelationship(tablemodel=Parent, fieldmodel=Child, labelfield='name', formfield='children', dbfield='children')
+
+    Use of viadbattr:
+
+        # local db
+        usertaskgroup_table = Table('user_taskgroup', Base.metadata,
+                           Column('user_id', Integer, ForeignKey('localuser.id')),
+                           Column('taskgroup_id', Integer, ForeignKey('taskgroup.id')),
+                           )
+
+        class LocalUser(Base):
+            __tablename__ = 'localuser'
+            id                  = Column(Integer(), primary_key=True)
+            user_id             = Column(Integer)
+
+        class TaskGroup(Base):
+            __tablename__ = 'taskgroup'
+            id                  = Column(Integer(), primary_key=True)
+            taskgroup           = Column(String(TASKGROUP_LEN))
+            users               = relationship('LocalUser',
+                                               secondary=usertaskgroup_table,
+                                               backref=backref('taskgroups'))
+
+        # separate db (using SQLALCHEMY_BINDS)
+        class User(Base, UserMixin):
+            __tablename__ = 'user'
+            __bind_key__ = 'users'
+            id                  = Column(Integer, primary_key=True)
+            email               = Column( String(EMAIL_LEN), unique=True )  # = username
+            password            = Column( String(PASSWORD_LEN) )
+            name                = Column( String(NAME_LEN) )
+            given_name          = Column( String(NAME_LEN) )
+
+        taskgroups = DteDbRelationship(tablemodel=TaskGroup, fieldmodel=User, viadbattr=LocalUser.user_id, labelfield='name', formfield='users', dbfield='users')
+
     '''
 
     # ----------------------------------------------------------------------
@@ -1315,6 +1353,7 @@ class DteDbRelationship():
                     valuefield='id',
                     formfield=None,
                     dbfield=None,
+                    viadbattr=None,
                     uselist=True,
                     searchbox=False,
                     nullable=False,
@@ -1331,6 +1370,11 @@ class DteDbRelationship():
         # set arguments as class attributes
         for key in args:
             setattr(self, key, args[key])
+
+        # pick up viadbattr class, key
+        if self.viadbattr:
+            self.viamodel = self.viadbattr.class_
+            self.viafield = self.viadbattr.key
 
     # ----------------------------------------------------------------------
     def set(self, formrow):
@@ -1355,10 +1399,17 @@ class DteDbRelationship():
                         itemvalues[ndx].update({key: vallist[ndx]})
             if debug: current_app.logger.debug('itemvalues={}'.format(itemvalues))
             for itemvalue in itemvalues:
-                queryfilter = itemvalue
-                # queryfilter = {self.valuefield : itemvalue}
-                thisitem = self.fieldmodel.query.filter_by(**queryfilter).one()
-                items.append(thisitem)
+                # normal operation is not through via attr
+                if not self.viadbattr:
+                    queryfilter = itemvalue
+                    # queryfilter = {self.valuefield : itemvalue}
+                    thisitem = self.fieldmodel.query.filter_by(**queryfilter).one()
+                    items.append(thisitem)
+                # operation through "via" model to access bind table
+                else:
+                    queryfilter = {self.viafield: itemvalue[self.valuefield]}
+                    thisitem = self.viamodel.query.filter_by(**queryfilter).one()
+                    items.append(thisitem)
             return items
         else:
             itemvalue = formrow[self.formfield] if formrow[self.formfield] else None
@@ -1371,7 +1422,9 @@ class DteDbRelationship():
     def get(self, dbrow_or_id):
         # check if id supplied, if so retrieve dbrow
         if type(dbrow_or_id) in [int, str]:
+            # normal operation is not through via attr
             dbrow = self.tablemodel.query().filter_by(id=dbrow_or_id).one()
+
         else:
             dbrow = dbrow_or_id
 
@@ -1381,8 +1434,16 @@ class DteDbRelationship():
             labelitems = []
             valueitems = []
             for item in getattr(dbrow, self.dbfield):
-                labelitems.append(str(getattr(item, self.labelfield)))
-                valueitems.append(str(getattr(item, self.valuefield)))
+                if not self.viadbattr:
+                    theitem = item
+                # operation through "via" model to access bind table
+                # item points at viamodel entry, need to convert to fieldmodel entry
+                else:
+                    itemparams = {self.valuefield: getattr(item, self.viafield)}
+                    theitem = self.fieldmodel.query.filter_by(**itemparams).one()
+
+                labelitems.append(str(getattr(theitem, self.labelfield)))
+                valueitems.append(str(getattr(theitem, self.valuefield)))
             items = {self.labelfield: SEPARATOR.join(labelitems), self.valuefield: SEPARATOR.join(valueitems)}
             return items
         else:
