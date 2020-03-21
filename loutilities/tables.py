@@ -1285,6 +1285,8 @@ class DteDbRelationship():
          fieldmodel items)
     * viadbattr - (optional) if fieldmodel is in a separate database, the select options of fieldmodel.valuefield
          can be mapped via a local table. Specify the "via" mapping attribute here, e.g., LocalUser.user_id
+    * viafilter - (optional) if viadbattr is set, this can be additional filters to add to the local table lookup.
+         This can be specific dict or function() which returns specific dict
     * uselist - set to True if using tags, otherwise field expects single entry, default True
     * searchbox - set to True if searchbox desired, default False
     * nullable - set to True if item can give null (unselected) return, default False (only applies for usellist=False)
@@ -1354,6 +1356,7 @@ class DteDbRelationship():
                     formfield=None,
                     dbfield=None,
                     viadbattr=None,
+                    viafilter={},
                     uselist=True,
                     searchbox=False,
                     nullable=False,
@@ -1407,7 +1410,9 @@ class DteDbRelationship():
                     items.append(thisitem)
                 # operation through "via" model to access bind table
                 else:
-                    queryfilter = {self.viafield: itemvalue[self.valuefield]}
+                    # note self.viafilter must be or return dict
+                    queryfilter = self.viafilter() if callable(self.viafilter) else self.viafilter
+                    queryfilter[self.viafield] = itemvalue[self.valuefield]
                     thisitem = self.viamodel.query.filter_by(**queryfilter).one()
                     items.append(thisitem)
             return items
