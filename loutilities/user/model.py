@@ -151,25 +151,61 @@ class User(Base, UserMixin):
     }
 
 class ManageLocalTables():
-    def __init__(self, db, appname, localusermodel, localinterestmodel):
+    def __init__(self, db, appname, localusermodel, localinterestmodel, hasuserinterest=False):
         '''
         operations on localuser model for callers of User model
 
         :param db: SQLAlchemy instance used by caller
         :param appname: name of application, must match Application.application
-        :param localusermodel: model class for User, in the slave database
+        :param localusermodel: model class for User, in the slave database (must have user_id column)
         :param localinterestmodel: model class for Interest, in the slave database
+        :param hasuserinterest: (optional) if localusermodel has interest_id field, the users are copied for
+                                           each interest used by appname, default False
         '''
         self.db = db
         self.localusermodel = localusermodel
         # see https://stackoverflow.com/questions/21301452/get-table-name-by-table-class-in-sqlalchemy
         self.localusertable = localusermodel.__table__.name
+        self.hasuserinterest = hasuserinterest
         self.localinterestmodel = localinterestmodel
         self.localinteresttable = localinterestmodel.__table__.name
 
         self.application = Application.query.filter_by(application=appname).one()
 
-    def _updateuser(self):
+    def _updateuser_byinterest(self):
+        # don't try to update before table exists
+        if not db.engine.has_table(self.localusertable): return
+
+        # alllocal will be used to determine what localuser model rows need to be deactivated
+        # this detects deletions in User table
+
+        alllocal = {}
+        for localuser in self.localusermodel.query.all():
+            alllocal[localuser.user_id, localuser.interest_id] = localuser
+
+        for user in User.query.all():
+            for interest in Interest.query.all():
+                # if this interest isn't for this application, ignore
+                if self.application not in interest.applications: continue
+
+                # can't have ForeignKey across databases, so get localinterest.id for reference from localuser table
+                localinterest = self.localinterestmodel.query.filter_by(interest_id=interest.id).one()
+
+                # remove from deactivate list; update active status
+                if (user.id,localinterest.id) in alllocal:
+                    localuser = alllocal.pop((user.id,localinterest.id))
+                    localuser.active = user.active
+                # needs to be added
+                else:
+                    newlocal = self.localusermodel(user_id=user.id, interest_id=localinterest.id, active=True)
+                    self.db.session.add(newlocal)
+
+        # all remaining in alllocal need to be deactivated
+        for user_id,interest_id in alllocal:
+            localuser = self.localusermodel.query.filter_by(user_id=user_id, interest_id=interest_id).one()
+            localuser.active = False
+
+    def _updateuser_only(self):
         # don't try to update before table exists
         if not db.engine.has_table(self.localusertable): return
 
@@ -179,6 +215,7 @@ class ManageLocalTables():
         alllocal = {}
         for localuser in self.localusermodel.query.all():
             alllocal[localuser.user_id] = localuser
+
         for user in User.query.all():
             # remove from deactivate list; update active status
             if user.id in alllocal:
@@ -188,6 +225,7 @@ class ManageLocalTables():
             else:
                 newlocal = self.localusermodel(user_id=user.id, active=user.active)
                 self.db.session.add(newlocal)
+
         # all remaining in alllocal need to be deactivated
         for user_id in alllocal:
             localuser = self.localusermodel.query.filter_by(user_id=user_id).one()
@@ -222,6 +260,12 @@ class ManageLocalTables():
         '''
         keep localuser and localinterest tables consistent with external db User table
         '''
-        self._updateuser()
+        # interests need to be created before users
         self._updateinterest()
+        db.session.flush()
+
+        if self.hasuserinterest:
+            self._updateuser_byinterest()
+        else:
+            self._updateuser_only()
         self.db.session.commit()

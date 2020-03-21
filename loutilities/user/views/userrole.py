@@ -146,7 +146,16 @@ role_formfields = 'rowid,name,description,applications'.split(',')
 role_dbmapping = dict(zip(role_dbattrs, role_formfields))
 role_formmapping = dict(zip(role_formfields, role_dbattrs))
 
-role = DbCrudApiRolePermissions(
+class RoleView(DbCrudApiRolePermissions):
+    def __init__(self, **kwargs):
+        '''
+        application MUST instantiate RoleView
+
+        application should override editor_method_postcommit(self, form) to call
+        loutilities.model.ManageLocalUser(db, appname, localusermodel, localinterestmodel).update()
+        '''
+        self.kwargs = kwargs
+        args = dict(
                     app = bp,   # use blueprint instead of app
                     db = db,
                     model = Role, 
@@ -179,7 +188,8 @@ role = DbCrudApiRolePermissions(
                                         'scrollY': True,
                                   },
                     )
-role.register()
+        args.update(kwargs)
+        super().__init__(**args)
 
 ##########################################################################################
 # interests endpoint
