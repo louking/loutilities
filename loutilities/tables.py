@@ -71,9 +71,7 @@ def renderboolean(expr, *args, **kwargs):
     return cast(expr, RenderBoolean(*args, **kwargs))
 
 
-#----------------------------------------------------------------------
 def get_dbattr(basemodel, attrstring):
-#----------------------------------------------------------------------
     '''
     get a database attribute for a string which may have multiple levels
 
@@ -92,9 +90,7 @@ def get_dbattr(basemodel, attrstring):
     attr = attrs.pop(0)
     return getattr(thismodel, attr)
 
-#----------------------------------------------------------------------
 def dt_editor_response(**respargs):
-#----------------------------------------------------------------------
     '''
     build response for datatables editor
     
@@ -105,10 +101,8 @@ def dt_editor_response(**respargs):
     return flask.jsonify(**respargs)
 
 
-#----------------------------------------------------------------------
 def get_request_action(form):
-#----------------------------------------------------------------------
-    # TODO: modify get_request_action and get_request_data to allow either request object or form object, 
+    # TODO: modify get_request_action and get_request_data to allow either request object or form object,
     # and remove if/else for formrequest, e.g., action = get_request_action(request)
     # (allowing form object deprecated for legacy code)
     '''
@@ -122,10 +116,8 @@ def get_request_action(form):
     else:
         return None
 
-#----------------------------------------------------------------------
 def get_request_data(form):
-#----------------------------------------------------------------------
-    # TODO: modify get_request_action and get_request_data to allow either request object or form object, 
+    # TODO: modify get_request_action and get_request_data to allow either request object or form object,
     # and remove if/else for formrequest, e.g., action = get_request_action(request)
     # (allowing form object deprecated for legacy code)
     '''
@@ -212,9 +204,7 @@ class DataTables(BaseDataTables, object):
             super(DataTables, self)._set_yadcf_data(query)
 
 
-###########################################################################################
 class DataTablesEditor():
-###########################################################################################
     '''
     handle CRUD request from dataTables Editor
 
@@ -229,16 +219,12 @@ class DataTablesEditor():
     :param null2emptystring: if True translate '' from form to None for db and visa versa
     '''
 
-    #----------------------------------------------------------------------
     def __init__(self, dbmapping, formmapping, null2emptystring=False):
-    #----------------------------------------------------------------------
         self.dbmapping = dbmapping
         self.formmapping = formmapping
         self.null2emptystring = null2emptystring
 
-    #----------------------------------------------------------------------
     def get_response_data(self, dbentry, nesteddata=False):
-    #----------------------------------------------------------------------
         '''
         set form values based on database model object
 
@@ -277,9 +263,7 @@ class DataTablesEditor():
         else:
             return data
 
-    #----------------------------------------------------------------------
     def set_dbrow(self, inrow, dbrow):
-    #----------------------------------------------------------------------
         '''
         update database entry from form entry
 
@@ -305,9 +289,7 @@ class DataTablesEditor():
                     pass
 
 
-#######################################################################
 class TablesCsv(MethodView):
-#######################################################################
     '''
     provides flask render for csv.DictReader-like datasource as table
 
@@ -399,10 +381,8 @@ class TablesCsv(MethodView):
         '''
         flask.abort(403)
 
-    #----------------------------------------------------------------------
     def __init__(self, **kwargs):
-    #----------------------------------------------------------------------
-        # the args dict has all the defined parameters to 
+        # the args dict has all the defined parameters to
         # caller supplied keyword args are used to update the defaults
         # all arguments are made into attributes for self
         self.kwargs = kwargs
@@ -424,9 +404,7 @@ class TablesCsv(MethodView):
         for key in args:
             setattr(self, key, args[key])
 
-#----------------------------------------------------------------------
     def register(self):
-    #----------------------------------------------------------------------
         # name for view is last bit of fully named endpoint
         name = self.endpoint.split('.')[-1]
 
@@ -434,9 +412,7 @@ class TablesCsv(MethodView):
         my_view = self.as_view(name, **self.kwargs)
         self.app.add_url_rule('{}'.format(self.rule),view_func=my_view,methods=['GET',])
 
-    #----------------------------------------------------------------------
     def get(self):
-    #----------------------------------------------------------------------
         try:
             # do any processing, e.g., check credentials
             redirect = self.beforeget()
@@ -495,10 +471,7 @@ class TablesCsv(MethodView):
             raise
 
 
-#######################################################################
-#----------------------------------------------------------------------
 def _editormethod(checkaction='', formrequest=True):
-#----------------------------------------------------------------------
     '''
     decorator for CrudApi methods used by Editor
 
@@ -585,9 +558,7 @@ def _editormethod(checkaction='', formrequest=True):
     return wrap
 
 
-#######################################################################
 class CrudApi(MethodView):
-#######################################################################
     '''
     provides initial render and RESTful CRUD api
 
@@ -680,10 +651,8 @@ class CrudApi(MethodView):
     :param multiselect: if True, allow selection of multiple rows, default False
     '''
 
-    #----------------------------------------------------------------------
     def __init__(self, **kwargs):
-    #----------------------------------------------------------------------
-        # the args dict has all the defined parameters to 
+        # the args dict has all the defined parameters to
         # caller supplied keyword args are used to update the defaults
         # all arguments are made into attributes for self
         self.kwargs = kwargs
@@ -724,9 +693,7 @@ class CrudApi(MethodView):
         # set up mapping between database and editor form
         # self.dte = DataTablesEditor(self.dbmapping, self.formmapping)
 
-    #----------------------------------------------------------------------
     def register(self):
-    #----------------------------------------------------------------------
         # name for view is last bit of fully named endpoint
         name = self.endpoint.split('.')[-1]
 
@@ -740,9 +707,7 @@ class CrudApi(MethodView):
             self.files.register()
             if debug: print('self.files.register()')
 
-    #----------------------------------------------------------------------
     def _renderpage(self):
-    #----------------------------------------------------------------------
         try:
             redirect = self.init()
             if redirect:
@@ -832,9 +797,7 @@ class CrudApi(MethodView):
             self.rollback()
             raise
 
-    #----------------------------------------------------------------------
     def _retrieverows(self):
-    #----------------------------------------------------------------------
         try:
             redirect = self.init()
             if redirect:
@@ -875,9 +838,7 @@ class CrudApi(MethodView):
             self.rollback()
             raise
 
-    #----------------------------------------------------------------------
     def getdtoptions(self):
-    #----------------------------------------------------------------------
 
         # DataTables options string, data: and buttons: are passed separately
         # self.dtoptions can update what we come up with
@@ -919,9 +880,7 @@ class CrudApi(MethodView):
 
         return dt_options
 
-    #----------------------------------------------------------------------
     def getedoptions(self):
-    #----------------------------------------------------------------------
         ed_options = {
             'idSrc': self.idSrc,
             'ajax': {
@@ -977,24 +936,18 @@ class CrudApi(MethodView):
 
         return ed_options
 
-    #----------------------------------------------------------------------
     def getyadcfoptions(self):
-    #----------------------------------------------------------------------
         return self.yadcfoptions
 
-    #----------------------------------------------------------------------
     def get(self):
-    #----------------------------------------------------------------------
         print('request.path = {}'.format(request.path))
         if request.path[-5:] != '/rest':
             return self._renderpage()
         else:
             return self._retrieverows()
 
-    #----------------------------------------------------------------------
     @_editormethod(checkaction='create,refresh', formrequest=True)
     def post(self):
-    #----------------------------------------------------------------------
         # retrieve data from request
         thisdata = self._data[0]
         
@@ -1018,10 +971,8 @@ class CrudApi(MethodView):
             thisrow = self.upload(thisdata)
 
 
-    #----------------------------------------------------------------------
     @_editormethod(checkaction='edit', formrequest=True)
     def put(self, thisid):
-    #----------------------------------------------------------------------
         # retrieve data from request
         self._responsedata = []
         thisdata = self._data[thisid]
@@ -1034,10 +985,8 @@ class CrudApi(MethodView):
         self._responsedata = [thisrow]
 
 
-    #----------------------------------------------------------------------
     @_editormethod(checkaction='remove', formrequest=False)
     def delete(self, thisid):
-    #----------------------------------------------------------------------
         self.deleterow(thisid)
 
         # prepare response
@@ -1048,34 +997,26 @@ class CrudApi(MethodView):
     # the following methods must be replaced in subclass
     #----------------------------------------------------------------------
     
-    #----------------------------------------------------------------------
     def open(self):
-    #----------------------------------------------------------------------
         '''
         open source of "csv" data
         '''
         raise NotImplementedError
 
-    #----------------------------------------------------------------------
     def nexttablerow(self):
-    #----------------------------------------------------------------------
         '''
         return next record, similar to csv.DictReader - raises StopIteration
         :rtype: dict with row data for table
         '''
         raise NotImplementedError
 
-    #----------------------------------------------------------------------
     def close(self):
-    #----------------------------------------------------------------------
         '''
         close source of "csv" data
         '''
         raise NotImplementedError
 
-    #----------------------------------------------------------------------
     def permission(self):
-    #----------------------------------------------------------------------
         '''
         check for readpermission on data
         :rtype: boolean
@@ -1083,9 +1024,7 @@ class CrudApi(MethodView):
         raise NotImplementedError
         return False
 
-    #----------------------------------------------------------------------
     def createrow(self, formdata):
-    #----------------------------------------------------------------------
         '''
         creates row in database
         
@@ -1094,9 +1033,7 @@ class CrudApi(MethodView):
         '''
         raise NotImplementedError
 
-    #----------------------------------------------------------------------
     def refreshrows(self, ids):
-    #----------------------------------------------------------------------
         '''
         refreshes rows from database
         
@@ -1106,9 +1043,7 @@ class CrudApi(MethodView):
         current_app.logger.debug('tables.refreshrows("{}"): reached'.format(ids))
         raise NotImplementedError
 
-    #----------------------------------------------------------------------
     def updaterow(self, thisid, formdata):
-    #----------------------------------------------------------------------
         '''
         updates row in database
         
@@ -1118,9 +1053,7 @@ class CrudApi(MethodView):
         '''
         raise NotImplementedError
 
-    #----------------------------------------------------------------------
     def deleterow(self, thisid):
-    #----------------------------------------------------------------------
         '''
         deletes row in database
         
@@ -1133,47 +1066,38 @@ class CrudApi(MethodView):
     # the following methods may be replaced in subclass
     #----------------------------------------------------------------------
     
-    #----------------------------------------------------------------------
     def init(self):
-    #----------------------------------------------------------------------
         '''
         optional return redirect URL
         :return: redirect url or None if no redirect
         '''
         pass
 
-    #----------------------------------------------------------------------
     def beforequery(self):
-    #----------------------------------------------------------------------
         '''
         update self.queryparams if necessary
         '''
         pass
 
-    #----------------------------------------------------------------------
     def commit(self):
-    #----------------------------------------------------------------------
         pass
 
-    #----------------------------------------------------------------------
     def rollback(self):
-    #----------------------------------------------------------------------
         pass
 
-    #----------------------------------------------------------------------
     def abort(self):
-    #----------------------------------------------------------------------
         flask.abort(403)
 
-    #----------------------------------------------------------------------
     def render_template(self, **kwargs):
-    #----------------------------------------------------------------------
-        # NOTE: it is recommended that rather than replacing this method, templateargs and template class 
-        # parameters be used instead
+        '''
+        NOTE: it is recommended that rather than replacing this method, templateargs and template class
+        parameters be used instead
+        '''
 
         # when class was instantiated, templateargs dict passed in, keys of which to be added to flask render_template
         # some of these keys cannot be determined when the class was instantiated, e.g., if url_for() is needed
         # because blueprint hadn't been instantiated yet. So these are pass as lambda: url_for(), and therefore callable
+
         theseargs = {}
         current_app.logger.debug('rendertemplate(): self.templateargs = {}'.format(self.templateargs))
         for arg in self.templateargs:
@@ -1188,9 +1112,7 @@ class CrudApi(MethodView):
         # current_app.logger.debug('flask.render_template({}, {})'.format(self.template, theseargs))
         return flask.render_template(self.template, **theseargs)
 
-    #----------------------------------------------------------------------
     def editor_method_prehook(self, form):
-    #----------------------------------------------------------------------
         '''
         This method is called within post() [create], put() [edit], delete() [edit] after permissions are checked
 
@@ -1205,9 +1127,7 @@ class CrudApi(MethodView):
         '''
         return
 
-    #----------------------------------------------------------------------
     def editor_method_posthook(self, form):
-    #----------------------------------------------------------------------
         '''
         This method is called within post() [create], put() [edit], delete() [edit] db commit() just before database
         commit and response to client
@@ -1221,9 +1141,7 @@ class CrudApi(MethodView):
         '''
         return
 
-    #----------------------------------------------------------------------
     def editor_method_postcommit(self, form):
-    #----------------------------------------------------------------------
         '''
         This method is called within post() [create], put() [edit], delete() [edit] db commit() just after database
         commit and before response to client
@@ -1238,10 +1156,7 @@ class CrudApi(MethodView):
         return
 
 
-#######################################################################
-#----------------------------------------------------------------------
 def _uploadmethod():
-#----------------------------------------------------------------------
     '''
     decorator for CrudFiles methods used by Editor
 
@@ -1265,9 +1180,7 @@ def _uploadmethod():
         return wrapped_f
     return wrap
 
-#####################################################
 class DteDbRelationship():
-#####################################################
     '''
     define relationship for datatables editor db - form interface
 
@@ -1343,9 +1256,7 @@ class DteDbRelationship():
 
     '''
 
-    # ----------------------------------------------------------------------
     def __init__(self, **kwargs):
-    # ----------------------------------------------------------------------
         # the args dict has default values for arguments added by this class
         # caller supplied keyword args are used to update these
         # all arguments are made into attributes for self by the inherited class
@@ -1379,9 +1290,7 @@ class DteDbRelationship():
             self.viamodel = self.viadbattr.class_
             self.viafield = self.viadbattr.key
 
-    # ----------------------------------------------------------------------
     def set(self, formrow):
-    # ----------------------------------------------------------------------
         # set database from form
         if self.uselist:
             # accumulate list of database model instances
@@ -1423,7 +1332,6 @@ class DteDbRelationship():
             thisitem = self.fieldmodel.query.filter_by(**queryfilter).one_or_none()
             return thisitem
 
-    # ----------------------------------------------------------------------
     def get(self, dbrow_or_id):
         # check if id supplied, if so retrieve dbrow
         if type(dbrow_or_id) in [int, str]:
@@ -1461,9 +1369,7 @@ class DteDbRelationship():
             else:
                 return {self.labelfield: None, self.valuefield: None}
 
-    # ----------------------------------------------------------------------
     def options(self):
-        # ----------------------------------------------------------------------
         # return sorted list of items in the model
         queryparams = self.queryparams() if callable(self.queryparams) else self.queryparams
         items = []
@@ -1474,17 +1380,13 @@ class DteDbRelationship():
         items.sort(key=lambda k: k['label'].lower())
         return items
 
-    # ----------------------------------------------------------------------
     def new_plus_options(self):
-        # ----------------------------------------------------------------------
         # return sorted list of items in the model
         items = [{'label': '<new>', 'value': 0}] + self.options()
         return items
 
 
-#####################################################
 class DteDbSubrec():
-#####################################################
     '''
     define subfield relationship for datatables editor db - form interface
 
@@ -1513,9 +1415,7 @@ class DteDbSubrec():
         reln = DteDbSubrec(model=Child, dbfield='name', formfield='name')
     '''
 
-    # ----------------------------------------------------------------------
     def __init__(self, **kwargs):
-    # ----------------------------------------------------------------------
         # the args dict has default values for arguments added by this class
         # caller supplied keyword args are used to update these
         # all arguments are made into attributes for self by the inherited class
@@ -1536,18 +1436,14 @@ class DteDbSubrec():
         for key in args:
             setattr(self, key, args[key])
 
-    # ----------------------------------------------------------------------
     def set(self, formrow):
-    # ----------------------------------------------------------------------
         # set database from form
         itemvalue = formrow[self.formfield] if formrow[self.formfield] else None
         queryfilter = itemvalue
         thisitem = self.model.query.filter_by(**queryfilter).one_or_none()
         return thisitem
 
-    # ----------------------------------------------------------------------
     def get(self, dbrow_or_id):
-    # ----------------------------------------------------------------------
         # check if id supplied, if so retrieve dbrow
         if type(dbrow_or_id) in [int, str]:
             dbrow = self.model.query().filter_by(id=dbrow_or_id).one()
@@ -1564,7 +1460,6 @@ class DteDbSubrec():
             return None
 
 
-#####################################################
 class DteDbBool():
     '''
     define helpers for boolean fields
@@ -1575,7 +1470,6 @@ class DteDbBool():
     * falsedisplay - hot to display False to user (default 'no')
     '''
 
-    # ----------------------------------------------------------------------
     def __init__(self, **kwargs):
         # the args dict has default values for arguments added by this class
         # caller supplied keyword args are used to update these
@@ -1598,7 +1492,6 @@ class DteDbBool():
         for key in args:
             setattr(self, key, args[key])
 
-    # ----------------------------------------------------------------------
     def get(self, dbrow_or_id):
         """get from database for form"""
         # check if id supplied, if so retrieve dbrow
@@ -1609,7 +1502,6 @@ class DteDbBool():
 
         return self.truedisplay if getattr(dbrow, self.dbfield) else self.falsedisplay
 
-    # ----------------------------------------------------------------------
     def sqla_expr(self):
         '''
         get from database when using serverside = True, for use with ColumnDT
@@ -1621,20 +1513,16 @@ class DteDbBool():
             truedisplay=self.truedisplay, falsedisplay=self.falsedisplay
         )
 
-    # ----------------------------------------------------------------------
     def set(self, formrow):
         """set to database from form"""
         return formrow[self.formfield] == self.truedisplay
 
-    # ----------------------------------------------------------------------
     def options(self):
         return [{'label': self.truedisplay, 'value': self.truedisplay},
                 {'label': self.falsedisplay, 'value': self.falsedisplay}]
 
 
-#####################################################
 class DteDbDependent():
-    #####################################################
     '''
     define dependent options between fields
 
@@ -1674,9 +1562,7 @@ class DteDbDependent():
         children is callable function which returns tree suitable for tables.CrudApi _update.options
     '''
 
-    # ----------------------------------------------------------------------
     def __init__(self, **kwargs):
-        # ----------------------------------------------------------------------
         # the args dict has default values for arguments added by this class
         # caller supplied keyword args are used to update these
         # all arguments are made into attributes for self by the inherited class
@@ -1700,9 +1586,7 @@ class DteDbDependent():
         for key in args:
             setattr(self, key, args[key])
 
-    # ----------------------------------------------------------------------
     def __call__(self):
-        # ----------------------------------------------------------------------
 
         dbvals = self.model.query.all()
         vals = [getattr(v, self.modelfield) for v in dbvals]
@@ -1725,9 +1609,7 @@ class DteDbDependent():
         return retoptions
 
 
-#####################################################
 class DbCrudApi(CrudApi):
-    #####################################################
     '''
     This class extends CrudApi. This extension uses sqlalchemy to read / write to a database
 
@@ -1806,9 +1688,7 @@ class DbCrudApi(CrudApi):
 
     # class specific imports here so users of other classes do not need to install
 
-    # ----------------------------------------------------------------------
     def __init__(self, **kwargs):
-        # ----------------------------------------------------------------------
         if debug: current_app.logger.debug('DbCrudApi.__init__()')
 
         # the args dict has default values for arguments added by this derived class
@@ -2046,9 +1926,7 @@ class DbCrudApi(CrudApi):
         self.validate = self.validatedb
         if debug: current_app.logger.debug('updated validate() to validatedb()')
 
-    # ----------------------------------------------------------------------
     def get(self):
-        # ----------------------------------------------------------------------
 
         # this returns editor options for this model class
         # this can be used to have a create or edit form accessed from any type of view
@@ -2229,9 +2107,7 @@ class DbCrudApi(CrudApi):
         else:
             return super(DbCrudApi, self).get()
 
-    # ----------------------------------------------------------------------
     def saformurl(self, **kwargs):
-        # ----------------------------------------------------------------------
         '''
         standalone form url
         '''
@@ -2241,9 +2117,7 @@ class DbCrudApi(CrudApi):
         url = '{}/saformjs?{}'.format(url_for('.' + self.my_view.__name__), args)
         return url
 
-    # ----------------------------------------------------------------------
     def register(self):
-        # ----------------------------------------------------------------------
         # name for view is last bit of fully named endpoint
         name = self.endpoint.split('.')[-1]
 
@@ -2252,9 +2126,7 @@ class DbCrudApi(CrudApi):
         self.app.add_url_rule('{}/saformjs'.format(self.rule), view_func=self.my_view, methods=['GET', ])
         self.app.add_url_rule('{}/saform'.format(self.rule), view_func=self.my_view, methods=['GET', ])
 
-    # ----------------------------------------------------------------------
     def open(self):
-        # ----------------------------------------------------------------------
         '''
         retrieve all the data in the indicated table
         '''
@@ -2290,9 +2162,7 @@ class DbCrudApi(CrudApi):
 
             self.output_result = output
 
-    # ----------------------------------------------------------------------
     def nexttablerow(self):
-        # ----------------------------------------------------------------------
         '''
         since open has done all the work, tell the caller we're done
         '''
@@ -2308,15 +2178,11 @@ class DbCrudApi(CrudApi):
             # nothing to do, all done in open()
             raise StopIteration
 
-    # ----------------------------------------------------------------------
     def close(self):
-        # ----------------------------------------------------------------------
         if debug: current_app.logger.debug('DbCrudApi.close()')
         pass
 
-    # ----------------------------------------------------------------------
     def validatedb(self, action, formdata):
-        # ----------------------------------------------------------------------
         if debug: current_app.logger.debug('DbCrudApi.validatedb({})'.format(action))
 
         # no validatation done if refresh action
@@ -2357,9 +2223,7 @@ class DbCrudApi(CrudApi):
 
         return results
 
-    # ----------------------------------------------------------------------
     def createrow(self, formdata):
-        # ----------------------------------------------------------------------
         '''
         creates row in database
 
@@ -2368,11 +2232,15 @@ class DbCrudApi(CrudApi):
         '''
         # create item
         dbrow = self.model()
+
         if debug: current_app.logger.debug('createrow(): self.dbmapping = {}'.format(self.dbmapping))
+
         self.dte.set_dbrow(formdata, dbrow)
         if debug: current_app.logger.debug('createrow(): creating dbrow={}'.format(dbrow.__dict__))
+
         self.db.session.add(dbrow)
         if debug: current_app.logger.debug('createrow(): created dbrow={}'.format(dbrow.__dict__))
+
         self.db.session.flush()
         if debug: current_app.logger.debug('createrow(): flushed dbrow={}'.format(dbrow.__dict__))
 
@@ -2383,9 +2251,7 @@ class DbCrudApi(CrudApi):
         thisrow = self.dte.get_response_data(dbrow)
         return thisrow
 
-    # ----------------------------------------------------------------------
     def updaterow(self, thisid, formdata):
-        # ----------------------------------------------------------------------
         '''
         updates row in database
 
@@ -2428,9 +2294,7 @@ class DbCrudApi(CrudApi):
         ## self.model.query.filter_by(id=thisid).update(updatefields)
         ## updatedrow = self.model.query.filter_by(id=thisid).one()
 
-    # ----------------------------------------------------------------------
     def deleterow(self, thisid):
-        # ----------------------------------------------------------------------
         '''
         deletes row in database
 
@@ -2443,9 +2307,7 @@ class DbCrudApi(CrudApi):
 
         return []
 
-    # ----------------------------------------------------------------------
     def refreshrows(self, ids):
-        # ----------------------------------------------------------------------
         '''
         refresh row(s) from database
 
@@ -2460,20 +2322,14 @@ class DbCrudApi(CrudApi):
 
         return responsedata
 
-    # ----------------------------------------------------------------------
     def commit(self):
-        # ----------------------------------------------------------------------
         self.db.session.commit()
 
-    # ----------------------------------------------------------------------
     def rollback(self):
-        # ----------------------------------------------------------------------
         self.db.session.rollback()
 
 
-#####################################################
 class DbCrudApiRolePermissions(DbCrudApi):
-#####################################################
     '''
     This class extends DbCrudApi which, in turn, extends CrudApi. This extension uses flask_security
     to do role checking for the current user.
@@ -2487,9 +2343,7 @@ class DbCrudApiRolePermissions(DbCrudApi):
     '''
     from flask_security import current_user
 
-    # ----------------------------------------------------------------------
     def __init__(self, **kwargs):
-        # ----------------------------------------------------------------------
         if debug: current_app.logger.debug('DbCrudApiRolePermissions.__init__()')
 
         # the args dict has default values for arguments added by this derived class
@@ -2511,9 +2365,7 @@ class DbCrudApiRolePermissions(DbCrudApi):
         if self.roles_required and not isinstance(self.roles_required, list):
             self.roles_required = [self.roles_required]
 
-    # ----------------------------------------------------------------------
     def permission(self):
-        # ----------------------------------------------------------------------
         '''
         determine if current user is permitted to use the view
         '''
@@ -2544,9 +2396,7 @@ class DbCrudApiRolePermissions(DbCrudApi):
         return allowed
 
 
-#######################################################################
 class CrudFiles(MethodView):
-#######################################################################
     '''
     provides files support for CrudApi
 
@@ -2556,10 +2406,8 @@ class CrudFiles(MethodView):
         apiinst.register()
     '''
 
-    #----------------------------------------------------------------------
     def __init__(self, **kwargs):
-    #----------------------------------------------------------------------
-        # the args dict has all the defined parameters to 
+        # the args dict has all the defined parameters to
         # caller supplied keyword args are used to update the defaults
         # all arguments are made into attributes for self
         if debug: print('CrudFiles.__init__() **kwargs={}'.format(kwargs))
@@ -2579,9 +2427,7 @@ class CrudFiles(MethodView):
 
         self.credentials = None
 
-    #----------------------------------------------------------------------
     def register(self):
-    #----------------------------------------------------------------------
         # name for view is last bit of fully named endpoint
         name = self.uploadendpoint.split('.')[-1]
 
@@ -2594,19 +2440,15 @@ class CrudFiles(MethodView):
         self.app.add_url_rule('{}'.format(self.uploadrule, **self.endpointvalues),view_func=upload_view,methods=['POST',])
 
 
-    #----------------------------------------------------------------------
     @_uploadmethod()
     def post(self):
-    #----------------------------------------------------------------------
         self._responsedata = self.upload()
 
     #----------------------------------------------------------------------
     # the following methods must be replaced in subclass
     #----------------------------------------------------------------------
     
-    #----------------------------------------------------------------------
     def list(self):
-    #----------------------------------------------------------------------
         '''
         must be overridden
 
@@ -2637,9 +2479,7 @@ class CrudFiles(MethodView):
         '''
         pass
 
-    #----------------------------------------------------------------------
     def upload(self):
-    #----------------------------------------------------------------------
         '''
         must override, but this must be called
 
@@ -2675,9 +2515,7 @@ class CrudFiles(MethodView):
         pass
 
 
-#----------------------------------------------------------------------
 def deepupdate(obj, val, newval):
-#----------------------------------------------------------------------
     '''
     recursively searches obj object and replaces any val values with newval
     does not update opj

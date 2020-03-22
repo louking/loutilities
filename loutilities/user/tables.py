@@ -15,7 +15,6 @@ class ParameterError(Exception): pass
 
 debug = False
 
-#####################################################
 class DbCrudApiInterestsRolePermissions(DbCrudApiRolePermissions):
     '''
     This class extends DbCrudApiRolePermissions. This extension uses flask_security
@@ -26,7 +25,6 @@ class DbCrudApiInterestsRolePermissions(DbCrudApiRolePermissions):
     decorators = [auth_required()]
 
     def __init__(self, **kwargs):
-        # ----------------------------------------------------------------------
         if debug: current_app.logger.debug('DbCrudApiInterestsRolePermissions.__init__()')
 
         # the args dict has default values for arguments added by this derived class
@@ -81,7 +79,6 @@ class DbCrudApiInterestsRolePermissions(DbCrudApiRolePermissions):
         self.localinterest = self.local_interest_model.query.filter_by(interest_id=self.interest.id).one()
         self.queryparams['interest_id'] = self.localinterest.id
 
-    # ----------------------------------------------------------------------
     def createrow(self, formdata):
         '''
         creates row in database
