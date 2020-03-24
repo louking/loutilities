@@ -181,6 +181,9 @@ function datatables(data, buttons, options, files) {
         }
     }
 
+    // evaluate buttons
+    buttons = checkeval(buttons);
+
     // set up buttons, special care for editor buttons
     var button_options = [];
     for (i=0; i<buttons.length; i++) {
