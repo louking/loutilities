@@ -106,3 +106,20 @@ function getCookie(cname) {
     }
     return "";
 }
+
+// render upload filename upon upload complete
+// return anonymous function as this gets eval'd at initialization
+function renderfileid() {
+    return function(fileid) {
+        var renderfile = fileid ? editor.file('data', fileid).filename : '';
+        return renderfile;
+    }
+}
+
+// render active field
+function renderactive() {
+    return function(val) {
+        var value = (val==1) ? 'active' : 'deleted'
+        return value
+    }
+}
