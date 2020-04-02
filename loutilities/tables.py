@@ -1180,6 +1180,121 @@ def _uploadmethod():
         return wrapped_f
     return wrap
 
+class DteDbOptionsPickerBase():
+    '''
+    base class defines options picker for datatables editor db - form interface
+
+    for relationships defined like
+    class model()
+        dbfield            = relationship( 'mappingmodel', backref=tablemodel, lazy=True )
+
+    * tablemodel - name of model for the table
+    * fieldmodel - name of model which comprises list in dbfield
+    * labelfield - field in fieldmodel which is used to be displayed to the user
+    * valuefield - field in fieldmodel which is used as value for select and to retrieve record, passed on Editor interface,
+    *    default 'id' - needs to be a key for model record
+    * formfield - field as used on the form
+    * dbfield - field as used in the database table (not the model -- this is field in tablemodel which has list of
+         fieldmodel items)
+    * uselist - set to True if using tags, otherwise field expects single entry, default True
+    * searchbox - set to True if searchbox desired, default False
+    * nullable - set to True if item can give null (unselected) return, default False (only applies for usellist=False)
+    * queryparams - dict containing parameters for query to determine options, or callable which returns such a dict
+    '''
+
+    def __init__(self, **kwargs):
+        # the args dict has default values for arguments added by this class
+        # caller supplied keyword args are used to update these
+        # all arguments are made into attributes for self by the inherited class
+        args = dict(tablemodel=None,
+                    fieldmodel=None,
+                    labelfield=None,
+                    valuefield='id',
+                    formfield=None,
+                    dbfield=None,
+                    uselist=True,
+                    searchbox=False,
+                    nullable=False,
+                    queryparams= {}
+                    )
+        args.update(kwargs)
+
+        # # some of the args are required
+        # reqdfields = ['fieldmodel', 'labelfield', 'formfield', 'dbfield']
+        # for field in reqdfields:
+        #     if not args[field]:
+        #         raise ParameterError('{} parameters are all required'.format(', '.join(reqdfields)))
+
+        # set arguments as class attributes
+        for key in args:
+            setattr(self, key, args[key])
+
+
+    def set(self, formrow):
+        '''
+        set formfield into database based on formrow
+
+        :param formrow: dict row received from datatables editor client with a key for each form field
+        :return: updated database item or item list
+        '''
+        raise NotImplementedError
+
+    def get(self, dbrow_or_id):
+        '''
+        get database item for display in option picker at datatables editor client
+
+        :param dbrow_or_id: id or database row, assumes id if int or str
+        :return: {self.labelfield : labelvalue, self.valuefield : valuevalue} (or list of these)
+        '''
+        # check if id supplied, if so retrieve dbrow
+        raise NotImplementedError
+
+    def options(self):
+        '''
+        return sorted list of items in the model, may be overridden for more complex models
+
+        :return: options as expected by optionpicker type,
+            e.g., for select2 list of {'label': label, 'value': value} (see https://select2.org/options)
+        '''
+        raise NotImplementedError
+        # e.g., like the below
+        # queryparams = self.queryparams() if callable(self.queryparams) else self.queryparams
+        # items = []
+        # if self.nullable:
+        #     items += [{'label': '<none>', 'value': None}]
+        # items += [{'label': getattr(item, self.labelfield), 'value': item.id}
+        #           for item in self.fieldmodel.query.filter_by(**queryparams).all()]
+        # items.sort(key=lambda k: k['label'].lower())
+        # return items
+
+    def new_plus_options(self):
+        '''
+        return sorted list of items in the model, with first option being <new>
+
+        :return:
+        '''
+        items = [{'label': '<new>', 'value': 0}] + self.options()
+        return items
+
+    def col_options(self):
+        '''
+        return additional column options required by the caller
+
+        :return:
+        '''
+        raise NotImplementedError
+
+        # e.g., like below
+        # col = {}
+        # col['type'] = 'select2'
+        # col['onFocus'] = 'focus'
+        # col['opts'] = {'minimumResultsForSearch': 0 if self.searchbox else 'Infinity',
+        #                'multiple': self.uselist,
+        #                'placeholder': None if self.uselist else '(select)'}
+        # if self.uselist:
+        #     col['separator'] = SEPARATOR
+        # return col
+
 class DteDbRelationship():
     '''
     define relationship for datatables editor db - form interface
@@ -1189,23 +1304,26 @@ class DteDbRelationship():
         dbfield            = relationship( 'mappingmodel', backref=tablemodel, lazy=True )
 
     * tablemodel - name of model for the table
-    * fieldmodel - name of model comprises list in dbfield
+    * fieldmodel - name of model which comprises list in dbfield
     * labelfield - field in fieldmodel which is used to be displayed to the user
     * valuefield - field in fieldmodel which is used as value for select and to retrieve record, passed on Editor interface,
     *    default 'id' - needs to be a key for model record
     * formfield - field as used on the form
     * dbfield - field as used in the database table (not the model -- this is field in tablemodel which has list of
          fieldmodel items)
+
     * viadbattr - (optional) if fieldmodel is in a separate database, the select options of fieldmodel.valuefield
          can be mapped via a local table. Specify the "via" mapping attribute here, e.g., LocalUser.user_id
     * viafilter - (optional) if viadbattr is set, this can be additional filters to add to the local table lookup.
          This can be specific dict or function() which returns specific dict
+
     * uselist - set to True if using tags, otherwise field expects single entry, default True
     * searchbox - set to True if searchbox desired, default False
     * nullable - set to True if item can give null (unselected) return, default False (only applies for usellist=False)
     * queryparams - dict containing parameters for query to determine options, or callable which returns such a dict
 
-    e.g.,
+    Basic Use:
+
         class Parent(Base):
             __tablename__ = 'parent'
             id = Column(Integer, primary_key=True)
@@ -1385,6 +1503,16 @@ class DteDbRelationship():
         items = [{'label': '<new>', 'value': 0}] + self.options()
         return items
 
+    def col_options(self):
+        col = {}
+        col['type'] = 'select2'
+        col['onFocus'] = 'focus'
+        col['opts'] = {'minimumResultsForSearch': 0 if self.searchbox else 'Infinity',
+                       'multiple': self.uselist,
+                       'placeholder': None if self.uselist else '(select)'}
+        if self.uselist:
+            col['separator'] = SEPARATOR
+        return col
 
 class DteDbSubrec():
     '''
@@ -1665,8 +1793,14 @@ class DbCrudApi(CrudApi):
 
             * _treatment - dict with (only) one of following keys - note this causes override of dbmapping and formmapping configuration
                 * boolean - {DteDbBool keyword parameters}
-                * relationship - {DteDbRelationship keyword parameters, 'editable' : { 'api':<DbCrudApi()> }}
-                    'editable' is set only if it is desired to bring up a form to edit the underlying model row
+                * relationship - {'editable' : { 'api':<DbCrudApi()> }}
+                                    'editable' is set only if it is desired to bring up a form to edit the
+                                    underlying model row
+
+                                  'optionspicker' : <DteDbOptionsPickerBase()> based class instance
+                                        OR
+                                  DteDbRelationship keyword parameters (backwards compatibility)
+
 
             * _ColumnDT_args - dict with keyword arguments passed to ColumnDT for serverside processing
 
@@ -1830,14 +1964,12 @@ class DbCrudApi(CrudApi):
                 # handle relationship treatment
                 if 'relationship' in treatment:
                     # now create the relationship
-                    thisreln = DteDbRelationship(tablemodel=args['model'], **treatment['relationship'])
-                    col['type'] = 'select2'
-                    col['onFocus'] = 'focus'
-                    col['opts'] = {'minimumResultsForSearch': 0 if thisreln.searchbox else 'Infinity',
-                                   'multiple': thisreln.uselist,
-                                   'placeholder': None if thisreln.uselist else '(select)'}
-                    if thisreln.uselist:
-                        col['separator'] = SEPARATOR
+                    if 'optionspicker' in treatment['relationship']:
+                        thisreln = treatment['relationship']['optionspicker']
+                    else:
+                        thisreln = DteDbRelationship(tablemodel=args['model'], **treatment['relationship'])
+                    col.update(thisreln.col_options())
+
                     # get original formfield and dbattr
                     # TODO: should this come from 'name' or 'data'?
                     ## actually name and data should be the same value, name for editor and data for datatable
@@ -1867,10 +1999,9 @@ class DbCrudApi(CrudApi):
                     if debug: current_app.logger.debug(
                         '__init__(): labelfield={} editable={}'.format(treatment['relationship']['labelfield'],
                                                                        editable))
-                    valuefield = 'id' if 'valuefield' not in treatment['relationship'] else treatment['relationship'][
-                        'valuefield']
-                    labelfield = treatment['relationship']['labelfield']
-                    formfield = treatment['relationship']['formfield']
+                    valuefield = thisreln.valuefield
+                    labelfield = thisreln.labelfield
+                    formfield = thisreln.formfield
                     if editable:
                         self.saforms.append({'api': editable['api'],
                                              'args': {'labelfield': labelfield, 'valuefield': valuefield,
@@ -1884,7 +2015,7 @@ class DbCrudApi(CrudApi):
                                 thisform['api'] = saform['api']
                                 # make copy so we don't corrupt xxx.saforms
                                 thisform['args'] = copy(saform['args'])
-                                thisform['args']['parent'] = '{}_editor'.format(treatment['relationship']['labelfield'])
+                                thisform['args']['parent'] = '{}_editor'.format(thisreln.labelfield)
                             self.saforms.append(thisform)
                         # add <new> option
                         col['options'] = thisreln.new_plus_options
