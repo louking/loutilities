@@ -12,7 +12,7 @@ var fltr_persistent = {};
 function fltr_register(id, def, transient) {
     // id is id containing filter value
     // def is default value for local storage
-    // transient = true means don't update local storage
+    // transient = true means don't update local storage (meaning this persists within tab, but not across tabs)
 
     // nothing to do if storage not available
     if (typeof(Storage) == "undefined") return;
