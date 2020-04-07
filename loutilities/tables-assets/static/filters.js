@@ -29,7 +29,7 @@ function fltr_register(id, def, transient) {
 
 // get column number for div surrounding yadcf filter
 function get_yadcf_col(id) {
-    thisid = $('#'+id+' .yadcf-filter').attr('id');
+    thisid = $('#'+id+' .yadcf-filter-wrapper').attr('id');
     idsplit = thisid.split('-');
     col = idsplit[idsplit.length-1];
     return col;
