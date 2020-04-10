@@ -72,9 +72,17 @@ class FieldUpload(CrudFiles):
         '''
         if (debug): print('FilesUpload.upload()')
 
-        # save gpx file
+        # save file
         thisfile = request.files['upload']
-        fid, filepath = self.create_fidfile(g.interest, thisfile.filename, thisfile.mimetype)
+        mimetype = thisfile.mimetype
+
+        # special processing for csv file upload, override mimetype
+        # see https://tools.ietf.org/html/rfc7111
+        # and https://stackoverflow.com/questions/7076042/what-mime-type-should-i-use-for-csv
+        if thisfile.filename.split('.')[-1] == 'csv':
+            mimetype = 'text/csv'
+
+        fid, filepath = self.create_fidfile(g.interest, thisfile.filename, mimetype)
         thisfile.save(filepath)
         thisfile.seek(0)
 
