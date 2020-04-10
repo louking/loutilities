@@ -141,7 +141,12 @@ def get_request_data(form):
         datapart,idpart = formlineitems[0:2]
         # if datapart != 'data': raise ParameterError, "invalid input in request: {}".format(formkey)
 
-        idvalue = int(idpart[0:-1])
+        # try to coerce to int, but accept as string
+        # this allows complex ids to be used, but is backwards compatible for integer ids
+        try:
+            idvalue = int(idpart[0:-1])
+        except ValueError:
+            idvalue = idpart[0:-1]
 
         # the rest of it is the field structure, may have been [a], [a][b], etc before splitting at '['
         fieldparts = [part[0:-1] for part in formlineitems[2:]]
@@ -701,7 +706,7 @@ class CrudApi(MethodView):
         self.my_view = self.as_view(name, **self.kwargs)
         self.app.add_url_rule('{}'.format(self.rule),view_func=self.my_view,methods=['GET',])
         self.app.add_url_rule('{}/rest'.format(self.rule),view_func=self.my_view,methods=['GET', 'POST'])
-        self.app.add_url_rule('{}/rest/<int:thisid>'.format(self.rule),view_func=self.my_view,methods=['PUT', 'DELETE'])
+        self.app.add_url_rule('{}/rest/<thisid>'.format(self.rule),view_func=self.my_view,methods=['PUT', 'DELETE'])
 
         if self.files:
             self.files.register()
@@ -973,6 +978,12 @@ class CrudApi(MethodView):
 
     @_editormethod(checkaction='edit', formrequest=True)
     def put(self, thisid):
+        # try to coerce to int, but ok if not
+        try:
+            thisid = int(thisid)
+        except ValueError:
+            pass
+
         # retrieve data from request
         self._responsedata = []
         thisdata = self._data[thisid]
@@ -987,6 +998,12 @@ class CrudApi(MethodView):
 
     @_editormethod(checkaction='remove', formrequest=False)
     def delete(self, thisid):
+        # try to coerce to int, but ok if not
+        try:
+            thisid = int(thisid)
+        except ValueError:
+            pass
+
         self.deleterow(thisid)
 
         # prepare response
@@ -1107,10 +1124,10 @@ class CrudApi(MethodView):
                 theseargs[arg] = self.templateargs[arg]()
             else:
                 theseargs[arg] = self.templateargs[arg]
-        theseargs.update(kwargs)
+        kwargs.update(theseargs)
 
         # current_app.logger.debug('flask.render_template({}, {})'.format(self.template, theseargs))
-        return flask.render_template(self.template, **theseargs)
+        return flask.render_template(self.template, **kwargs)
 
     def editor_method_prehook(self, form):
         '''
