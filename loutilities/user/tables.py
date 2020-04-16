@@ -2,8 +2,11 @@
 tables - support tables for user package under loutilities
 ==============================================================
 '''
+# standard
+from urllib.parse import urlencode
+
 # pypi
-from flask import g, current_app
+from flask import g, current_app, url_for
 from flask_security import auth_required
 from flask_security import current_user
 
@@ -95,4 +98,37 @@ class DbCrudApiInterestsRolePermissions(DbCrudApiRolePermissions):
         row = super().createrow(formdata)
 
         return row
+
+    def saformurl(self, **kwargs):
+        '''
+        standalone form url
+        '''
+        # NOTE: keyword arguments need to match request.args access in self.get()
+        args = urlencode(kwargs)
+        # self.__name__ is endpoint -- see https://github.com/pallets/flask/blob/master/flask/views.py View.as_view method
+        url = '{}/saformjs?{}'.format(url_for('.' + self.my_view.__name__, interest=g.interest), args)
+        return url
+
+    def saformpostjs(self, saeditor):
+        '''
+        this gives subclass ability to add additional javascript code to saformjs handler
+        (see self.get elif request.path[-9:] == '/saformjs':)
+
+        this code is added after standalone form created, as saeditor
+
+        :param saeditor: name of variable which holds standalone form
+        :return: list of additional javascript strings
+        '''
+        js = super().saformpostjs(saeditor)
+
+        js += [
+            # note groups_groupname and groups_groupselectselector will now match that which was
+            # used for register_group_for_editor
+            '  // add event handlers for this standalone editor (see groups.js)',
+            '  {}.groups_groupname = editor.groups_groupname;'.format(saeditor),
+            '  {}.groups_groupselectselector = editor.groups_groupselectselector;'.format(saeditor),
+            '  set_editor_event_handlers({});'.format(saeditor),
+        ]
+
+        return js
 

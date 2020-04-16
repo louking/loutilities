@@ -2112,33 +2112,56 @@ class DbCrudApi(CrudApi):
                 # NOTE: this assumes editor has been defined by an earlier $([ready]) function
                 '  if ( editorstack.length == 0 ) {',
                 '      curreditor = editor;',
-                '      parentbuttons = [',
-                '                 {',
-                '                  label: "Cancel",',
-                '                  fn: function () {',
-                '                        this.close();',
-                '                  },',
-                '                 },',
-                '                 {',
-                '                  label: "Create",',
-                '                  fn: function () {',
-                '                        this.submit( );',
-                '                  },',
-                '                 },',
-                '      ];',
                 '  }',
                 '',
                 '  if ( typeof pusheditor == "undefined" ) {',
                 '      function pusheditor( neweditor, parentname, buttons, editorname ) {',
                 '        var fields = {};',
-                '        $.each(curreditor.fields(), function(i, field) {',
+                '        $.each(curreditor.order(), function(i, field) {',
                 '            fields[field] = curreditor.field(field).get();',
                 '        });',
                 '        pushing = true;',
+                '',
+                '        var mode = curreditor.mode();',
+                '        // true parameter below is includeHash, required to get the right rows ',
+                '        var ids = curreditor.ids( true );',
+                # TODO: make this generic to accept a variety of button configurations
+                '        if (mode == \'create\') {',
+                '            parentbuttons = [',
+                '                       {',
+                '                        label: "Cancel",',
+                '                        fn: function () {',
+                '                              this.close();',
+                '                        },',
+                '                       },',
+                '                       {',
+                '                        label: "Create",',
+                '                        fn: function () {',
+                '                              this.submit( );',
+                '                        },',
+                '                       },',
+                '            ];',
+                '        } else if (mode == \'edit\') {',
+                '            parentbuttons = [',
+                '                       {',
+                '                        label: "Cancel",',
+                '                        fn: function () {',
+                '                              this.close();',
+                '                        },',
+                '                       },',
+                '                       {',
+                '                        label: "Update",',
+                '                        fn: function () {',
+                '                              this.submit( );',
+                '                        },',
+                '                       },',
+                '            ];',
+                '        }',
+                '',
                 '        curreditor.close()',
                 '        pushing = false;',
                 # need to map / extend to make a copy of parentbuttons
-                '        editorstack.push( { editor:curreditor, newcurrent:editorname, fields:fields, buttons:parentbuttons.map(a => $.extend(true, {}, a)) } );',
+                '        editorstack.push( { editor:curreditor, newcurrent:editorname, mode:mode, ids:ids, fields:fields, buttons:parentbuttons.map(a => $.extend(true, {}, a)) } );',
                 '        parentbuttons = buttons;',
                 '        curreditor = neweditor;',
                 # 'console.log("pusheditor(): newcurrent=" + editorname + " depth="+editorstack.length);',
@@ -2146,16 +2169,21 @@ class DbCrudApi(CrudApi):
                 '      }',
                 '',
                 '      function popeditor( ) {',
-                '        editorrec = editorstack.pop();',
-                '        curreditor = editorrec.editor;',
-                '        buttons = editorrec.buttons;',
+                '          editorrec = editorstack.pop();',
+                '          curreditor = editorrec.editor;',
+                '          buttons = editorrec.buttons;',
                 # '        if ( curreditor != editor ) {',
                 # handle buttons specially for top level editor
                 # requires special handling above
-                # TODO: make this generic
-                '          curreditor',
-                '            .buttons( buttons )',
-                '            .create();',
+                '          if (editorrec.mode == \'create\') {',
+                '              curreditor',
+                '                .buttons( buttons )',
+                '                .create();',
+                '          } else if (editorrec.mode == \'edit\') {',
+                '              curreditor',
+                '                .buttons( buttons )',
+                '                .edit(editorrec.ids);',
+                '          }',
                 '          restoring = true;',
                 '          $.each(editorrec.fields, function(field, val) {',
                 '              curreditor.field(field).set( val );',
@@ -2187,14 +2215,18 @@ class DbCrudApi(CrudApi):
                 '                  label: "Create",',
                 '                  fn: function () {',
                 '                        this.submit( function(resp) {',
-                # apparently close/popeditor has already occurred, so curreditor should work
-                # '                              this.close();',
-                # '                              popeditor( );',
-                # 'console.log("{} create submit resp="+JSON.stringify(resp));'.format(labelfield),
-                '                              var newval = {{label:resp.data[0].{}, value:resp.data[0].{}}};'.format(
+                # resp.data needs to be converted to string in case select2 is uselist=True
+                '                              // at this point curreditor is back to parent form',
+                '                              var newval = {{label:resp.data[0].{}, value:resp.data[0].{}.toString()}};'.format(
                     labelfield, self.idSrc),
                 '                              curreditor.field( parentname ).AddOption( [ newval ] );',
-                '                              curreditor.field( parentname ).set( newval.value );',
+                '                              if ( curreditor.field( parentname ).isMultiSelect() ) {',
+                '                                  var sep = curreditor.field( parentname ).separator();',
+                '                                  var thevals = [curreditor.field( parentname ).get( ), newval.value].join(sep);',
+                '                                  curreditor.field( parentname ).set( thevals );',
+                '                              } else {',
+                '                                  curreditor.field( parentname ).set( newval.value );',
+                '                              } ',
                 '                           },',
                 '                        )',
                 '                  },',
@@ -2205,8 +2237,12 @@ class DbCrudApi(CrudApi):
                 '  } );',
                 '  $( {}.field( parentname ).input() ).on ("change", function (e) {{'.format(parent),
                 # '    console.log("{} select2 change fired");'.format(parentfield),
-                '    // only fire if <new> entry',
-                '    if ( {}.get( parentname ) != 0 ) return;'.format(parent),
+                '    // only fire if <new> entry in field -- check if null first',
+                # need to split by SEPARATOR in case select2 is uselist=True
+                '    var parentfield = {}.get( parentname );'.format(parent),
+                '    if ( parentfield == null ) return;',
+                '    var parentitems = parentfield.split(\'{}\');'.format(SEPARATOR),
+                '    if ( !parentitems.includes("0") ) return;',
                 '    // no fire if restoring',
                 '    if ( restoring ) return;',
                 # this is for #65, abandoned for first release
@@ -2244,6 +2280,12 @@ class DbCrudApi(CrudApi):
                 '',
                 # set the width for this form
                 # '  {}_editor.__dialouge.dialog( "option", "width", 600 );'.format(labelfield),
+
+            ]
+
+            js += self.saformpostjs('{}_editor'.format(labelfield))
+
+            js += [
                 '} );',
             ]
             # see https://stackoverflow.com/questions/11017466/flask-return-image-created-from-database
@@ -2254,6 +2296,20 @@ class DbCrudApi(CrudApi):
         # otherwise handle get from base class
         else:
             return super(DbCrudApi, self).get()
+
+    def saformpostjs(self, saeditor):
+        '''
+        this may be overridden
+
+        this gives subclass ability to add additional javascript code to saformjs handler
+        (see self.get elif request.path[-9:] == '/saformjs':)
+
+        this code is added after standalone form created, as saeditor
+
+        :param saeditor: name of variable which holds standalone form
+        :return: list of additional javascript strings
+        '''
+        return []
 
     def saformurl(self, **kwargs):
         '''
