@@ -311,6 +311,7 @@ function EditorButtonDialog(options) {
 // };
 
 // patch for select2 search. see https://stackoverflow.com/questions/19787982/select2-plugin-and-jquery-ui-modal-dialogs
+// TODO: this causes "maximum call stack size exceeded" see #21
 if ($.ui && $.ui.dialog && $.ui.dialog.prototype._allowInteraction) {
     var ui_dialog_interaction = $.ui.dialog.prototype._allowInteraction;
     $.ui.dialog.prototype._allowInteraction = function(e) {
