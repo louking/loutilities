@@ -909,6 +909,9 @@ class CrudApi(MethodView):
             
             'fields': [
             ],
+
+            # no focus on field error, fixes #50
+            'onFieldError': 'none',
         }
         # TODO: these are known editor field options as of Editor 1.8.1 -- do we really need to get rid of non-Editor options?
         fieldkeys = ['className', 'data', 'def', 'entityDecode', 'fieldInfo', 'id', 'label', 'labelInfo', 'name', 'type', 'options', 'opts', 'ed', 'separator', 'dateFormat', 'onFocus']
