@@ -10,6 +10,18 @@ if (jQuery) {
       }
   }
 
+  function allUrlParams() {
+      var args = {};
+      var search = location.search.substring(1);
+      if (search !== '') {
+          var eachargs = args.split('&');
+          for (eacharg in eachargs) {
+              args[eacharg.split('=')[0]] = eacharg.split('=')[1];
+          }
+      }
+      return args;
+  }
+
   // Serialize an array of form elements or a set of
   // key/values into a query string
   // adapted from jQuery.param
