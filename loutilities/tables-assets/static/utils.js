@@ -14,8 +14,9 @@ if (jQuery) {
       var args = {};
       var search = location.search.substring(1);
       if (search !== '') {
-          var eachargs = args.split('&');
-          for (eacharg in eachargs) {
+          var eachargs = search.split('&');
+          for (i=0; i<eachargs.length; i++) {
+              eacharg = eachargs[i];
               args[eacharg.split('=')[0]] = eacharg.split('=')[1];
           }
       }
