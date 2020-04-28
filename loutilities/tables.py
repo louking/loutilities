@@ -49,6 +49,9 @@ REGEX_EMAIL = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,63}$"
 # https://stackoverflow.com/questions/17564088/how-to-form-a-regex-to-recognize-correct-declaration-of-variable-names
 REGEX_VBL = r"^[a-zA-Z_$][a-zA-Z_$0-9]*$"
 
+# https://regexr.com/37l5c
+REGEX_ISODATE = r"(19|20)\d\d-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])"
+
 #####################################################
 # for use in ColumnDT declarations
 #####################################################
