@@ -43,7 +43,14 @@ setup(
 
     # include data files as appropriate
     package_data={
-        '': ['tables-assets/static/*', 'tables-assets/templates/*'],
+        '': [
+            'tables-assets/static/*',
+            'tables-assets/static/user/*',
+            'tables-assets/static/user/admin/*',
+            'tables-assets/templates/*',
+            'tables-assets/templates/security/*',
+            'tables-assets/templates/security/email/*',
+        ],
     },
 
     entry_points = {
