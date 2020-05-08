@@ -107,7 +107,7 @@ class FieldUpload(CrudFiles):
 
     def list(self):
 
-        if (debug): print('RunningRoutesFiles.list()')
+        if (debug): print('FieldUpload.list()')
 
         # list files whose parent is datafolderid
         table = 'data'

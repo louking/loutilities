@@ -18,7 +18,7 @@ userrole - manage application users and roles
 # pypi
 from validators.slug import slug
 from validators.email import email
-from flask import g
+from flask import g, request
 from flask_security.recoverable import send_reset_password_instructions
 
 # homegrown
@@ -69,6 +69,19 @@ class UserCrudApi(DbCrudApiRolePermissions):
         if action == 'create':
             user = User.query.filter_by(id=self.created_id).one()
             send_reset_password_instructions(user)
+    def updaterow(self, thisid, formdata):
+        '''
+        updaterow is used by edit form, may need to also send password reset request to user.
+        comes from tables-assets/static/user/admin/beforedatatables.js reset_password_button()
+
+        :param thisid: id of user
+        :param formdata: edit form
+        :return: row data
+        '''
+        if 'resetpw' in request.form:
+            user = User.query.filter_by(id=thisid).one()
+            send_reset_password_instructions(user)
+        return super().updaterow(thisid, formdata)
 
 class UserView(UserCrudApi):
     def __init__(self, **kwargs):
@@ -125,7 +138,17 @@ class UserView(UserCrudApi):
             validate=user_validate,
             servercolumns=None,  # not server side
             idSrc='rowid',
-            buttons=['create', 'editRefresh'],
+            buttons=['create',
+                     {
+                         'extend': 'editRefresh',
+                         'text': 'Edit',
+                         'editor': {'eval': 'editor'},
+                         'formButtons': [
+                             {'text': 'Reset Password', 'action': {'eval': 'reset_password_button'}},
+                             {'text': 'Update', 'action': {'eval': 'submit_button'}},
+                         ]
+                     },
+            ],
             dtoptions={
                 'scrollCollapse': True,
                 'scrollX': True,

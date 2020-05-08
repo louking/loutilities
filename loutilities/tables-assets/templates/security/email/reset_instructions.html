@@ -1,6 +1,12 @@
 <p>
-    <b>{{ _productname_text|safe }}</b> has sent you this because your account was just created, or because you asked
-    for the password to be reset. When you reset your password you'll be logged in.
+    <b>{{ _productname_text|safe }}</b> has sent you this because your account was just created, or because a password
+    reset request was submitted. When you reset your password you'll be logged in.
+</p>
+<p>
+    If your account is new, you will need to reset your password using this link to activate your account.
+</p>
+<p>
+    This link will expire in {{ config.SECURITY_RESET_PASSWORD_WITHIN }}.
 </p>
 
 <p><a href="{{ reset_link }}">{{ _('Click here to reset your password') }}</a></p>
