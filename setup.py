@@ -50,6 +50,7 @@ setup(
             'tables-assets/templates/*',
             'tables-assets/templates/security/*',
             'tables-assets/templates/security/email/*',
+            '*.csv',
         ],
     },
 
