@@ -3,10 +3,6 @@ mailer - send email
 ================================================
 '''
 # standard
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from base64 import urlsafe_b64encode
 
 # pypi
 from flask import current_app
