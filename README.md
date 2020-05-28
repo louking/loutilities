@@ -15,6 +15,7 @@ This is a package with a few hopefully useful utilities.
 * kmlutils - utilities for access to kml file
 * namesplitter - name splitting method
 * nesteddict - handle dict keys like d['a.b.c'] as d['a']['b']['c']
+* nicknames - name equivalence detector
 * renderrun - common functions for rendering information related to running
 * tables - utilities for dataTables javascript support
     * tables-files - supporting files required for tables.py -- these need to be copied to project using tables.py
