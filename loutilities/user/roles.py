@@ -20,8 +20,14 @@ roles_common = [
 # members roles
 ROLE_LEADERSHIP_ADMIN = 'leadership-admin'
 ROLE_LEADERSHIP_MEMBER = 'leadership-member'
+ROLE_MEMBERSHIP_ADMIN = 'membership-admin'
+ROLE_BOARDMGMT_ADMIN = 'boardmgmt-admin'
+ROLE_BOARDMGMT_MEMBER = 'boardmgmt-member'
 roles_members = [{'name': ROLE_LEADERSHIP_ADMIN, 'description': 'access to leadership tasks for members application', 'apps':[APP_MEMBERS]},
-                 {'name': ROLE_LEADERSHIP_MEMBER, 'description': 'user of leadership tasks for members application', 'apps':[APP_MEMBERS]}
+                 {'name': ROLE_LEADERSHIP_MEMBER, 'description': 'user of leadership tasks for members application', 'apps':[APP_MEMBERS]},
+                 {'name': ROLE_MEMBERSHIP_ADMIN, 'description': 'access to membership admininstration for members application', 'apps':[APP_MEMBERS]},
+                 {'name': ROLE_BOARDMGMT_ADMIN, 'description': 'access to board management administration for members application', 'apps':[APP_MEMBERS]},
+                 {'name': ROLE_BOARDMGMT_MEMBER, 'description': 'user of board management for members application', 'apps':[APP_MEMBERS]},
                  ]
 
 # routes roles
