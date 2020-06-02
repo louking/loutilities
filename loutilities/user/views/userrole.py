@@ -25,6 +25,9 @@ from flask_security.recoverable import send_reset_password_instructions
 from . import bp
 from loutilities.user.model import db, User, Role, Interest, Application
 from loutilities.tables import DbCrudApiRolePermissions, get_request_action, SEPARATOR
+from loutilities.timeu import asctime
+
+ymdtime = asctime('%Y-%m-%d %H:%M:%S')
 
 ##########################################################################################
 # users endpoint
@@ -34,6 +37,9 @@ user_dbattrs = 'id,email,name,given_name,roles,interests,last_login_at,current_l
 user_formfields = 'rowid,email,name,given_name,roles,interests,last_login_at,current_login_at,last_login_ip,current_login_ip,login_count,active'.split(',')
 user_dbmapping = dict(zip(user_dbattrs, user_formfields))
 user_formmapping = dict(zip(user_formfields, user_dbattrs))
+
+user_formmapping['last_login_at'] = lambda dbrow: ymdtime.dt2asc(dbrow.last_login_at) if dbrow.last_login_at else None
+user_formmapping['current_login_at'] = lambda dbrow: ymdtime.dt2asc(dbrow.current_login_at) if dbrow.current_login_at else None
 
 def user_validate(action, formdata):
     results = []
@@ -127,12 +133,18 @@ class UserView(UserCrudApi):
                  '_treatment': {'boolean': {'formfield': 'active', 'dbfield': 'active'}},
                  'ed': {'def': 'yes'},
                  },
-                {'data': 'last_login_at', 'name': 'last_login_at', 'label': 'Last Login At', 'type': 'readonly'},
+                {'data': 'last_login_at', 'name': 'last_login_at', 'label': 'Last Login At',
+                 'className': 'dt-body-nowrap',
+                 'type': 'readonly'
+                 },
                 {'data': 'current_login_at', 'name': 'current_login_at', 'label': 'Current Login At',
-                 'type': 'readonly'},
+                 'className': 'dt-body-nowrap',
+                 'type': 'readonly',
+                 },
                 {'data': 'last_login_ip', 'name': 'last_login_ip', 'label': 'Last Login IP', 'type': 'readonly'},
                 {'data': 'current_login_ip', 'name': 'current_login_ip', 'label': 'Current Login IP',
-                 'type': 'readonly'},
+                 'type': 'readonly'
+                 },
                 {'data': 'login_count', 'name': 'login_count', 'label': 'Login Count', 'type': 'readonly'},
             ],
             validate=user_validate,
