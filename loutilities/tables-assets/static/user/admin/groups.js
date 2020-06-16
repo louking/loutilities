@@ -1,4 +1,4 @@
-function translate_interest(e, data, action) {
+function translate_editor_group(e, data, action) {
     // group comes from external source
     var group = $( this.groups_groupselectselector ).val();
     // save editor's ajax config in this editor's state
@@ -11,30 +11,91 @@ function translate_interest(e, data, action) {
     }
     this.ajax(newconfig);
 }
-
-function set_editor_event_handlers(ed) {        // need on 'preEditRefresh' to translate interest for editRefresh button
-    ed.on( 'preEditRefresh', translate_interest);
+function restore_editor_group(e, data, action, xhr) {
+    this.ajax(this.groups_staticconfig);
+}
+function set_editor_event_handlers(ed) {
+    // need on 'preEditRefresh' to translate interest for editRefresh button
+    ed.on( 'preEditRefresh', translate_editor_group);
     // need on 'preSubmit' to translate interest for resubmission of form, e.g., after error occurs
-    ed.on( 'preSubmit', translate_interest);
+    ed.on( 'preSubmit', translate_editor_group);
     // need on 'open' to translate interest for file uploads, as there's no 'preSubmit' for these
-    ed.on( 'open', translate_interest);
+    ed.on( 'open', translate_editor_group);
 
     // return ajax config to what was there before
-    ed.on( 'postSubmit', function(e, data, action, xhr) {
-        ed.ajax(this.groups_staticconfig);
-    })
+    ed.on( 'postSubmit', restore_editor_group);
+
 }
 
-function register_group_for_editor(groupname, groupselectselector) {
+function register_group_for_editor(groupname, groupselectselector, ed) {
     // requires Editor
     // expects editor to be set up globally, as in loutilities/table-assets/static/datatables.js
     // call after datatables is initialized
 
-    // use editor class to save some groupselectselector (used by translate_interest)
-    editor.groups_groupselectselector = groupselectselector
-    editor.groups_groupname = groupname
-    set_editor_event_handlers(editor);
+    // backwards compatibility
+    if (ed == undefined) {
+        ed = editor;
+    }
+
+    // use editor class to save some groupselectselector (used by translate_editor_group)
+    ed.groups_groupselectselector = groupselectselector
+    ed.groups_groupname = groupname
+    set_editor_event_handlers(ed);
 }
+
+var dt_groupname = null;
+var dt_groupselectselector = null;
+function register_group_for_datatable(groupname, groupselectselector) {
+    // the group and groupselector are common for the page, so ok to save globally
+    dt_groupselectselector = groupselectselector
+    dt_groupname = groupname
+}
+// this function returns function configured to dataTables ajax parameter, based in indicated url
+function translate_datatable_group(url) {
+    return function(data, callback, settings) {
+        // if no group configured, just use url
+        var ajaxurl;
+        if (dt_groupname == null) {
+            ajaxurl = url;
+        } else {
+            // group comes from external source
+            var group = $( dt_groupselectselector ).val();
+            // replace <group> items with current group
+            // note use of lodash _.replace
+            ajaxurl = _.replace(decodeURIComponent(url), _.replace('<{groupname}>', '{groupname}', dt_groupname), group);
+        }
+        // WARNING: nonstandard/nonpublic use of settings information
+        var dt = settings.oApi;
+        // tack on current url parameters
+        ajaxurl += '?' + setParams(allUrlParams());
+        // adapted from jquery.dataTables.js _fnBuildAjax; _fn functions are from dataTables
+        $.ajax({
+            "url": ajaxurl,
+            "data": data,
+            "success": function(data, textStatus, xhr) {
+                callback(data)
+            },
+			"dataType": "json",
+			"cache": false,
+			"method": 'GET',
+			"error": function (xhr, error, thrown) {
+				var ret = dt._fnCallbackFire( settings, null, 'xhr', [settings, null, settings.jqXHR] );
+
+				if ( $.inArray( true, ret ) === -1 ) {
+					if ( error == "parsererror" ) {
+						dt._fnLog( settings, 0, 'Invalid JSON response', 1 );
+					}
+					else if ( xhr.readyState === 4 ) {
+						dt._fnLog( settings, 0, 'Ajax error', 7 );
+					}
+				}
+
+				dt._fnProcessingDisplay( settings, false );
+			}
+        });
+    }
+}
+
 
 // see https://stackoverflow.com/a/18660968/799921
 function link_is_external(link_element) {

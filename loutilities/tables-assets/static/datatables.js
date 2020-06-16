@@ -204,7 +204,9 @@ function datatables(data, buttons, options, files) {
 
     // assume data is url if serverSide is truthy
     if (options.dtopts.serverSide) {
-        $.extend(options.dtopts, { ajax: data });
+        var url = data;
+        // translate_datatable_group returns function which does the ajax data query, if doesn't exist, use url directly
+        $.extend(options.dtopts, { ajax: (translate_datatable_group && translate_datatable_group(url)) || url });
 
     // otherwise assume it is object containing the data to render
     } else {

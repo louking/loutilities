@@ -772,7 +772,7 @@ class CrudApi(MethodView):
                     pass
                 self.close()
             else:
-                tabledata = '{}/rest'.format(url_for(self.endpoint))
+                tabledata = '{}/rest'.format(url_for(self.endpoint, **self.endpointvalues))
 
             # get files if indicated
             if self.files:
@@ -785,20 +785,23 @@ class CrudApi(MethodView):
             self.commit()
 
             # render page
-            return self.render_template( pagename = self.pagename,
-                                         pagejsfiles = self.scriptfilter(self.pagejsfiles),
-                                         pagecssfiles = self.scriptfilter(self.pagecssfiles),
-                                         tabledata = tabledata, 
-                                         tablefiles = tablefiles,
-                                         tablebuttons = self.buttons,
-                                         pretablehtml = self.pretablehtml,
-                                         options = {'dtopts': dt_options, 
-                                                    'editoropts': ed_options, 
-                                                    'yadcfopts' : yadcf_options,
-                                                    'updateopts': update_options},
-                                         writeallowed = self.permission(),
-                                         **self.addltemplateargs
-                                         )
+            return self.render_template(
+                pagename = self.pagename if not callable(self.pagename) else self.pagename(),
+                pagejsfiles = self.scriptfilter(self.pagejsfiles),
+                pagecssfiles = self.scriptfilter(self.pagecssfiles),
+                tabledata = tabledata,
+                tablefiles = tablefiles,
+                tablebuttons = self.buttons,
+                pretablehtml = self.pretablehtml if not callable(self.pretablehtml) else self.pretablehtml(),
+                options = {
+                    'dtopts': dt_options,
+                    'editoropts': ed_options,
+                    'yadcfopts' : yadcf_options,
+                    'updateopts': update_options
+                },
+                writeallowed = self.permission(),
+                **self.addltemplateargs
+            )
         
         except:
             # roll back database updates and close transaction
@@ -1891,7 +1894,7 @@ class DbCrudApi(CrudApi):
             }
             # this code comes through multiple times so need to prevent from being added twice
             # should consider alternative of deepcopy() like mapping arguments
-            if version_id_col not in [c['name'] for c in args['clientcolumns']]:
+            if version_id_col not in [c['data'] for c in args['clientcolumns']]:
                 args['clientcolumns'].append(versioncol)
 
         # for serverside processing, self.servercolumns is built up from column data, always starts with model.id
@@ -1909,7 +1912,12 @@ class DbCrudApi(CrudApi):
                 self.dbmapping.pop(col['name'], None)
 
             # need formfield and dbattr for a couple of things
-            formfield = col['name']  # TODO: should this come from 'name' or 'data'?
+            formfield = col['data']
+
+            # certain use cases require data=None and no dbattr exists,
+            # e.g., child row handling
+            if formfield == None: continue
+
             dbattr = self.formmapping[formfield]
 
             # maybe this column needs to be unique
