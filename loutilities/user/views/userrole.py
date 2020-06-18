@@ -38,8 +38,8 @@ user_formfields = 'rowid,email,name,given_name,roles,interests,last_login_at,cur
 user_dbmapping = dict(zip(user_dbattrs, user_formfields))
 user_formmapping = dict(zip(user_formfields, user_dbattrs))
 
-user_formmapping['last_login_at'] = lambda dbrow: ymdtime.dt2asc(dbrow.last_login_at) if dbrow.last_login_at else None
-user_formmapping['current_login_at'] = lambda dbrow: ymdtime.dt2asc(dbrow.current_login_at) if dbrow.current_login_at else None
+user_formmapping['last_login_at'] = lambda dbrow: ymdtime.dt2asc(dbrow.last_login_at) if dbrow.last_login_at else ''
+user_formmapping['current_login_at'] = lambda dbrow: ymdtime.dt2asc(dbrow.current_login_at) if dbrow.current_login_at else ''
 
 def user_validate(action, formdata):
     results = []

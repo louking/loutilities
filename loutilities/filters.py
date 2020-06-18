@@ -24,7 +24,7 @@ Usage::
 
     example = CrudApi(
             :
-        pretablehtml = filters,
+        pretablehtml = filters.render(),
             :
         yadcfoptions = yadcf_options,
     )

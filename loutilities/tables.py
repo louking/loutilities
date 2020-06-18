@@ -549,7 +549,7 @@ def _editormethod(checkaction='', formrequest=True):
                 self.editor_method_postcommit(request.form)
 
                 # response to client
-                return dt_editor_response(data=self._responsedata)
+                return dt_editor_response(data=self._responsedata, **self.responsekeys)
             
             except:
                 # roll back database updates and close transaction
@@ -657,6 +657,7 @@ class CrudApi(MethodView):
     :param templateargs: dict of arguments to pass to template - if callable arg function is called before being passed to template (no parameters)
     :param validate: editor validation function (action, formdata), result is set to self._fielderrors
     :param multiselect: if True, allow selection of multiple rows, default False
+    :param responsekeys: dict of items to add to editor response, can update in any of the hooks
     '''
 
     def __init__(self, **kwargs):
@@ -688,6 +689,7 @@ class CrudApi(MethodView):
                     validate = lambda action,formdata: [],
                     multiselect = False,
                     addltemplateargs = {},
+                    responsekeys = {},
                     )
         args.update(kwargs)
 
@@ -839,9 +841,11 @@ class CrudApi(MethodView):
 
             # back to client
             if hasattr(self, 'output_result'):
+                self.output_result.update(self.responsekeys)
                 return jsonify(self.output_result)
             else:
                 output_result = tabledata
+                output_result.update(self.responsekeys)
                 return jsonify(output_result)
 
         except:
@@ -856,12 +860,6 @@ class CrudApi(MethodView):
         dt_options = {
             'dom': '<"H"lBpfr>t<"F"i>',
             'columns': [
-                {
-                    'data': None,
-                    'defaultContent': '',
-                    'className': 'select-checkbox',
-                    'orderable': False
-                },
             ],
             'rowId': self.idSrc,
             'select': 'single' if not self.multiselect else 'os',
@@ -962,9 +960,12 @@ class CrudApi(MethodView):
 
     @_editormethod(checkaction='create,refresh', formrequest=True)
     def post(self):
+        self.do_post()
+
+    def do_post(self):
         # retrieve data from request
         thisdata = self._data[0]
-        
+
         action = get_request_action(request.form)
         self._fielderrors = self.validate(action, thisdata)
         if self._fielderrors: raise ParameterError
@@ -983,7 +984,6 @@ class CrudApi(MethodView):
                 raise ParameterError(cause)
         else:
             thisrow = self.upload(thisdata)
-
 
     @_editormethod(checkaction='edit', formrequest=True)
     def put(self, thisid):

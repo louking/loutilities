@@ -8,6 +8,8 @@ function translate_editor_group(e, data, action) {
     // substitute group into urls
     for (const action in newconfig) {
         newconfig[action].url = _.replace(decodeURIComponent(newconfig[action].url), _.replace('<{groupname}>', '{groupname}', this.groups_groupname), group);
+        // tack on url query parameters
+        newconfig[action].url += '?' + setParams(allUrlParams());
     }
     this.ajax(newconfig);
 }
@@ -45,6 +47,7 @@ function register_group_for_editor(groupname, groupselectselector, ed) {
 
 var dt_groupname = null;
 var dt_groupselectselector = null;
+var dt_lastjson = null;
 function register_group_for_datatable(groupname, groupselectselector) {
     // the group and groupselector are common for the page, so ok to save globally
     dt_groupselectselector = groupselectselector
@@ -66,14 +69,15 @@ function translate_datatable_group(url) {
         }
         // WARNING: nonstandard/nonpublic use of settings information
         var dt = settings.oApi;
-        // tack on current url parameters
+        // tack on current url query parameters
         ajaxurl += '?' + setParams(allUrlParams());
         // adapted from jquery.dataTables.js _fnBuildAjax; _fn functions are from dataTables
         $.ajax({
             "url": ajaxurl,
             "data": data,
-            "success": function(data, textStatus, xhr) {
-                callback(data)
+            "success": function(json, textStatus, xhr) {
+                dt_lastjson = json;
+                callback(json)
             },
 			"dataType": "json",
 			"cache": false,

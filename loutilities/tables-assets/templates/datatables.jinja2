@@ -73,10 +73,6 @@
   <table class="" id="datatable" >
     <thead>
       <tr>
-        {# assume select column if Editor options are provided #}
-        {% if options.editoropts is defined %}
-          <th class=""></th>
-        {% endif %}
         {% for col in options.dtopts.columns %}
           {% if col.label is defined %}
             <th class="">{{ col.label }}</th>
