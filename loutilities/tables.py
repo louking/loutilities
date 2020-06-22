@@ -20,7 +20,7 @@ import sys
 import flask
 from flask import request, jsonify, url_for, current_app, make_response
 from flask.views import MethodView
-from sqlalchemy import func, types, cast
+from sqlalchemy import func, types, cast, inspect
 from sqlalchemy.types import TypeDecorator
 from datatables import DataTables as BaseDataTables, ColumnDT
 
@@ -478,6 +478,21 @@ class TablesCsv(MethodView):
             self.rollback()
             raise
 
+class CrudChildElement():
+    '''
+    represents an element within a datatable child row
+
+    :param name: name of the element
+    :param type: type of the element, '_table' or datatables field type
+    :param args: arguments specific to the element type
+    '''
+    def __init__(self, name=None, type=None, args=None):
+        if args is None:
+            args = {}
+        self.name = name
+        self.type = type
+        self.args = args
+
 
 def _editormethod(checkaction='', formrequest=True):
     '''
@@ -658,6 +673,9 @@ class CrudApi(MethodView):
     :param validate: editor validation function (action, formdata), result is set to self._fielderrors
     :param multiselect: if True, allow selection of multiple rows, default False
     :param responsekeys: dict of items to add to editor response, can update in any of the hooks
+
+    :param childtemplate: nunjuck template for display of child row
+    :param childelementargs: array of arg dicts for instantiations of CrudChildElement instances
     '''
 
     def __init__(self, **kwargs):
@@ -690,6 +708,8 @@ class CrudApi(MethodView):
                     multiselect = False,
                     addltemplateargs = {},
                     responsekeys = {},
+                    childtemplate = None,
+                    childelementargs = [],
                     )
         args.update(kwargs)
 
@@ -700,8 +720,10 @@ class CrudApi(MethodView):
         for key in args:
             setattr(self, key, args[key])
 
-        # set up mapping between database and editor form
-        # self.dte = DataTablesEditor(self.dbmapping, self.formmapping)
+        # set up child element instances
+        self.childelements = []
+        for args in self.childelementargs:
+            self.childelements.append()
 
     def register(self):
         # name for view is last bit of fully named endpoint
@@ -1513,6 +1535,17 @@ class DteDbRelationship():
             else:
                 return {self.labelfield: None, self.valuefield: None}
 
+    def sqla_expr(self):
+        '''
+        get from database when using serverside = True, for use with ColumnDT
+
+        :return: sqlalchemy expression
+        '''
+        if not self.viadbattr:
+            return get_dbattr(self.tablemodel, self.dbfield)
+        else:
+            return self.viadbattr
+
     def options(self):
         # return sorted list of items in the model
         queryparams = self.queryparams() if callable(self.queryparams) else self.queryparams
@@ -1900,6 +1933,8 @@ class DbCrudApi(CrudApi):
         # for serverside processing, self.servercolumns is built up from column data, always starts with model.id
         if args['serverside']:
             self.servercolumns = [ColumnDT(getattr(args['model'], 'id'), mData=self.dbmapping['id'])]
+            # keep track of needed joins
+            self.joins = []
 
         # do some preprocessing on columns
         booleandb = {}
@@ -1931,27 +1966,33 @@ class DbCrudApi(CrudApi):
 
             # no special treatment is the norm
             if not treatment:
-                if args['serverside']:
-                    self.servercolumns.append(
-                        ColumnDT(getattr(args['model'], dbattr), mData=formfield, **columndt_args))
-
-                # special processing if db attribute implies subrecord
-                # only know how to handle two levels now
+                # some special processing to check for subrecords, unless there's a function
                 if not callable(dbattr):
                     branches = dbattr.split('.')
-                    if len(branches) == 2:
+                    if len(branches) == 1:
+                        if args['serverside']:
+                            self.servercolumns.append(
+                                ColumnDT(getattr(args['model'], dbattr), mData=formfield, **columndt_args))
+
+                    # special processing if db attribute implies subrecord
+                    # only know how to handle two levels now
+                    elif len(branches) == 2:
                         # submodel is one level down
                         submodelname = branches[0]
-                        submodel = type(getattr(args['model'], submodelname))
+                        submodelinsp = inspect(getattr(args['model'], submodelname))
+                        submodel = submodelinsp.prop.entity.class_
+                        # submodel = getattr(args['model'], submodelname)
                         subfield = branches[1]
                         thisreln = DteDbSubrec(model=submodel, field=submodelname, subfield=subfield, formfield=formfield)
                         if not args['serverside']:
                             self.formmapping[formfield] = thisreln.get
 
-                        # server side tables adds ColumnDT (untested)
+                        # server side tables adds ColumnDT
                         else:
                             self.servercolumns.append(
-                                ColumnDT(thisreln.get(getattr(submodel, 'id')), mData=formfield, **columndt_args))
+                                ColumnDT(getattr(submodel, subfield), mData=formfield, **columndt_args))
+                            if submodel not in self.joins:
+                                self.joins.append(submodel)
 
                             # db processing section
                         ## save handler, set data to db using handler set function
@@ -1959,6 +2000,9 @@ class DbCrudApi(CrudApi):
                         # self.dbmapping[dbattr] = thisreln.set        #TODO: doesn't work
                         self.dbmapping[dbattr] = '__readonly__'  # won't be found so no db update to this field will be made
                         col['type'] = 'readonly'  # force column to be readonly on form
+
+                    else:
+                        raise ParameterError('can\'t handle more than 2 levels of dbattr yet')
 
             # special treatment required
             else:
@@ -2016,10 +2060,12 @@ class DbCrudApi(CrudApi):
 
                     # server side tables adds ColumnDT (untested)
                     else:
-                        # TODO: maybe need to do something with {formfield : {'id': xx, label: yy}} or maybe this will just work?
+                        sqla_expr = thisreln.sqla_expr()
                         self.servercolumns.append(
-                            ColumnDT(func.thisreln.get(getattr(thisreln.tablemodel, 'id')), mData=formfield,
-                                     **columndt_args))
+                            ColumnDT(sqla_expr, mData=formfield, **columndt_args)
+                        )
+                        if sqla_expr.class_ not in self.joins:
+                            self.joins.append(sqla_expr.class_)
 
                     # db processing section
                     ## save handler, set data to db using handler set function
@@ -2359,7 +2405,12 @@ class DbCrudApi(CrudApi):
         # server table, this is the output to be returned, nexttablerow() is noop
         # note get_response_data transform is not done - name mapping is in self.servercolumns
         else:
-            query = self.db.session.query().select_from(self.model).filter_by(**self.queryparams)
+            query = self.db.session.query().select_from(self.model)
+            # add required joins (determined in __init__
+            for j in self.joins:
+                query = query.join(j)
+            # now filter
+            query = query.filter_by(**self.queryparams)
             args = request.args.to_dict()
             rowTable = DataTables(args, query, self.servercolumns)
 
