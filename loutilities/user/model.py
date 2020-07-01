@@ -126,6 +126,14 @@ class Role(Base, RoleMixin):
         'version_id_col': version_id
     }
 
+copy_local_user_attrs = ['name', 'email', 'given_name', 'active' ]
+class LocalUserMixin(object):
+    user_id             = Column(Integer)
+    email               = Column( String(EMAIL_LEN) )
+    name                = Column( String(NAME_LEN) )
+    given_name          = Column( String(NAME_LEN) )
+    active              = Column(Boolean)
+
 class User(Base, UserMixin):
     __tablename__ = 'user'
     __bind_key__ = 'users'
@@ -191,10 +199,11 @@ class ManageLocalTables():
                 # can't have ForeignKey across databases, so get localinterest.id for reference from localuser table
                 localinterest = self.localinterestmodel.query.filter_by(interest_id=interest.id).one()
 
-                # remove from deactivate list; update active status
+                # remove from deactivate list; update all fields
                 if (user.id,localinterest.id) in alllocal:
                     localuser = alllocal.pop((user.id,localinterest.id))
-                    localuser.active = user.active
+                    for copy_local_user_attr in copy_local_user_attrs:
+                        setattr(localuser, copy_local_user_attr, getattr(user, copy_local_user_attr))
                 # needs to be added
                 else:
                     newlocal = self.localusermodel(user_id=user.id, interest_id=localinterest.id, active=True)
@@ -220,7 +229,8 @@ class ManageLocalTables():
             # remove from deactivate list; update active status
             if user.id in alllocal:
                 localuser = alllocal.pop(user.id)
-                localuser.active = user.active
+                for copy_local_user_attr in copy_local_user_attrs:
+                    setattr(localuser, copy_local_user_attr, getattr(user, copy_local_user_attr))
             # needs to be added
             else:
                 newlocal = self.localusermodel(user_id=user.id, active=user.active)
