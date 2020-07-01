@@ -15,13 +15,15 @@ from json import dumps
 from urllib.parse import urlencode
 from threading import RLock
 import sys
+import json
 
 # pypi
 import flask
 from flask import request, jsonify, url_for, current_app, make_response
 from flask.views import MethodView
-from sqlalchemy import func, types, cast, inspect
+from sqlalchemy import func, types, cast
 from sqlalchemy.types import TypeDecorator
+from sqlalchemy.orm.attributes import InstrumentedAttribute
 from datatables import DataTables as BaseDataTables, ColumnDT
 
 # homegrown
@@ -212,6 +214,22 @@ class DataTables(BaseDataTables, object):
             super(DataTables, self)._set_yadcf_data(query)
 
 
+def getattrdeep(obj, attr):
+    '''
+    get an attribute which might be keyed with dotted notation
+
+    :param obj: possibly multilevel object
+    :param attr: key attribute, possible dotted notation
+    :return: value
+    '''
+    attrbranches = attr.split('.')
+    # we're at the end of the branches, just return the value
+    if len(attrbranches) == 1:
+        return getattr(obj, attr)
+    # drill down further
+    else:
+        return getattrdeep(getattr(obj, attrbranches[0]), '.'.join(attrbranches[1:]))
+
 class DataTablesEditor():
     '''
     handle CRUD request from dataTables Editor
@@ -232,21 +250,14 @@ class DataTablesEditor():
         self.formmapping = formmapping
         self.null2emptystring = null2emptystring
 
-    def get_response_data(self, dbentry, nesteddata=False):
+    def get_response_data(self, dbentry):
         '''
         set form values based on database model object
 
         :param dbentry: database entry (model object)
-        :param nesteddata: set to True if data coming from server is multi leveled e.g., see see https://editor.datatables.net/examples/simple/join.html)
         '''
 
-        # ** use of NestedDict() may be useful for certain situations (e.g., see https://editor.datatables.net/examples/simple/join.html)
-        # ** however this has not been fully tested so is disabled by default  
-        if nesteddata:
-            # data['a.b.c'].to_dict() = data['a']['b']['c']
-            data = NestedDict()
-        else:
-            data = {}
+        data = {}
 
         # create data fields based on formmapping
         for key in self.formmapping:
@@ -262,14 +273,11 @@ class DataTablesEditor():
                 # skip if indicated
                 if dbattr == '__skip__': continue
 
-                data[key] = getattr(dbentry, dbattr)
+                data[key] = getattrdeep(dbentry, dbattr)
                 if self.null2emptystring and data[key]==None:
                     data[key] = ''
 
-        if nesteddata:
-            return data.to_dict()
-        else:
-            return data
+        return data
 
     def set_dbrow(self, inrow, dbrow):
         '''
@@ -432,33 +440,6 @@ class TablesCsv(MethodView):
                 self.rollback()
                 self.abort()
             
-            # # DataTables options string, data: and buttons: are passed separately
-            # dt_options = {
-            #     'dom': '<"H"lBpfr>t<"F"i>',
-            #     'columns': [],
-            #     'ordering': True,
-            #     'serverSide': False,
-            # }
-            # dt_options.update(self.dtoptions)
-
-            # # set up columns
-            # if hasattr(self.columns, '__call__'):
-            #     columns = self.columns()
-            # else:
-            #     columns = self.columns
-            # for column in columns:
-            #     dt_options['columns'].append(column)
-
-            # # set up buttons
-            # if hasattr(self.buttons, '__call__'):
-            #     buttons = self.buttons()
-            # else:
-            #     buttons = self.buttons
-
-            # set up column transformation from header items to data items
-            # mapping = { c['data']:c['label'] for c in columns }
-            # headers2data = Transform(mapping, sourceattr=False, targetattr=False)
-
             # build table data
             self.open()
             tabledata = []
@@ -493,6 +474,16 @@ class CrudChildElement():
         self.type = type
         self.args = args
 
+    def get_options(self):
+        if self.type == '_table':
+            args = self.args['table'].getdtoptions()
+        else:
+            args = self.args
+        return dict(
+            name = self.name,
+            type = self.type,
+            args = args
+        )
 
 def _editormethod(checkaction='', formrequest=True):
     '''
@@ -674,8 +665,12 @@ class CrudApi(MethodView):
     :param multiselect: if True, allow selection of multiple rows, default False
     :param responsekeys: dict of items to add to editor response, can update in any of the hooks
 
-    :param childtemplate: nunjuck template for display of child row
-    :param childelementargs: array of arg dicts for instantiations of CrudChildElement instances
+    :param childrowoptions: (optional)
+        {
+          'template': nunjuck template for display of child row,
+          'childelementargs': array of arg dicts for instantiations of CrudChildElement instances
+          'showeditor': True if editor should be shown in childrow, template must have element with id childrow-editform
+        }
     '''
 
     def __init__(self, **kwargs):
@@ -708,8 +703,7 @@ class CrudApi(MethodView):
                     multiselect = False,
                     addltemplateargs = {},
                     responsekeys = {},
-                    childtemplate = None,
-                    childelementargs = [],
+                    childrowoptions = {},
                     )
         args.update(kwargs)
 
@@ -722,8 +716,10 @@ class CrudApi(MethodView):
 
         # set up child element instances
         self.childelements = []
-        for args in self.childelementargs:
-            self.childelements.append()
+        if self.childrowoptions:
+            childelementargs = self.childrowoptions.get('childelementargs', None)
+            for args in childelementargs:
+                self.childelements.append(CrudChildElement(**args))
 
     def register(self):
         # name for view is last bit of fully named endpoint
@@ -783,6 +779,7 @@ class CrudApi(MethodView):
             dt_options = self.getdtoptions()
             ed_options = self.getedoptions()
             yadcf_options = self.getyadcfoptions()
+            childrow_options = self.getchildrowoptions()
 
             # build table data
             if not self.serverside:
@@ -821,6 +818,7 @@ class CrudApi(MethodView):
                     'dtopts': dt_options,
                     'editoropts': ed_options,
                     'yadcfopts' : yadcf_options,
+                    'childrow' : childrow_options,
                     'updateopts': update_options
                 },
                 writeallowed = self.permission(),
@@ -972,6 +970,33 @@ class CrudApi(MethodView):
 
     def getyadcfoptions(self):
         return self.yadcfoptions
+
+    def getchildrowoptions(self):
+        def is_jsonable(x):
+            try:
+                json.dumps(x)
+                return True
+            except (TypeError, OverflowError):
+                return False
+
+        def copyopts(opts):
+            if isinstance(opts, dict):
+                newopts = {}
+                for f in opts:
+                    newopts[f] = copyopts(opts[f])
+            else:
+                if is_jsonable(opts):
+                    newopts = opts
+                else:
+                    # what should we do here?
+                    newopts = str(opts)
+
+            return newopts
+
+        # deep copy, taking care not to include non-jsonable values
+        val = copyopts(self.childrowoptions)
+
+        return val
 
     def get(self):
         print('request.path = {}'.format(request.path))
@@ -1365,10 +1390,13 @@ class DteDbRelationship():
     * viafilter - (optional) if viadbattr is set, this can be additional filters to add to the local table lookup.
          This can be specific dict or function() which returns specific dict
 
+    * sqlaexpr - override sqla expression with this
+
     * uselist - set to True if using tags, otherwise field expects single entry, default True
     * searchbox - set to True if searchbox desired, default False
     * nullable - set to True if item can give null (unselected) return, default False (only applies for usellist=False)
     * queryparams - dict containing parameters for query to determine options, or callable which returns such a dict
+
 
     Basic Use:
 
@@ -1434,10 +1462,11 @@ class DteDbRelationship():
                     dbfield=None,
                     viadbattr=None,
                     viafilter={},
+                    sqlaexpr=None,
                     uselist=True,
                     searchbox=False,
                     nullable=False,
-                    queryparams= {}
+                    queryparams= {},
                     )
         args.update(kwargs)
 
@@ -1541,6 +1570,9 @@ class DteDbRelationship():
 
         :return: sqlalchemy expression
         '''
+        if type(self.sqlaexpr) != type(None):
+            return self.sqlaexpr
+
         if not self.viadbattr:
             return get_dbattr(self.tablemodel, self.dbfield)
         else:
@@ -1961,7 +1993,7 @@ class DbCrudApi(CrudApi):
 
             # check for special treatment for column
             treatment = col.get('_treatment', None)
-            columndt_args = col.get('_ColumnDT_args', {})
+            _columndt_args = col.get('_ColumnDT_args', {})
             if debug: current_app.logger.debug('__init__(): treatment = {}'.format(treatment))
 
             # no special treatment is the norm
@@ -1970,27 +2002,28 @@ class DbCrudApi(CrudApi):
                 if not callable(dbattr):
                     branches = dbattr.split('.')
                     if len(branches) == 1:
+                        # server side tables adds ColumnDT for page paint
                         if args['serverside']:
-                            self.servercolumns.append(
-                                ColumnDT(getattr(args['model'], dbattr), mData=formfield, **columndt_args))
+                            columndt_args = {'sqla_expr': getattr(args['model'], dbattr), 'mData':formfield}
+                            columndt_args.update(**_columndt_args)
+                            self.servercolumns.append(ColumnDT(**columndt_args))
 
                     # special processing if db attribute implies subrecord
                     # only know how to handle two levels now
                     elif len(branches) == 2:
                         # submodel is one level down
                         submodelname = branches[0]
-                        submodelinsp = inspect(getattr(args['model'], submodelname))
-                        submodel = submodelinsp.prop.entity.class_
+                        submodel = getattr(args['model'], submodelname).prop.entity.class_
                         # submodel = getattr(args['model'], submodelname)
                         subfield = branches[1]
                         thisreln = DteDbSubrec(model=submodel, field=submodelname, subfield=subfield, formfield=formfield)
-                        if not args['serverside']:
-                            self.formmapping[formfield] = thisreln.get
+                        self.formmapping[formfield] = thisreln.get
 
-                        # server side tables adds ColumnDT
-                        else:
-                            self.servercolumns.append(
-                                ColumnDT(getattr(submodel, subfield), mData=formfield, **columndt_args))
+                        # server side tables adds ColumnDT for page paint
+                        if args['serverside']:
+                            columndt_args = {'sqla_expr': getattr(submodel, subfield), 'mData':formfield}
+                            columndt_args.update(**_columndt_args)
+                            self.servercolumns.append(ColumnDT(**columndt_args))
                             if submodel not in self.joins:
                                 self.joins.append(submodel)
 
@@ -2021,15 +2054,14 @@ class DbCrudApi(CrudApi):
                     booleanform[formfield] = thisbool
                     col['options'] = booleanform[formfield].options
 
-                    # client side table modifies getter to handle boolean values
-                    if not args['serverside']:
-                        self.formmapping[formfield] = booleanform[formfield].get
+                    # table modifies getter to handle boolean values
+                    self.formmapping[formfield] = booleanform[formfield].get
 
-                    # server side tables adds ColumnDT to handle boolean values (untested)
-                    else:
-                        self.servercolumns.append(
-                            ColumnDT(thisbool.sqla_expr(), mData=formfield, **columndt_args)
-                        )
+                    # server side tables adds ColumnDT to handle boolean values for page paint
+                    if args['serverside']:
+                        columndt_args = {'sqla_expr': thisbool.sqla_expr(), 'mData': formfield}
+                        columndt_args.update(**_columndt_args)
+                        self.servercolumns.append(ColumnDT(**columndt_args))
 
                         # db processing section
                     ## save handler, set data to db using handler set function
@@ -2054,17 +2086,17 @@ class DbCrudApi(CrudApi):
                     ## save handler, get data from form using handler get function, update form to call handler options when options needed
                     # relationshipform[formfield] = thisreln
 
-                    # client side table modifies getter to handle boolean values
-                    if not args['serverside']:
-                        self.formmapping[formfield] = thisreln.get
+                    # table modifies getter to handle associated values
+                    self.formmapping[formfield] = thisreln.get
 
-                    # server side tables adds ColumnDT (untested)
-                    else:
+                    # server side tables adds ColumnDT for page paint (untested)
+                    if args['serverside']:
                         sqla_expr = thisreln.sqla_expr()
-                        self.servercolumns.append(
-                            ColumnDT(sqla_expr, mData=formfield, **columndt_args)
-                        )
-                        if sqla_expr.class_ not in self.joins:
+                        columndt_args = {'sqla_expr': sqla_expr, 'mData': formfield}
+                        columndt_args.update(**_columndt_args)
+                        self.servercolumns.append(ColumnDT(**columndt_args))
+
+                        if type(sqla_expr) == InstrumentedAttribute and sqla_expr.class_ not in self.joins:
                             self.joins.append(sqla_expr.class_)
 
                     # db processing section

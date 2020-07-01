@@ -13,3 +13,51 @@ tr.shown td.details-control {
     text-align:center;
     color:red;
 }
+
+/* from https://datatables.net/blog/2017-06-30#Example */
+
+.childrow-display .DTE_Label {
+    font-weight: bold;
+    padding-top: 6px;
+}
+
+#childrow-editform div.DTE div.DTE_Body div.DTE_Field,
+.childrow-display p.DTE_Field_Input
+{
+    padding: 0.7em 0 0 0;
+}
+#childrow-editform div.DTE div.DTE_Body div.DTE_Field > label {
+    float: none;
+    clear: both;
+    width: 100%;
+}
+#childrow-editform div.DTE div.DTE_Body div.DTE_Field > div.DTE_Field_Input {
+    float: none;
+    clear: both;
+    width: 100%;
+}
+
+/*#childrow-editform div.DTE div.DTE_Header,*/
+#childrow-editform div.DTE div.DTE_Footer {
+    background-color: transparent;
+    border-color: black;
+    display: block;
+    float: left;
+    padding-top: 6px;
+}
+
+/*#childrow-editform div.DTE div.DTE_Header {*/
+/*    height: 60px;*/
+/*}*/
+
+#childrow-editform p.start-editing,
+#childrow-editform p.add-new {
+    text-align: center;
+    font-size: 1.4em;
+    line-height: 1.4em;
+}
+
+
+#childrow-editform p.start-editing {
+    padding-top: 7em;
+}

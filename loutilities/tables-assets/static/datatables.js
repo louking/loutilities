@@ -1,16 +1,6 @@
-// generic datatables / Editor handling
-
-// data is an list of objects for rendering or url for ajax retrieval of similar object
-// buttons is a JSON parsable string, as it references editor which hasn't been instantiated yet
-// options is an object with the following keys
-//     dtopts:       options to be passed to DataTables instance, 
-//                   except for data: and buttons: options, passed in data, buttons
-//     editoropts:   options to be passed to Editor instance, 
-//                   if not present, Editor will not be configured
-//     updateopts:   options to configure Editor select fields with
-//                   see crudapi.py for more details
-//     yadcfopts:    yadcf options to be passed to yadcf 
-//                   if not present, yadcf will not be configured
+/**
+ * generic datatables / Editor handling
+ */
 
 var editor, _dt_table;
 var opttree = {};
@@ -116,6 +106,24 @@ function jsGetDataTableHeightPx() {
     return retHeightPx;
 }
 
+/**
+ * configure dataTables for table with id=datatable
+ *
+ * @param data - list of objects for rendering or url for ajax retrieval of similar object
+ * @param buttons - is a JSON parsable string, as it references editor which hasn't been instantiated yet
+ * @param options - object with the following keys
+ *     dtopts:       options to be passed to DataTables instance,
+ *                   except for data: and buttons: options, passed in data, buttons
+ *     editoropts:   options to be passed to Editor instance,
+ *                   if not present, Editor will not be configured
+ *     updateopts:   options to configure Editor select fields with
+ *                   see tables.py for more details
+ *     yadcfopts:    (optional) yadcf options to be passed to yadcf
+ *                   if not present, yadcf will not be configured
+ *     childrow:     (optional) options to configure ChildRow display (see datatables-childrow.js)
+ *                   if not present, childrow will not be configured
+ * @param files - (optional) passed to Editor instance
+ */
 function datatables(data, buttons, options, files) {
 
     // convert render to javascript -- backwards compatibility
@@ -151,6 +159,13 @@ function datatables(data, buttons, options, files) {
             autocomplete: 'off'
           }
         } );
+
+        // configure childrow options for editor if so configured
+        if ( ! $.isEmptyObject( options.childrow ) ) {
+            if (options.childrow.showeditor) {
+                $.extend(options.editoropts,{display:onPageDisplay('#childrow-editform')})
+            }
+        }
 
         // create editor instance
         $.extend(options.editoropts,{table:'#datatable'})
@@ -215,6 +230,12 @@ function datatables(data, buttons, options, files) {
 
     // define the table
     _dt_table = $('#datatable').DataTable ( options.dtopts );
+
+    // configure childrow if so configured
+    if ( ! $.isEmptyObject( options.childrow ) ) {
+        // sets up child row event handling, and initializes child elements as needed
+        var childrow = new ChildRow(_dt_table, options.childrow.template, options.childrow.config, editor);
+    }
 
     // any column filtering required? if so, define the filters
     if ( ! $.isEmptyObject( options.yadcfopts ) ) {
