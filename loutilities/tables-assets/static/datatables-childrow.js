@@ -28,8 +28,9 @@ function ChildRow(table, template, config, editor) {
         var row = that.table.row( tr );
 
         if ( row.child.isShown() ) {
-            // This row is already open - close it
+            // This row is already open - close it, close editor if open
             that.hideChild(row);
+            that.closeChild(row);
             tr.removeClass('shown');
             tdi.first().removeClass('fa-minus-square');
             tdi.first().addClass('fa-plus-square');
@@ -64,8 +65,10 @@ function ChildRow(table, template, config, editor) {
     that.table.on('deselect', function () {
         var tr = editor.s.modifier;
         var row = that.table.row( tr );
-        that.closeChild(row);
-        that.showChild(row);
+        if (row.child.isShown()) {
+            that.closeChild(row);
+            that.showChild(row);
+        }
     } );
 
     that.table.on('user-select', function (e, dt, type, cell, originalEvent) {
@@ -118,6 +121,7 @@ ChildRow.prototype.editChild = function(row) {
     // todo: var that = this, add event handlers to make 'dirty' class to force saving later
 
     that.editor
+        .title('Edit')
         .buttons([
             {
                 "label": "Save",
