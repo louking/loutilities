@@ -38,6 +38,9 @@ debug = False
 # separator for select2 tag list
 SEPARATOR = ', '
 
+# child row management
+CHILDROW_TYPE_TABLE = '_table'
+
 #####################################################
 # for use in validation functions
 #####################################################
@@ -74,6 +77,42 @@ class RenderBoolean(TypeDecorator):
 
 def renderboolean(expr, *args, **kwargs):
     return cast(expr, RenderBoolean(*args, **kwargs))
+
+
+def is_jsonable(x):
+    '''
+    returns true if json serializable
+
+    :param x: object to check
+    :return: True if json serializable
+    '''
+    try:
+        json.dumps(x)
+        return True
+    except (TypeError, OverflowError):
+        return False
+
+
+def copyopts(opts):
+    '''
+    deep copy of dictionary options, json serializable
+    if an option wasn't serializable it gets turned into a string
+
+    :param opts: dict or scalar
+    :return: json serializable dict or scalar
+    '''
+    if isinstance(opts, dict):
+        newopts = {}
+        for f in opts:
+            newopts[f] = copyopts(opts[f])
+    else:
+        if is_jsonable(opts):
+            newopts = opts
+        else:
+            # what should we do here?
+            newopts = str(opts)
+
+    return newopts
 
 
 def get_dbattr(basemodel, attrstring):
@@ -464,21 +503,37 @@ class CrudChildElement():
     represents an element within a datatable child row
 
     :param name: name of the element
-    :param type: type of the element, '_table' or datatables field type
+    :param type: type of the element, CHILDROW_TYPE_TABLE or datatables field type
     :param args: arguments specific to the element type
     '''
-    def __init__(self, name=None, type=None, args=None):
+    def __init__(self, name=None, type=None, args=None, table=None):
         if args is None:
             args = {}
         self.name = name
         self.type = type
         self.args = args
+        self.table = table
+
+        if type == CHILDROW_TYPE_TABLE and not table:
+            raise ParameterError('CrudChildElement: element "{}" missing table argument'.format(name))
 
     def get_options(self):
-        if self.type == '_table':
-            args = self.args['table'].getdtoptions()
+        if self.type == CHILDROW_TYPE_TABLE:
+            args = {}
+            args['dtopts'] = self.table.getdtoptions()
+            args['edopts'] = self.table.getedoptions()
+            args['cropts'] = self.table.getchildrowoptions()
+            # remove server based column control as this has been configured by the base table
+            # and we don't want to try to pass that to the client
+            columns = []
+            for thiscol in self.table.clientcolumns:
+                columns.append(copyopts(thiscol))
+                columns[-1].pop('_ColumnDT_args', None)
+            args['clientcolumns'] = columns
+
         else:
             args = self.args
+
         return dict(
             name = self.name,
             type = self.type,
@@ -717,7 +772,7 @@ class CrudApi(MethodView):
         # set up child element instances
         self.childelements = []
         if self.childrowoptions:
-            childelementargs = self.childrowoptions.get('childelementargs', None)
+            childelementargs = self.childrowoptions.get('childelementargs', [])
             for args in childelementargs:
                 self.childelements.append(CrudChildElement(**args))
 
@@ -972,29 +1027,17 @@ class CrudApi(MethodView):
         return self.yadcfoptions
 
     def getchildrowoptions(self):
-        def is_jsonable(x):
-            try:
-                json.dumps(x)
-                return True
-            except (TypeError, OverflowError):
-                return False
-
-        def copyopts(opts):
-            if isinstance(opts, dict):
-                newopts = {}
-                for f in opts:
-                    newopts[f] = copyopts(opts[f])
-            else:
-                if is_jsonable(opts):
-                    newopts = opts
-                else:
-                    # what should we do here?
-                    newopts = str(opts)
-
-            return newopts
-
         # deep copy, taking care not to include non-jsonable values
         val = copyopts(self.childrowoptions)
+
+        # the original childelementargs config has been converted to self.childelements
+        val.pop('childelementargs', None)
+
+        # add elements to options
+        # NOTE: the order from the original childelementargs has been preserved
+        for el in self.childelements:
+            val.setdefault('childelements',[])
+            val['childelements'].append(el.get_options())
 
         return val
 

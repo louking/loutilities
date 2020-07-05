@@ -26,18 +26,22 @@ tr.shown td.details-control {
 {
     padding: 0.7em 0 0 0;
 }
+
+.childrow-display .DTE_Label,
 #childrow-editform div.DTE div.DTE_Body div.DTE_Field > label {
     float: none;
     clear: both;
     width: 100%;
+    font-size: 1.3em;
 }
 #childrow-editform div.DTE div.DTE_Body div.DTE_Field > div.DTE_Field_Input {
     float: none;
     clear: both;
     width: 100%;
+    padding-top: 1px;
 }
 
-/*#childrow-editform div.DTE div.DTE_Header,*/
+#childrow-editform div.DTE div.DTE_Header,
 #childrow-editform div.DTE div.DTE_Footer {
     background-color: transparent;
     border-color: black;
@@ -46,9 +50,15 @@ tr.shown td.details-control {
     padding-top: 6px;
 }
 
-/*#childrow-editform div.DTE div.DTE_Header {*/
-/*    height: 60px;*/
-/*}*/
+#childrow-editform div.DTE div.DTE_Header {
+    /*height: 60px;*/
+    font-size: 2em;
+}
+
+/* overrides padding from editor.jqueryui.css */
+#childrow-editform div.DTE_Body {
+    padding: 52px 0;
+}
 
 #childrow-editform p.start-editing,
 #childrow-editform p.add-new {
@@ -60,4 +70,8 @@ tr.shown td.details-control {
 
 #childrow-editform p.start-editing {
     padding-top: 7em;
+}
+
+.childrow-display .DTE_Field_Input {
+    padding: 0 6px;
 }

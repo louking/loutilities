@@ -35,7 +35,7 @@ function onPageDisplay ( elm ) {
                 Editor.display.jqueryui.open(editor, form, callback);
 
             } else if (editor.mode() == 'remove') {
-                Editor.display.jqueryui.remove(editor, form, callback);
+                Editor.display.jqueryui.open(editor, form, callback);
 
             } else {
                 $(elm).children().detach();

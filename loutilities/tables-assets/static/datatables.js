@@ -234,7 +234,7 @@ function datatables(data, buttons, options, files) {
     // configure childrow if so configured
     if ( ! $.isEmptyObject( options.childrow ) ) {
         // sets up child row event handling, and initializes child elements as needed
-        var childrow = new ChildRow(_dt_table, options.childrow.template, options.childrow.config, editor);
+        var childrow = new ChildRow(_dt_table, options.childrow, editor);
     }
 
     // any column filtering required? if so, define the filters

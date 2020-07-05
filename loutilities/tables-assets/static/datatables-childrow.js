@@ -13,12 +13,12 @@
  * @param {Editor} editor - Editor instance to use for create/open form
  * @constructor
  */
-function ChildRow(table, template, config, editor) {
+function ChildRow(table, config, editor) {
     // adapted from https://datatables.net/examples/api/row_details.html
     var that = this;
     that.table = table;
     that.editor = editor;
-    that.template = template;
+    that.template = config.template;
     that.config = config;
 
     // clicking +/- displays the data
