@@ -50,6 +50,11 @@ tr.shown td.details-control {
     padding-top: 6px;
 }
 
+/* override editor.dataTables.css */
+#childrow-editform div.DTE div.DTE_Form_Buttons button {
+    float:left;
+}
+
 #childrow-editform div.DTE div.DTE_Header {
     /*height: 60px;*/
     font-size: 2em;
