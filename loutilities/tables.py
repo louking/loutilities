@@ -523,22 +523,28 @@ class CrudChildElement():
             args['dtopts'] = self.table.getdtoptions()
             args['edopts'] = self.table.getedoptions()
             args['cropts'] = self.table.getchildrowoptions()
+            args['buttons'] = self.table.buttons
             # remove server based column control as this has been configured by the base table
             # and we don't want to try to pass that to the client
+            # add data2col lookup
             columns = []
+            data2col = {}
             for thiscol in self.table.clientcolumns:
-                columns.append(copyopts(thiscol))
-                columns[-1].pop('_ColumnDT_args', None)
+                copycol = copyopts(thiscol)
+                copycol.pop('_ColumnDT_args', None)
+                columns.append(copycol)
+                data2col[copycol['data']] = copycol
             args['clientcolumns'] = columns
+            args['data2col'] = data2col
 
         else:
             args = self.args
 
-        return dict(
-            name = self.name,
-            type = self.type,
-            args = args
-        )
+        return {
+            'name': self.name,
+            'type': self.type,
+            'args': args
+        }
 
 def _editormethod(checkaction='', formrequest=True):
     '''
@@ -950,6 +956,10 @@ class CrudApi(MethodView):
             # remove any column options indicated when this class called (filtercoloptions)
             dtcolumn = { key: column[key] if not callable(column[key]) else column[key]()
                         for key in column if key not in self.filtercoloptions + ['dtonly']}
+
+            # add title option if not there
+            dtcolumn.setdefault('title', dtcolumn.get('label', ''))
+
             # pop to remove certain keys from dtcolumn
             dtspecific = dtcolumn.pop('dt', {})
             dtcolumn.pop('ed', {})
@@ -993,7 +1003,8 @@ class CrudApi(MethodView):
             'onFieldError': 'none',
         }
         # TODO: these are known editor field options as of Editor 1.8.1 -- do we really need to get rid of non-Editor options?
-        fieldkeys = ['className', 'data', 'def', 'entityDecode', 'fieldInfo', 'id', 'label', 'labelInfo', 'name', 'type', 'options', 'opts', 'ed', 'separator', 'dateFormat', 'onFocus']
+        fieldkeys = ['className', 'data', 'def', 'entityDecode', 'fieldInfo', 'id', 'label', 'labelInfo', 'name',
+                     'type', 'options', 'opts', 'ed', 'separator', 'dateFormat', 'onFocus']
         for column in self.clientcolumns:
             # skip rows that are datatable only
             if 'dtonly' in column: continue
@@ -1036,8 +1047,9 @@ class CrudApi(MethodView):
         # add elements to options
         # NOTE: the order from the original childelementargs has been preserved
         for el in self.childelements:
-            val.setdefault('childelements',[])
-            val['childelements'].append(el.get_options())
+            val.setdefault('childelements',{})
+            options = el.get_options()
+            val['childelements'][options['name']] = options
 
         return val
 

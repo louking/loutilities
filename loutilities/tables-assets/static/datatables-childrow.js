@@ -14,15 +14,25 @@
  * @constructor
  */
 function ChildRow(table, config, editor) {
-    // adapted from https://datatables.net/examples/api/row_details.html
     var that = this;
+    that.debug = true;
+
+    if (that.debug) {console.log(new Date().toISOString() + ' ChildRow()');}
+
+    // adapted from https://datatables.net/examples/api/row_details.html
     that.table = table;
     that.editor = editor;
     that.template = config.template;
     that.config = config;
 
+    // childtable may be per table within row
+    // current implementation has only one childeditor row open at a time, but it supports multiple tables
+    that.childtable = {};
+    that.childeditor = {};
+
     // clicking +/- displays the data
-    that.table.on('click', 'td.details-control', function () {
+    that.table.on('click.dt', 'td.details-control', function () {
+        if (that.debug) {console.log(new Date().toISOString() + ' click.dt event');}
         var tr = $(this).closest('tr');
         var tdi = tr.find("i.fa");
         var row = that.table.row( tr );
@@ -44,9 +54,11 @@ function ChildRow(table, config, editor) {
         }
     } );
 
+    // set up events
     // selecting will open the child row if it's not already open
     // if it's already open need to hide the text display and bring up the edit form
-    that.table.on('select', function (e, dt, type, indexes) {
+    that.table.on('select.dt', function (e, dt, type, indexes) {
+        if (that.debug) {console.log(new Date().toISOString() + ' select.dt event type = ' + type + ' indexes = ' + indexes);}
         var row = that.table.row( indexes );
         var tr = $(row.node());
         var tdi = tr.find("i.fa");
@@ -62,21 +74,112 @@ function ChildRow(table, config, editor) {
     } );
 
     // deselect just hides the edit form and brings up the text display
-    that.table.on('deselect', function () {
-        var tr = editor.s.modifier;
-        var row = that.table.row( tr );
+    that.table.on('deselect.dt', function (e, dt, type, indexes) {
+        if (that.debug) {console.log(new Date().toISOString() + ' deselect.dt event type = ' + type + ' indexes = ' + indexes);}
+        // var tr = editor.s.modifier;
+        // var row = that.table.row( tr );
+        var row = that.table.row( indexes );
+        var tr = $(row.node());
         if (row.child.isShown()) {
             that.closeChild(row);
             that.showChild(row);
         }
     } );
 
-    that.table.on('user-select', function (e, dt, type, cell, originalEvent) {
+    // prevent user select on details control column
+    that.table.on('user-select.dt', function (e, dt, type, cell, originalEvent) {
+        if (that.debug) {console.log(new Date().toISOString() + ' user-select.dt event');}
         if ($(cell.node()).hasClass('details-control')) {
             e.preventDefault();
         }
     });
+}
 
+/**
+ * get the table id for specified row, tablename
+ *
+ * @param row - datatables row
+ * @param tablename - name of table
+ * @returns {string} - hashtagged id for table row
+ */
+ChildRow.prototype.getTableId = function(row, tablename) {
+    return '#childrow-table-' + tablename + '-' + row.id();
+}
+
+/**
+ * show tables for this row
+ *
+ * @param row - dataTables row
+ * @param showedit - true if editor to be used
+ */
+ChildRow.prototype.showTables = function(row, showedit) {
+    var that = this;
+    if (that.debug) {console.log(new Date().toISOString() + ' showTables()');}
+
+    // if there are tables, render them now
+    var id = row.id();
+    var rowdata = row.data();
+    for (var i=0; rowdata.tables && i<rowdata.tables.length; i++) {
+        var tablemeta = rowdata.tables[i];
+        var tableconfig = that.config.childelements[tablemeta.name];
+        if (tableconfig) {
+            var buttons = [];
+            // if (showedit) {
+            //     var edopts = _.cloneDeep(tableconfig.args.edopts);
+            //
+            //     that.childeditor[tablemeta.name] = new $.fn.dataTable.Editor(
+            //         edopts
+            //     )
+            //
+            //     buttons = [];
+            // }
+            var dtopts = _.cloneDeep(tableconfig.args.dtopts);
+            $.extend(dtopts, {
+                ajax: {
+                    url: tablemeta.url,
+                    type: 'get'
+                },
+                buttons: buttons,
+                // need to remove scrollCollapse as we don't want to hide rows
+                scrollCollapse: false,
+            });
+            var table = $(that.getTableId(row, tablemeta.name));
+            that.childtable[id] = that.childtable[id] || {}
+            that.childtable[id][tablemeta.name] = table.DataTable(dtopts);
+        } else {
+            throw 'table missing from config.childelements: ' + tablemeta.name;
+        }
+    }
+}
+
+/**
+ * destroy tables and editors
+ *
+ * @param row - datatables row
+ */
+ChildRow.prototype.destroyTables = function(row) {
+    var that = this;
+    if (that.debug) {console.log(new Date().toISOString() + ' destroyTables()');}
+
+    var id = row.id();
+
+    // kill editor(s) if they exist
+    if (that.childeditor) {
+        $.each(that.childeditor, function(tablename, editor) {
+            // editor.destroy();
+        })
+    }
+
+    // kill table(s) if they exist
+    if (that.childtable[id]) {
+        $.each(that.childtable[id], function(tablename, table) {
+            var table = $(that.getTableId(row, tablename));
+            table.detach();
+            table.DataTable().destroy();
+        })
+        delete that.childtable[id];
+        // that.resetEvents();
+    }
 }
 
 /**
@@ -86,14 +189,16 @@ function ChildRow(table, config, editor) {
  */
 ChildRow.prototype.showChild = function(row) {
     var that = this;
+    if (that.debug) {console.log(new Date().toISOString() + ' showChild()');}
 
     // see see https://datatables.net/examples/api/row_details.html, https://datatables.net/blog/2019-01-11
     var env = new nunjucks.Environment();
     var rowdata = row.data();
     rowdata._showedit = false;
-    // todo: create table(s) and add to rowdata
     row.child(env.render(that.template, rowdata)).show();
 
+    // show tables
+    that.showTables(row, rowdata._showedit);
 };
 
 /**
@@ -103,13 +208,19 @@ ChildRow.prototype.showChild = function(row) {
  */
 ChildRow.prototype.hideChild = function(row) {
     var that = this;
+    if (that.debug) {console.log(new Date().toISOString() + ' hideChild()');}
+
+    var id = row.id();
+
+    // remove table(s) and editor(s)
+    that.destroyTables(row);
 
     row.child.hide();
-    // todo: destroy table(s)
 };
 
 ChildRow.prototype.editChild = function(row) {
     var that = this;
+    if (that.debug) {console.log(new Date().toISOString() + ' editChild()');}
 
     // see see https://datatables.net/examples/api/row_details.html, https://datatables.net/blog/2019-01-11
     var env = new nunjucks.Environment();
@@ -118,19 +229,22 @@ ChildRow.prototype.editChild = function(row) {
     // todo: create table(s) and add to rowdata
     row.child(env.render(that.template, rowdata)).show();
 
-    // todo: var that = this, add event handlers to make 'dirty' class to force saving later
-
     that.editor
         .title('Edit')
         .buttons([
             {
                 "label": "Save",
                 "fn": function () {
-                    editor.submit();
+                    that.editor.submit();
                 }
             }
         ])
         .edit(row); // in https://datatables.net/forums/discussion/62880
+
+    // todo: add event handlers to make 'dirty' class to force saving later
+
+    // show tables
+    that.showTables(row, rowdata._showedit);
 }
 
 /**
@@ -140,19 +254,12 @@ ChildRow.prototype.editChild = function(row) {
  */
 ChildRow.prototype.closeChild = function(row) {
     var that = this;
-    var rowdata = row.data();
-    row.child.hide();
-    // todo: destroy table(s)
-};
+    if (that.debug) {console.log(new Date().toISOString() + ' closeChild()');}
 
-/**
- * Child row element management for a child row
- *
- * @param {ChildRow} childrow - ChildRow instance
- * @param options
- * @constructor
- */
-function ChildRowElement(childrow, options) {
-    this.childrow = childrow;
-    this.options = options;
-}
+    var rowdata = row.data();
+
+    // remove table(s) and editor(s)
+    that.destroyTables(row);
+
+    row.child.hide();
+};

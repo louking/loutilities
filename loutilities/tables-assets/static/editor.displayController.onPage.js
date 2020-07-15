@@ -17,12 +17,14 @@ function onPageDisplay ( elm ) {
     var name = 'onPage'+Math.random();
     var Editor = $.fn.dataTable.Editor;
     var emptyInfo;
+    // jqueryui standalone display controller
+    var sadisplay = Editor.display.jqueryui;
 
     Editor.display[name] = $.extend( true, {}, Editor.models.display, {
         // Create the HTML mark-up needed the display controller
         init: function ( editor ) {
-            // Setup the jqueryui - we'll use it for new entries
-            Editor.display.jqueryui.init(editor);
+            // Setup standalone controller - we'll use it for new entries
+            sadisplay.init(editor);
 
             // emptyInfo = $(elm).html();
             return Editor.display[name];
@@ -31,11 +33,11 @@ function onPageDisplay ( elm ) {
         // Show the form
         open: function ( editor, form, callback ) {
             if (editor.mode() == 'create') {
-                // Its a new row. Use jqueryui
-                Editor.display.jqueryui.open(editor, form, callback);
+                // Its a new row. Use standalone controller
+                sadisplay.open(editor, form, callback);
 
             } else if (editor.mode() == 'remove') {
-                Editor.display.jqueryui.open(editor, form, callback);
+                sadisplay.open(editor, form, callback);
 
             } else {
                 $(elm).children().detach();
@@ -50,7 +52,7 @@ function onPageDisplay ( elm ) {
         // Hide the form
         close: function ( editor, callback ) {
             // close jqueryui if it's open
-            Editor.display.jqueryui.close(editor, callback);
+            sadisplay.close(editor, callback);
 
             $(elm).children().detach();
             // $(elm).html( emptyInfo );
