@@ -134,6 +134,14 @@ ChildRow.prototype.showTables = function(row, showedit) {
             //     buttons = [];
             // }
             var dtopts = _.cloneDeep(tableconfig.args.dtopts);
+            if (tableconfig.args.columns && tableconfig.args.columns.datatable) {
+                var dtextend = tableconfig.args.columns.datatable;
+                $.each(dtopts.columns, function(index, col) {
+                    if (dtextend.hasOwnProperty(col.data)) {
+                        $.extend(col, dtextend[col.data]);
+                    }
+                })
+            }
             $.extend(dtopts, {
                 ajax: {
                     url: tablemeta.url,
@@ -143,6 +151,11 @@ ChildRow.prototype.showTables = function(row, showedit) {
                 // need to remove scrollCollapse as we don't want to hide rows
                 scrollCollapse: false,
             });
+            if (!showedit) {
+                $.extend(dtopts, {
+                    select: false
+                });
+            };
             var table = $(that.getTableId(row, tablemeta.name));
             that.childtable[id] = that.childtable[id] || {}
             that.childtable[id][tablemeta.name] = table.DataTable(dtopts);

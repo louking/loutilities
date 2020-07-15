@@ -505,6 +505,15 @@ class CrudChildElement():
     :param name: name of the element
     :param type: type of the element, CHILDROW_TYPE_TABLE or datatables field type
     :param args: arguments specific to the element type
+        CHILDROW_TYPE_TABLE
+            name - name of table
+            table - CrudApi table instance
+            type - CHILDROW_TYPE_TABLE
+            args -
+                columns (optional)
+                    datatable - { col.data : {attributes to merge}, ... }
+                    editor    - { col.name : {attributes to merge}, ... }
+                        ( col.data and col.name identify the column to merge attributes for )
     '''
     def __init__(self, name=None, type=None, args=None, table=None):
         if args is None:
@@ -519,7 +528,7 @@ class CrudChildElement():
 
     def get_options(self):
         if self.type == CHILDROW_TYPE_TABLE:
-            args = {}
+            args = self.args
             args['dtopts'] = self.table.getdtoptions()
             args['edopts'] = self.table.getedoptions()
             args['cropts'] = self.table.getchildrowoptions()
