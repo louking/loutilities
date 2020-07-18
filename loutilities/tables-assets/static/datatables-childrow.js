@@ -179,9 +179,10 @@ ChildRow.prototype.showTables = function(row, showedit) {
                 // if inline editing requested, add a handler
                 if (tableconfig.args.inline) {
                     $( that.getTableId(row, tablemeta.name)).on('click', '._inline_edit', function() {
-                        that.childeditor[tablemeta.name].inline(this, {
-                            submitOnBlur: true
-                        });
+                        // get inline parameters
+                        var colname = that.childeditor[tablemeta.name].fields()[this._DT_CellIndex.column];
+                        var inlineopts = tableconfig.args.inline[colname];
+                        that.childeditor[tablemeta.name].inline(this, inlineopts);
                     });
                 }
 
