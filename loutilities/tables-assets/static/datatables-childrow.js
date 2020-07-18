@@ -134,15 +134,29 @@ ChildRow.prototype.showTables = function(row, showedit) {
             if (showedit) {
                 var edopts = _.cloneDeep(tableconfig.args.edopts);
 
-                // update column properties as indicated
+                // add requested editor field options
                 if (tableconfig.args.columns && tableconfig.args.columns.editor) {
                     var edextend = tableconfig.args.columns.editor;
-                    $.each(edopts.fields, function(index, col) {
-                        if (edextend.hasOwnProperty(col.name)) {
-                            $.extend(col, edextend[col.name]);
+                    $.each(edopts.fields, function(index, field) {
+                        if (edextend.hasOwnProperty(field.name)) {
+                            $.extend(field, edextend[field.name]);
                         }
                     })
                 }
+
+                // if inline editing is requested, annotate the fields with _inline-edit class
+                // note need to do this with dtopts as the dtopts.col.className option takes precedence
+                if (tableconfig.args.inline) {
+                    var inline = tableconfig.args.inline;
+                    $.each(dtopts.columns, function(index, col) {
+                        if (inline.hasOwnProperty(col.data)) {
+                            // not quite sure why I'm using 'class' not 'className'
+                            // see https://datatables.net/reference/option/columns.className
+                            col.className = (col.className || '') + ' _inline_edit'
+                        }
+                    });
+                }
+
 
                 $.extend(edopts, {
                     table: that.getTableId(row, tablemeta.name)
@@ -162,6 +176,15 @@ ChildRow.prototype.showTables = function(row, showedit) {
                     }
                 }
 
+                // if inline editing requested, add a handler
+                if (tableconfig.args.inline) {
+                    $( that.getTableId(row, tablemeta.name)).on('click', '._inline_edit', function() {
+                        that.childeditor[tablemeta.name].inline(this, {
+                            submitOnBlur: true
+                        });
+                    });
+                }
+
                 // buttons for datatable need to point at this editor
                 // TODO: need to determine if 'edit' or 'editRefresh is appropriate, based on configuration
                 buttons = [
@@ -170,6 +193,7 @@ ChildRow.prototype.showTables = function(row, showedit) {
                     {extend:'remove', editor:that.childeditor[tablemeta.name]}
                 ];
             }
+            // add requested datatable column options
             if (tableconfig.args.columns && tableconfig.args.columns.datatable) {
                 var dtextend = tableconfig.args.columns.datatable;
                 $.each(dtopts.columns, function(index, col) {

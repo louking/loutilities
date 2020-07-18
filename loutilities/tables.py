@@ -330,7 +330,11 @@ class DataTablesEditor():
             # call the function to fill dbrow.<dbattr>
             if hasattr(self.dbmapping[dbattr], '__call__'):
                 callback = self.dbmapping[dbattr]
-                setattr(dbrow, dbattr, callback(inrow))
+                try:
+                    setattr(dbrow, dbattr, callback(inrow))
+                # maybe inrow attribute wasn't found, e.g., inline edit mode
+                except KeyError:
+                    pass
 
             # simple map from inrow field
             else:
@@ -514,6 +518,9 @@ class CrudChildElement():
                     datatable - { col.data : {attributes to merge}, ... }
                     editor    - { col.name : {attributes to merge}, ... }
                         ( col.data and col.name identify the column to merge attributes for )
+                inline (optional)
+                    // col.data is used because className is updated for datatables options
+                    { col.data : {editor.inline() options}, ... }
     '''
     def __init__(self, name=None, type=None, args=None, table=None):
         if args is None:
@@ -738,8 +745,10 @@ class CrudApi(MethodView):
     :param childrowoptions: (optional)
         {
           'template': nunjuck template for display of child row,
-          'childelementargs': array of arg dicts for instantiations of CrudChildElement instances
           'showeditor': True if editor should be shown in childrow, template must have element with id childrow-editform
+          'group' (optional) if group is used to partition database, this is the name of the group
+          'groupselector' (optional, but required if 'group' is set) this is the selector id which the user uses to choose their group
+          'childelementargs': array of arg dicts for instantiations of CrudChildElement instances
         }
     '''
 
@@ -2501,12 +2510,14 @@ class DbCrudApi(CrudApi):
         # server table, this is the output to be returned, nexttablerow() is noop
         # note get_response_data transform is not done - name mapping is in self.servercolumns
         else:
-            query = self.db.session.query().select_from(self.model)
+            # filter applies to self.model
+            query = self.db.session.query().select_from(self.model).filter_by(**self.queryparams)
             # add required joins (determined in __init__
             for j in self.joins:
                 query = query.join(j)
-            # now filter
-            query = query.filter_by(**self.queryparams)
+            # TODO: does moving this to self.model filter break anything?
+            # # now filter
+            # query = query.filter_by(**self.queryparams)
             args = request.args.to_dict()
             rowTable = DataTables(args, query, self.servercolumns)
 
@@ -2633,7 +2644,8 @@ class DbCrudApi(CrudApi):
             queryparams = {
                 'id': thisid,
             }
-            if self.version_id_col:
+            # some edit modes do not supply version id from form (inline editing, e.g.)
+            if self.version_id_col and self.version_id_col in formdata:
                 queryparams[self.version_id_col] = formdata[self.version_id_col]
             dbrow = self.model.query.filter_by(**queryparams).one_or_none()
 
