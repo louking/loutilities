@@ -13,7 +13,7 @@
  * @param {Editor} editor - Editor instance to use for create/open form
  * @constructor
  */
-function ChildRow(table, config, editor) {
+function ChildRow(table, config, editor, group, groupselector) {
     var that = this;
     that.debug = true;
 
@@ -58,6 +58,9 @@ function ChildRow(table, config, editor) {
     // selecting will open the child row if it's not already open
     // if it's already open need to hide the text display and bring up the edit form
     that.table.on('select.dt', function (e, dt, type, indexes) {
+        // // check if triggered by this datatable
+        // if (dt.context[0].sTableId !== that.table.context[0].sTableId) return;
+
         if (that.debug) {console.log(new Date().toISOString() + ' select.dt event type = ' + type + ' indexes = ' + indexes);}
         var row = that.table.row( indexes );
         var tr = $(row.node());
@@ -75,6 +78,9 @@ function ChildRow(table, config, editor) {
 
     // deselect just hides the edit form and brings up the text display
     that.table.on('deselect.dt', function (e, dt, type, indexes) {
+        // // check if triggered by this datatable
+        // if (dt.context[0].sTableId !== that.table.context[0].sTableId) return;
+
         if (that.debug) {console.log(new Date().toISOString() + ' deselect.dt event type = ' + type + ' indexes = ' + indexes);}
         // var tr = editor.s.modifier;
         // var row = that.table.row( tr );
@@ -124,16 +130,46 @@ ChildRow.prototype.showTables = function(row, showedit) {
         var tableconfig = that.config.childelements[tablemeta.name];
         if (tableconfig) {
             var buttons = [];
-            // if (showedit) {
-            //     var edopts = _.cloneDeep(tableconfig.args.edopts);
-            //
-            //     that.childeditor[tablemeta.name] = new $.fn.dataTable.Editor(
-            //         edopts
-            //     )
-            //
-            //     buttons = [];
-            // }
             var dtopts = _.cloneDeep(tableconfig.args.dtopts);
+            if (showedit) {
+                var edopts = _.cloneDeep(tableconfig.args.edopts);
+
+                // update column properties as indicated
+                if (tableconfig.args.columns && tableconfig.args.columns.editor) {
+                    var edextend = tableconfig.args.columns.editor;
+                    $.each(edopts.fields, function(index, col) {
+                        if (edextend.hasOwnProperty(col.name)) {
+                            $.extend(col, edextend[col.name]);
+                        }
+                    })
+                }
+
+                $.extend(edopts, {
+                    table: that.getTableId(row, tablemeta.name)
+                });
+
+                // create child row editor
+                that.childeditor[tablemeta.name] = new $.fn.dataTable.Editor(edopts);
+
+                // set up special event handlers for group management, if requested
+                if (register_group_for_editor) {
+                    if (that.config.group) {
+                        if (!that.config.groupselector) {
+                            throw 'groupselected required if group configured'
+                        }
+                        register_group_for_editor(that.config.group, that.config.groupselector, that.childeditor[tablemeta.name])
+                        set_editor_event_handlers(that.childeditor[tablemeta.name])
+                    }
+                }
+
+                // buttons for datatable need to point at this editor
+                // TODO: need to determine if 'edit' or 'editRefresh is appropriate, based on configuration
+                buttons = [
+                    {extend:'create', editor:that.childeditor[tablemeta.name]},
+                    {extend:'editRefresh', editor:that.childeditor[tablemeta.name]},
+                    {extend:'remove', editor:that.childeditor[tablemeta.name]}
+                ];
+            }
             if (tableconfig.args.columns && tableconfig.args.columns.datatable) {
                 var dtextend = tableconfig.args.columns.datatable;
                 $.each(dtopts.columns, function(index, col) {
@@ -158,7 +194,13 @@ ChildRow.prototype.showTables = function(row, showedit) {
             };
             var table = $(that.getTableId(row, tablemeta.name));
             that.childtable[id] = that.childtable[id] || {}
-            that.childtable[id][tablemeta.name] = table.DataTable(dtopts);
+            that.childtable[id][tablemeta.name] = table
+                // don't let select /deselect propogate to the parent table
+                // from https://datatables.net/forums/discussion/comment/175517/#Comment_175517
+                .on('select.dt deselect.dt', function (e) {
+                    e.stopPropagation();
+                })
+                .DataTable(dtopts);
         } else {
             throw 'table missing from config.childelements: ' + tablemeta.name;
         }
@@ -179,7 +221,8 @@ ChildRow.prototype.destroyTables = function(row) {
     // kill editor(s) if they exist
     if (that.childeditor) {
         $.each(that.childeditor, function(tablename, editor) {
-            // editor.destroy();
+            editor.destroy();
+            delete that.childeditor[tablename];
         })
     }
 

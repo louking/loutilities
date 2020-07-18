@@ -8,8 +8,20 @@ function translate_editor_group(e, data, action) {
     // substitute group into urls
     for (const action in newconfig) {
         newconfig[action].url = _.replace(decodeURIComponent(newconfig[action].url), _.replace('<{groupname}>', '{groupname}', this.groups_groupname), group);
+
+        // split out query parameters, and collect in object
+        var urlsplit = newconfig[action].url.split('?');
+        var urlparams = allUrlParams();
+
+        // skip path. This allows for somewhat embarrasing case of multiple ? in the string
+        // note these override original url parameters
+        for (var i=1; i<urlsplit.length; i++) {
+            var params = deparam(urlsplit[i]);
+            $.extend(urlparams, params);
+        }
+
         // tack on url query parameters
-        newconfig[action].url += '?' + setParams(allUrlParams());
+        newconfig[action].url = urlsplit[0] + '?' + setParams(urlparams);
     }
     this.ajax(newconfig);
 }
