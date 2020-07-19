@@ -2035,10 +2035,10 @@ class DbCrudApi(CrudApi):
             if version_id_col not in [c['data'] for c in args['clientcolumns']]:
                 args['clientcolumns'].append(versioncol)
 
-        # for serverside processing, self.servercolumns is built up from column data, always starts with model.id
+        # for serverside processing, self.servercolumns is built up from column data
         if args['serverside']:
-            self.servercolumns = [ColumnDT(getattr(args['model'], 'id'), mData=self.dbmapping['id'])]
-            # keep track of needed joins
+            # keep track of needed columns and joins
+            self.servercolumns = []
             self.joins = []
 
         # do some preprocessing on columns
@@ -2221,6 +2221,12 @@ class DbCrudApi(CrudApi):
         # from pprint import PrettyPrinter
         # pp = PrettyPrinter()
         # if debug: current_app.logger.debug('args["columns"]={}'.format(pp.pformat(args['clientcolumns'])))
+
+        # for serverside processing, self.servercolumns is built up from column data, always finishes with model.id
+        # this is put at the end to make sure the column index inside DataTables (python pypi package)
+        # is the same as what is given to DataTables (javascript)
+        if args['serverside']:
+            self.servercolumns += [ColumnDT(getattr(args['model'], 'id'), mData=self.dbmapping['id'])]
 
         # set up mapping between database and editor form
         # Note: translate '' to None and visa versa
@@ -2526,15 +2532,6 @@ class DbCrudApi(CrudApi):
             # check for errors
             if 'error' in output:
                 raise ParameterError(output['error'])
-
-            # # transform rowTable.output_result()['data'] using get_response_data
-            # ## loop through data
-            # data = output['data']
-            # for i in range(len(data)):
-            #     rowobj = Dictate(data[i])
-            #     newdict = {}
-            #     self.dte.get_response_data(rowobj, newdict)
-            #     data[i] = newdict
 
             self.output_result = output
 
