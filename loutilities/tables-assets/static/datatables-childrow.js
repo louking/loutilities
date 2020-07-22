@@ -186,6 +186,18 @@ ChildRow.prototype.showTables = function(row, showedit) {
                     });
                 }
 
+                // if createfieldvals requested, add a handler which initializes fields when create form displayed
+                if (tablemeta.createfieldvals) {
+                    // save for initCreate function
+                    that.childeditor[tablemeta.name].createfieldvals = tablemeta.createfieldvals;
+                    that.childeditor[tablemeta.name].on('initCreate.dt', function(e) {
+                        var that = this;
+                        $.each(this.createfieldvals, function(field, val) {
+                            that.field(field).val(val);
+                        });
+                    });
+                }
+
                 // buttons for datatable need to point at this editor
                 // TODO: need to determine if 'edit' or 'editRefresh is appropriate, based on configuration
                 buttons = [
