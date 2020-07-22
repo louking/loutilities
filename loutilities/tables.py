@@ -521,6 +521,9 @@ class CrudChildElement():
                 inline (optional)
                     // col.data is used because className is updated for datatables options
                     { col.data : {editor.inline() options}, ... }
+                createfieldvals (optional)
+                    // col.name is used because Editor fields are being updated
+                    { col.field : initial_value, ... }
     '''
     def __init__(self, name=None, type=None, args=None, table=None):
         if args is None:
@@ -944,7 +947,8 @@ class CrudApi(MethodView):
                 return jsonify(self.output_result)
             else:
                 output_result = tabledata
-                output_result.update(self.responsekeys)
+                # for this case (non-serverside) output_result is list so this doesn't work
+                # output_result.update(self.responsekeys)
                 return jsonify(output_result)
 
         except:
@@ -1595,9 +1599,14 @@ class DteDbRelationship():
             return items
         else:
             itemvalue = formrow[self.formfield] if formrow[self.formfield] else None
-            queryfilter = itemvalue
-            # queryfilter = {self.valuefield : itemvalue}
-            thisitem = self.fieldmodel.query.filter_by(**queryfilter).one_or_none()
+            if not self.viadbattr:
+                queryfilter = itemvalue
+                # queryfilter = {self.valuefield : itemvalue}
+                thisitem = self.fieldmodel.query.filter_by(**queryfilter).one_or_none()
+            else:
+                queryfilter = self.viafilter() if callable(self.viafilter) else self.viafilter
+                queryfilter[self.viafield] = itemvalue[self.valuefield]
+                thisitem = self.viamodel.query.filter_by(**queryfilter).one()
             return thisitem
 
     def get(self, dbrow_or_id):
@@ -1647,7 +1656,9 @@ class DteDbRelationship():
             return self.sqlaexpr
 
         if not self.viadbattr:
-            return get_dbattr(self.tablemodel, self.dbfield)
+            return get_dbattr(self.fieldmodel, self.labelfield)
+            # return get_dbattr(self.tablemodel, self.dbfield)
+
         else:
             return self.viadbattr
 
@@ -1677,6 +1688,24 @@ class DteDbRelationship():
         if self.uselist:
             col['separator'] = SEPARATOR
         return col
+
+    def col_dt_list(self, **coldt_args):
+        '''
+        return a two item list of ColumnDT instances, for id and labelfield
+        louking/members#152 (search for this to find required matching code)
+        TODO: test to work with viadbattr (guaranteed not to work right now)
+
+        :param coldt_args: caller supplied ColumnDT arguments
+        :return: [ColumnDT( for 'id' ), ColumnDT( for labelfield )
+        '''
+        coldts = []
+        for f in ['id', self.labelfield]:
+            args = {}
+            args.update(**coldt_args)
+            # these take precedence
+            args.update({'sqla_expr': get_dbattr(self.fieldmodel, f), 'mData': '{}.{}'.format(self.formfield, f)})
+            coldts.append(ColumnDT(**args))
+        return coldts
 
 class DteDbSubrec():
     '''
@@ -2087,7 +2116,6 @@ class DbCrudApi(CrudApi):
                         # submodel is one level down
                         submodelname = branches[0]
                         submodel = getattr(args['model'], submodelname).prop.entity.class_
-                        # submodel = getattr(args['model'], submodelname)
                         subfield = branches[1]
                         thisreln = DteDbSubrec(model=submodel, field=submodelname, subfield=subfield, formfield=formfield)
                         self.formmapping[formfield] = thisreln.get
@@ -2098,6 +2126,7 @@ class DbCrudApi(CrudApi):
                             columndt_args.update(**_columndt_args)
                             self.servercolumns.append(ColumnDT(**columndt_args))
                             if submodel not in self.joins:
+                                print('DbCrudApi: self {} joining {}'.format(args['model'], submodel))
                                 self.joins.append(submodel)
 
                             # db processing section
@@ -2165,12 +2194,17 @@ class DbCrudApi(CrudApi):
                     # server side tables adds ColumnDT for page paint (untested)
                     if args['serverside']:
                         sqla_expr = thisreln.sqla_expr()
-                        columndt_args = {'sqla_expr': sqla_expr, 'mData': formfield}
-                        columndt_args.update(**_columndt_args)
-                        self.servercolumns.append(ColumnDT(**columndt_args))
+                        # louking / members  # 152 (search for this to find required matching code)
+                        self.servercolumns += thisreln.col_dt_list(**_columndt_args)
 
-                        if type(sqla_expr) == InstrumentedAttribute and sqla_expr.class_ not in self.joins:
-                            self.joins.append(sqla_expr.class_)
+                        # need to add join of this relationship
+                        # if type(sqla_expr) == InstrumentedAttribute and sqla_expr.class_ not in self.joins:
+                        #     self.joins.append(sqla_expr.class_)
+                        if type(sqla_expr) == InstrumentedAttribute:
+                            subsubmodel = sqla_expr.class_
+                            if subsubmodel not in self.joins:
+                                print('DbCrudApi: self {} joining {}'.format(args['model'], subsubmodel))
+                                self.joins.append(subsubmodel)
 
                     # db processing section
                     ## save handler, set data to db using handler set function
@@ -2528,6 +2562,25 @@ class DbCrudApi(CrudApi):
             rowTable = DataTables(args, query, self.servercolumns)
 
             output = rowTable.output_result()
+
+            # kludge? to take items in object notation, and make into object
+            # louking/members#152 (search for this to find required matching code
+            # TODO: only handles one level deep - should we make this recursive?
+            for row in output['data']:
+                delfields = []
+                addfields = {}
+                for field in row:
+                    splitobj = field.split('.')
+                    # if there are multiple levels to the fieldname, need to make it into an object
+                    if len(splitobj) > 1:
+                        # this will cause exception if more than two levels; that's ok for now, see todo above
+                        parent, child = splitobj
+                        addfields.setdefault(parent,{})
+                        addfields[parent][child] = row[field]
+                        delfields.append(field)
+                row.update(addfields)
+                for field in delfields:
+                    del row[field]
 
             # check for errors
             if 'error' in output:
