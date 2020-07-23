@@ -2264,11 +2264,25 @@ class DbCrudApi(CrudApi):
         # pp = PrettyPrinter()
         # if debug: current_app.logger.debug('args["columns"]={}'.format(pp.pformat(args['clientcolumns'])))
 
-        # for serverside processing, self.servercolumns is built up from column data, always finishes with model.id
-        # this is put at the end to make sure the column index inside DataTables (python pypi package)
-        # is the same as what is given to DataTables (javascript)
+        # for serverside processing, self.servercolumns is built up from column data
+        # because of https://github.com/Pegase745/sqlalchemy-datatables/issues/131 we need to make sure that
+        # indexes given to sqlalchemy-datatables (python pypi package) line up with those given to DataTables (js)
         if args['serverside']:
+            # finish with model.id
+            # this is put at the end to make sure the column index inside sqlalchemy-datatables (python pypi package)
+            # is the same as what is given to DataTables (javascript)
             self.servercolumns += [ColumnDT(getattr(args['model'], 'id'), mData=self.dbmapping['id'])]
+
+            # kludge to prevent https://github.com/louking/members/issues/156
+            # push any field.id ColumnDT instances to end of list; scan from end so earlier indices don't change
+            for ndx in range(len(self.servercolumns)-1, 0, -1):
+                mdata = getattr(self.servercolumns[ndx], 'mData', None)
+                if mdata:
+                    splitmdata = mdata.split('.')
+                    # if this is an object notation with 'id' field, move to end of list
+                    if len(splitmdata) > 1 and splitmdata[-1] == 'id':
+                        self.servercolumns.append(self.servercolumns.pop(ndx))
+
 
         # set up mapping between database and editor form
         # Note: translate '' to None and visa versa
