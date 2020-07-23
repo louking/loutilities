@@ -2080,13 +2080,22 @@ class DbCrudApi(CrudApi):
             if col.get('type', None) == 'readonly':
                 self.dbmapping.pop(col['name'], None)
 
+            # need to peel off column dt args before checking col['data'] == None
+            _columndt_args = col.get('_ColumnDT_args', {})
+
+            # certain use cases require data=None and therefore no dbattr exists,
+            # e.g., child row handling
+            # if serverside=True put in placeholder ColumnDT column so indeces for
+            # datatables(js) and sqlalchemy-datatables(py) line up, but don't do anything else for this column
+            if col['data'] == None:
+                if args['serverside']:
+                    columndt_args = {'sqla_expr': getattr(args['model'], 'id'), 'mData': '_placeholder'}
+                    columndt_args.update(**_columndt_args)
+                    self.servercolumns.append(ColumnDT(**columndt_args))
+                continue
+
             # need formfield and dbattr for a couple of things
             formfield = col['data']
-
-            # certain use cases require data=None and no dbattr exists,
-            # e.g., child row handling
-            if formfield == None: continue
-
             dbattr = self.formmapping[formfield]
 
             # maybe this column needs to be unique
@@ -2095,7 +2104,6 @@ class DbCrudApi(CrudApi):
 
             # check for special treatment for column
             treatment = col.get('_treatment', None)
-            _columndt_args = col.get('_ColumnDT_args', {})
             if debug: current_app.logger.debug('__init__(): treatment = {}'.format(treatment))
 
             # no special treatment is the norm
