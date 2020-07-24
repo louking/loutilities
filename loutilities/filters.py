@@ -58,7 +58,7 @@ def filtercontainerdiv():
     '''
     return div(_class='external-filter filter-container')
 
-def yadcfoption(colselector, filterid, filtertype, placeholder=None, width=None, date_format='yyyy-mm-dd'):
+def yadcfoption(colselector, filterid, filtertype, placeholder=None, width=None, date_format='yyyy-mm-dd', filter_match_mode='contains'):
     '''
     return yadcf option entry for filter
 
@@ -68,12 +68,14 @@ def yadcfoption(colselector, filterid, filtertype, placeholder=None, width=None,
     :param placeholder: (for select2) placeholder for empty filter
     :param width: (for select2) css value for width of filter container
     :param date_format: (for range_date) format for date, default 'yyyy-mm-dd'
+    :param filter_match_mode: one of 'contains', 'exact', 'startsWith', default 'contains'
     :return: yadcf option for inclusion in yadcf option array
     '''
     option = {
         'column_selector': colselector,
         'filter_container_id': filterid,
         'filter_type': filtertype,
+        'filter_match_mode': filter_match_mode,
     }
 
     if filtertype in ['select', 'multi_select']:
