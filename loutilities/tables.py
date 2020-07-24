@@ -61,7 +61,7 @@ REGEX_ISODATE = r"(19|20)\d\d-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])"
 # for use in ColumnDT declarations
 #####################################################
 class RenderBoolean(TypeDecorator):
-    impl = types.String
+    impl = types.Boolean
 
     def __init__(self, *args, **kwargs):
         # set arguments as class attributes
@@ -70,10 +70,12 @@ class RenderBoolean(TypeDecorator):
         self.falsedisplay = kwargs.pop('falsedisplay')
         super(RenderBoolean, self).__init__(*args, **kwargs)
 
-    # assumes float value seconds to be converted to time
     def process_result_value(self, value, engine):
         # value should be '0' or '1'
         return self.truedisplay if int(value) else self.falsedisplay
+
+    def process_bind_param(self, value, dialect):
+        return value == self.truedisplay
 
 def renderboolean(expr, *args, **kwargs):
     return cast(expr, RenderBoolean(*args, **kwargs))
@@ -2169,7 +2171,10 @@ class DbCrudApi(CrudApi):
 
                     # server side tables adds ColumnDT to handle boolean values for page paint
                     if args['serverside']:
-                        columndt_args = {'sqla_expr': thisbool.sqla_expr(), 'mData': formfield}
+                        # yadcf_autocomplete because this forces direct comparison. See sqlalchemy-datatables.search_methods
+                        # this is probably a kludge, as here we have no idea what 'yadcf_autocomplete' means
+                        columndt_args = {'sqla_expr': thisbool.sqla_expr(), 'mData': formfield,
+                                         'search_method': 'yadcf_autocomplete'}
                         columndt_args.update(**_columndt_args)
                         self.servercolumns.append(ColumnDT(**columndt_args))
 
