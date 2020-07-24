@@ -216,6 +216,7 @@ ChildRow.prototype.showTables = function(row, showedit) {
                 })
             }
             $.extend(dtopts, {
+                // TODO: ajax assumes serverside=True
                 ajax: {
                     url: tablemeta.url,
                     type: 'get'
@@ -224,6 +225,9 @@ ChildRow.prototype.showTables = function(row, showedit) {
                 // need to remove scrollCollapse as we don't want to hide rows
                 scrollCollapse: false,
             });
+            if (tableconfig.args.updatedtopts) {
+                $.extend(dtopts, tableconfig.args.updatedtopts);
+            }
             if (!showedit) {
                 $.extend(dtopts, {
                     select: false

@@ -526,6 +526,11 @@ class CrudChildElement():
                 createfieldvals (optional)
                     // col.name is used because Editor fields are being updated
                     { col.field : initial_value, ... }
+                updatedtopts (optional)
+                    // general options for datatables, which override the defaults
+                    // See https://datatables.net/reference/option/ search on DataTables - Features
+                    // these are update on top of dtopts from self.table
+                    { option: value, ... }
     '''
     def __init__(self, name=None, type=None, args=None, table=None):
         if args is None:
