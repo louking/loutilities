@@ -25,6 +25,7 @@ from sqlalchemy import func, types, cast
 from sqlalchemy.types import TypeDecorator
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from datatables import DataTables as BaseDataTables, ColumnDT
+from jinja2 import Template
 
 # homegrown
 from loutilities.nesteddict import NestedDict
@@ -747,17 +748,22 @@ class CrudApi(MethodView):
     :param yadcfoptions: dict of yadcf options to apply at end of options calculation
     :param pagejsfiles: list of javascript file paths to be included
     :param pagecssfiles: list of css file paths to be included
-    :param templateargs: dict of arguments to pass to template - if callable arg function is called before being passed to template (no parameters)
+    :param templateargs: dict of arguments to pass to template - if callable arg function is called before being passed
+            to template (no parameters)
     :param validate: editor validation function (action, formdata), result is set to self._fielderrors
     :param multiselect: if True, allow selection of multiple rows, default False
     :param responsekeys: dict of items to add to editor response, can update in any of the hooks
+    :param tableidtemplate: (optional) jinja2 template string used to identify this table, merged via
+            self.tableid(**context)
 
     :param childrowoptions: (optional)
         {
           'template': nunjuck template for display of child row,
-          'showeditor': True if editor should be shown in childrow, template must have element with id childrow-editform
+          'showeditor': True if editor should be shown in childrow, template must have element with id
+                childrow-editform-<id>
           'group' (optional) if group is used to partition database, this is the name of the group
-          'groupselector' (optional, but required if 'group' is set) this is the selector id which the user uses to choose their group
+          'groupselector' (optional, but required if 'group' is set) this is the selector id which the user uses to
+                choose their group
           'childelementargs': array of arg dicts for instantiations of CrudChildElement instances
         }
     '''
@@ -792,6 +798,7 @@ class CrudApi(MethodView):
                     multiselect = False,
                     addltemplateargs = {},
                     responsekeys = {},
+                    tableidtemplate = '',
                     childrowoptions = {},
                     )
         args.update(kwargs)
@@ -805,10 +812,12 @@ class CrudApi(MethodView):
 
         # set up child element instances
         self.childelements = []
+        self.childtables = {}
         if self.childrowoptions:
             childelementargs = self.childrowoptions.get('childelementargs', [])
             for args in childelementargs:
                 self.childelements.append(CrudChildElement(**args))
+                self.childtables[args['name']] = args
 
     def register(self):
         # name for view is last bit of fully named endpoint
@@ -864,12 +873,6 @@ class CrudApi(MethodView):
                     else:
                         raise ParameterError('invalid _update format: {}'.format(update))
 
-            # get datatable, editor and yadcf options
-            dt_options = self.getdtoptions()
-            ed_options = self.getedoptions()
-            yadcf_options = self.getyadcfoptions()
-            childrow_options = self.getchildrowoptions()
-
             # build table data
             if not self.serverside:
                 self.open()
@@ -904,10 +907,10 @@ class CrudApi(MethodView):
                 tablebuttons = self.buttons,
                 pretablehtml = self.pretablehtml if not callable(self.pretablehtml) else self.pretablehtml(),
                 options = {
-                    'dtopts': dt_options,
-                    'editoropts': ed_options,
-                    'yadcfopts' : yadcf_options,
-                    'childrow' : childrow_options,
+                    'dtopts': self.getdtoptions(),
+                    'editoropts': self.getedoptions(),
+                    'yadcfopts' : self.getyadcfoptions(),
+                    'childrow' : self.getchildrowoptions(),
                     'updateopts': update_options
                 },
                 writeallowed = self.permission(),
@@ -1081,6 +1084,17 @@ class CrudApi(MethodView):
             val['childelements'][options['name']] = options
 
         return val
+
+    def tableid(self, **context):
+        '''
+        return string from context, suitable for use within table form
+
+        :param context: keyword parameters rendered against template supplied at instantiation via childidtemplate
+            parameter
+        :return: string
+        '''
+        template = Template(self.tableidtemplate)
+        return template.render(**context)
 
     def get(self):
         print('request.path = {}'.format(request.path))
@@ -2094,7 +2108,7 @@ class DbCrudApi(CrudApi):
             # e.g., child row handling
             # if serverside=True put in placeholder ColumnDT column so indeces for
             # datatables(js) and sqlalchemy-datatables(py) line up, but don't do anything else for this column
-            if col['data'] == None:
+            if col['data'] == None or col['data'] == '':
                 if args['serverside']:
                     columndt_args = {'sqla_expr': getattr(args['model'], 'id'), 'mData': '_placeholder'}
                     columndt_args.update(**_columndt_args)

@@ -3,17 +3,37 @@
  */
 
 /**
+ * @typedef {Object<rowid, Object<tablename, ChildRowTableMeta>>} ChildRowMeta
+ *
+ * @typedef {Object} ChildRowTableMeta
+ * @property {DataTable} table DataTable instance
+ * @property {string} tableid css id for table
+ * @property {Editor} [editor] Editor instance associated with table
+ * @property {ChildRowMeta} [childbase] recursive childbase for this table
+ *
+ * @typedef {(string|number)} rowid DataTables id which identifies the row, e.g., row().id()
+ *
+ * @typedef {string} tablename name of table as configured in CrudChildElement.get_options()
+ *
+ */
+/*
+ * @type {ChildRowMeta} - maintains the data for all child rows
+ */
+var childrow_childbase = {};
+
+/**
  * Child row management for a table
  *
  * @param {dataTable} table - dataTables instance of the table for which this child row is maintained
- * @param {string} template - name of nunjucks template file for display of the child row
  * @param config - list of ChildRowElement configurations
  *          options:    options to be passed to childrow DataTables instance,
  *                      except for data: and buttons: options, passed in childdata, childbuttons
  * @param {Editor} editor - Editor instance to use for create/open form
+ * @param {ChildRowMeta} base - ChildRow data is maintained here; this can be recursively used for child rows within child rows
+ *          if base isn't supplied,
  * @constructor
  */
-function ChildRow(table, config, editor, group, groupselector) {
+function ChildRow(table, config, editor, base) {
     var that = this;
     that.debug = true;
 
@@ -24,15 +44,17 @@ function ChildRow(table, config, editor, group, groupselector) {
     that.editor = editor;
     that.template = config.template;
     that.config = config;
-
-    // childtable may be per table within row
-    // current implementation has only one childeditor row open at a time, but it supports multiple tables
-    that.childtable = {};
-    that.childeditor = {};
+    that.base = base;
 
     // clicking +/- displays the data
-    that.table.on('click.dt', 'td.details-control', function () {
-        if (that.debug) {console.log(new Date().toISOString() + ' click.dt event');}
+    that.table.on('click', 'td.details-control', function (e) {
+        if (that.debug) {console.log(new Date().toISOString() + ' click event');}
+
+        // don't let this bubble to an outer table in the case of recursive child rows
+        if ( $(this).closest('table').attr('id') != $(that.table.table().node()).attr('id') ) {
+            return;
+        }
+
         var tr = $(this).closest('tr');
         var tdi = tr.find("i.fa");
         var row = that.table.row( tr );
@@ -109,9 +131,27 @@ function ChildRow(table, config, editor, group, groupselector) {
  * @returns {string} - hashtagged id for table row
  */
 ChildRow.prototype.getTableId = function(row, tablename) {
-    return '#childrow-table-' + tablename + '-' + row.id();
+    var that = this;
+    var rowdata = row.data();
+    var tablemeta = that.getTableMeta(row, tablename);
+    return '#childrow-table-' + tablemeta.tableid;
 }
 
+ChildRow.prototype.getTableMeta = function(row, tablename) {
+    var rowdata = row.data();
+    var tablemeta = null;
+    for (var i=0; rowdata.tables && i<rowdata.tables.length; i++) {
+        table = rowdata.tables[i];
+        if (table.name == tablename) {
+            tablemeta = table;
+            break;
+        }
+    }
+    if (tablemeta === null) {
+        throw 'could not find table in row: ' + tablename;
+    }
+    return tablemeta;
+}
 /**
  * show tables for this row
  *
@@ -124,11 +164,19 @@ ChildRow.prototype.showTables = function(row, showedit) {
 
     // if there are tables, render them now
     var id = row.id();
+    that.base[id] = that.base[id] || {};
     var rowdata = row.data();
     for (var i=0; rowdata.tables && i<rowdata.tables.length; i++) {
         var tablemeta = rowdata.tables[i];
         var tableconfig = that.config.childelements[tablemeta.name];
+
         if (tableconfig) {
+            // initialize base[id][tablename] if needed
+            that.base[id][tablemeta.name] = that.base[id][tablemeta.name] || {};
+            var childrowtablemeta = that.base[id][tablemeta.name];
+
+            childrowtablemeta.tableid = childrowtablemeta.tableid || that.getTableId(row, tablemeta.name);
+
             var buttons = [];
             var dtopts = _.cloneDeep(tableconfig.args.dtopts);
             if (showedit) {
@@ -157,13 +205,19 @@ ChildRow.prototype.showTables = function(row, showedit) {
                     });
                 }
 
-
                 $.extend(edopts, {
-                    table: that.getTableId(row, tablemeta.name)
+                    table: childrowtablemeta.tableid
                 });
 
+                // configure childrow options for editor if so configured
+                if ( ! $.isEmptyObject( tableconfig.args.cropts ) ) {
+                    if (tableconfig.args.cropts.showeditor) {
+                        $.extend(edopts, {display:onPageDisplay('#childrow-editform-' + tablemeta.tableid)})
+                    }
+                }
+
                 // create child row editor
-                that.childeditor[tablemeta.name] = new $.fn.dataTable.Editor(edopts);
+                childrowtablemeta.editor = new $.fn.dataTable.Editor(edopts);
 
                 // set up special event handlers for group management, if requested
                 if (register_group_for_editor) {
@@ -171,26 +225,26 @@ ChildRow.prototype.showTables = function(row, showedit) {
                         if (!that.config.groupselector) {
                             throw 'groupselected required if group configured'
                         }
-                        register_group_for_editor(that.config.group, that.config.groupselector, that.childeditor[tablemeta.name])
-                        set_editor_event_handlers(that.childeditor[tablemeta.name])
+                        register_group_for_editor(that.config.group, that.config.groupselector, childrowtablemeta.editor)
+                        set_editor_event_handlers(childrowtablemeta.editor)
                     }
                 }
 
                 // if inline editing requested, add a handler
                 if (tableconfig.args.inline) {
-                    $( that.getTableId(row, tablemeta.name)).on('click', '._inline_edit', function() {
+                    $( childrowtablemeta.tableid ).on('click', '._inline_edit', function() {
                         // get inline parameters
-                        var colname = that.childeditor[tablemeta.name].fields()[this._DT_CellIndex.column];
+                        var colname = childrowtablemeta.editor.fields()[this._DT_CellIndex.column];
                         var inlineopts = tableconfig.args.inline[colname];
-                        that.childeditor[tablemeta.name].inline(this, inlineopts);
+                        childrowtablemeta.editor.inline(this, inlineopts);
                     });
                 }
 
                 // if createfieldvals requested, add a handler which initializes fields when create form displayed
                 if (tablemeta.createfieldvals) {
                     // save for initCreate function
-                    that.childeditor[tablemeta.name].createfieldvals = tablemeta.createfieldvals;
-                    that.childeditor[tablemeta.name].on('initCreate.dt', function(e) {
+                    childrowtablemeta.editor.createfieldvals = tablemeta.createfieldvals;
+                    childrowtablemeta.editor.on('initCreate.dt', function(e) {
                         var that = this;
                         $.each(this.createfieldvals, function(field, val) {
                             that.field(field).val(val);
@@ -201,9 +255,9 @@ ChildRow.prototype.showTables = function(row, showedit) {
                 // buttons for datatable need to point at this editor
                 // TODO: need to determine if 'edit' or 'editRefresh is appropriate, based on configuration
                 buttons = [
-                    {extend:'create', editor:that.childeditor[tablemeta.name]},
-                    {extend:'editRefresh', editor:that.childeditor[tablemeta.name]},
-                    {extend:'remove', editor:that.childeditor[tablemeta.name]}
+                    {extend:'create', editor:childrowtablemeta.editor},
+                    {extend:'editRefresh', editor:childrowtablemeta.editor},
+                    {extend:'remove', editor:childrowtablemeta.editor}
                 ];
             }
             // add requested datatable column options
@@ -233,15 +287,23 @@ ChildRow.prototype.showTables = function(row, showedit) {
                     select: false
                 });
             };
-            var table = $(that.getTableId(row, tablemeta.name));
-            that.childtable[id] = that.childtable[id] || {}
-            that.childtable[id][tablemeta.name] = table
-                // don't let select /deselect propogate to the parent table
+            var table = $( childrowtablemeta.tableid );
+            childrowtablemeta.table = table
+                // don't let select / deselect propogate to the parent table
                 // from https://datatables.net/forums/discussion/comment/175517/#Comment_175517
                 .on('select.dt deselect.dt', function (e) {
                     e.stopPropagation();
                 })
                 .DataTable(dtopts);
+
+            // configure childrow if so configured
+            if ( ! $.isEmptyObject( tableconfig.args.cropts ) ) {
+                // sets up child row event handling, and initializes child elements as needed
+                childrowtablemeta.childbase = {}
+                var childsubrow = new ChildRow(childrowtablemeta.table, tableconfig.args.cropts, childrowtablemeta.editor, childrowtablemeta.childbase);
+            }
+
+
         } else {
             throw 'table missing from config.childelements: ' + tablemeta.name;
         }
@@ -259,23 +321,18 @@ ChildRow.prototype.destroyTables = function(row) {
 
     var id = row.id();
 
-    // kill editor(s) if they exist
-    if (that.childeditor) {
-        $.each(that.childeditor, function(tablename, editor) {
-            editor.destroy();
-            delete that.childeditor[tablename];
-        })
-    }
-
-    // kill table(s) if they exist
-    if (that.childtable[id]) {
-        $.each(that.childtable[id], function(tablename, table) {
-            var table = $(that.getTableId(row, tablename));
+    // kill table(s) and editor(s) if they exist
+    if (that.base[id]) {
+        $.each(that.base[id], function(tablename, rowtablemeta) {
+            var table = $( that.base[id][tablename].tableid );
             table.detach();
             table.DataTable().destroy();
+            if (rowtablemeta.editor) {
+                var editor = rowtablemeta.editor;
+                editor.destroy();
+            }
         })
-        delete that.childtable[id];
-        // that.resetEvents();
+        delete that.base[id];
     }
 }
 
