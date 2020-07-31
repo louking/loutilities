@@ -14,6 +14,14 @@ tr.shown td.details-control {
     color:red;
 }
 
+/* childrow display */
+
+/* indent child rows */
+.childrow-display {
+    margin-left: 20px;
+    width: 95%;
+}
+
 /* from https://datatables.net/blog/2017-06-30#Example */
 
 .childrow-display .DTE_Label {
