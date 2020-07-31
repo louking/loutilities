@@ -90,6 +90,6 @@ tr.shown td.details-control {
 }
 
 /* reorder */
-.dataTables_wrapper .reorder {
-    width: 3rem;
+table.dataTable td.reorder {
+    text-align: left;
 }
