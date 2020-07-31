@@ -1132,22 +1132,25 @@ class CrudApi(MethodView):
 
     @_editormethod(checkaction='edit', formrequest=True)
     def put(self, thisid):
-        # try to coerce to int, but ok if not
-        try:
-            thisid = int(thisid)
-        except ValueError:
-            pass
-
-        # retrieve data from request
+        # allow multirow editing, e.g., for rowReorder
+        theseids = thisid.split(',')
         self._responsedata = []
-        thisdata = self._data[thisid]
-        
-        self._fielderrors = self.validate('edit', thisdata)
-        if self._fielderrors: raise ParameterError
-        
-        thisrow = self.updaterow(thisid, thisdata)
+        for id in theseids:
+            # try to coerce to int, but ok if not
+            try:
+                id = int(id)
+            except ValueError:
+                pass
 
-        self._responsedata = [thisrow]
+            # retrieve data from request
+            thisdata = self._data[id]
+
+            self._fielderrors = self.validate('edit', thisdata)
+            if self._fielderrors: raise ParameterError
+
+            thisrow = self.updaterow(id, thisdata)
+
+            self._responsedata += [thisrow]
 
 
     @_editormethod(checkaction='remove', formrequest=False)
