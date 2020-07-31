@@ -1961,7 +1961,8 @@ class DbCrudApi(CrudApi):
         model: sqlalchemy model for the table to read/write from
         dbmapping: mapping dict with key for each db field, value is key in form or function(dbentry)
         formmapping: mapping dict with key for each form row, value is key in db row or function(form)
-        queryparams: dict of query parameters relevant to this table to retrieve table or rows
+        queryparams: dict of query parameters relevant to this table to retrieve table or rows (using filter_by())
+        queryfilters: list of query criteria relevant to this table to retrieve table or rows (using filter())
         dtoptions: datatables options to override / add
         version_id_col: name of column which contains version id
         checkrequired: True causes checks of columns with className: 'field_req'
@@ -2049,6 +2050,7 @@ class DbCrudApi(CrudApi):
                     version_id_col=None,
                     serverside=False,  # duplicated here and in CrudApi because test before super() called
                     queryparams={},
+                    queryfilters=[],
                     dtoptions={},
                     filtercoloptions=[],
                     checkrequired=None,  # TODO: should this be made more general? Maybe a function to check col
@@ -2590,20 +2592,18 @@ class DbCrudApi(CrudApi):
 
         # not server table, rows will be handled in nexttablerow()
         if not self.serverside:
-            query = self.model.query.filter_by(**self.queryparams)
+            query = self.model.query.filter_by(**self.queryparams).filter(*self.queryfilters)
             self.rows = iter(query.all())
 
         # server table, this is the output to be returned, nexttablerow() is noop
         # note get_response_data transform is not done - name mapping is in self.servercolumns
         else:
             # filter applies to self.model
-            query = self.db.session.query().select_from(self.model).filter_by(**self.queryparams)
+            query = self.db.session.query().select_from(self.model).filter_by(**self.queryparams).filter(*self.queryfilters)
             # add required joins (determined in __init__
             for j in self.joins:
                 query = query.join(j)
-            # TODO: does moving this to self.model filter break anything?
-            # # now filter
-            # query = query.filter_by(**self.queryparams)
+
             args = request.args.to_dict()
             rowTable = DataTables(args, query, self.servercolumns)
 
@@ -2681,7 +2681,8 @@ class DbCrudApi(CrudApi):
             self.dte.set_dbrow(formdata, dbrow)
             for field in self.uniquecols:
                 # if debug: current_app.logger.debug('DbCrudApi.validatedb(): checking field "{}":"{}"'.format(field,getattr(dbrow,field)))
-                rows = self.model.query.filter_by(**self.queryparams).filter_by(**{field: getattr(dbrow, field)}).all()
+                # TODO: it isn't clear that we want to do all this filtering before checking uniqueness
+                rows = self.model.query.filter_by(**self.queryparams).filter_by(**{field: getattr(dbrow, field)}).filter(*self.queryfilters).all()
                 # if we found a row that matches, flag error
 
                 # looking to see if we found any rows which aren't the row we're currently working on
