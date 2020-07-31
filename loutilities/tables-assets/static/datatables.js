@@ -213,9 +213,21 @@ function datatables(data, buttons, options, files) {
 
             button_options.push(button);
         }
-    };
+    }
 
     $.extend(options.dtopts, {buttons:button_options});
+
+    // handle rowReorder if requested; if no editor, disable rowReorder
+    // assume an object was configured
+    if (options.dtopts.rowReorder) {
+        if (options.editoropts) {
+            options.dtopts.rowReorder.editor = editor;
+            options.dtopts.rowReorder.update = false;
+            // 'row-reorder' event added later
+        } else {
+            options.dtopts.rowReorder = false;
+        }
+    }
 
     // assume data is url if serverSide is truthy
     if (options.dtopts.serverSide) {
@@ -226,7 +238,7 @@ function datatables(data, buttons, options, files) {
     // otherwise assume it is object containing the data to render
     } else {
         $.extend(options.dtopts, { data: data });
-    };
+    }
 
     // define the table
     _dt_table = $('#datatable').DataTable ( options.dtopts );
@@ -254,10 +266,25 @@ function datatables(data, buttons, options, files) {
         }
     }
 
+    // handle rowReorder if requested; if no editor, disable rowReorder
+    // https://datatables.net/reference/event/row-reorder
+    if (options.dtopts.rowReorder) {
+        if (options.editoropts) {
+            // 'row-reorder' event added
+            _dt_table.on( 'row-reorder', function ( e, details, changes ) {
+                editor
+                    .edit( changes.nodes, false, {
+                        submit: 'allIfChanged'
+                    } )
+                    .multiSet( changes.dataSrc, changes.values )
+                    .submit();
+            });
+        }
+    }
     // take care of any initialization which needs to be done after datatables is initialized
     if (typeof afterdatatables !== "undefined") {
         afterdatatables();
-    };
+    }
 
     // adjust scrolling to fit window
     firstDataTableScrollAdjust();        
@@ -305,7 +332,7 @@ function EditorButtonDialog(options) {
             this.open()
         } else {
             this.close()
-        };
+        }
     };
 
     this.open = function() {

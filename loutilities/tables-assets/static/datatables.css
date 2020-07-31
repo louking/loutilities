@@ -88,3 +88,8 @@ tr.shown td.details-control {
 .childrow-display .DTE_Field_Input {
     padding: 0 6px;
 }
+
+/* reorder */
+.dataTables_wrapper .reorder {
+    width: 3rem;
+}
