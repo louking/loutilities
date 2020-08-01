@@ -89,7 +89,3 @@ tr.shown td.details-control {
     padding: 0 6px;
 }
 
-/* reorder */
-table.dataTable td.reorder {
-    text-align: left;
-}

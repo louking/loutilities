@@ -163,7 +163,7 @@ function datatables(data, buttons, options, files) {
         // configure childrow options for editor if so configured
         if ( ! $.isEmptyObject( options.childrow ) ) {
             if (options.childrow.showeditor) {
-                $.extend(options.editoropts,{display:onPageDisplay('#childrow-editform-' + options.childrow.tableid)})
+                $.extend(options.editoropts,{display:onPageDisplay('#childrow-editform-')})
             }
         }
 
