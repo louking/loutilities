@@ -147,6 +147,7 @@ function ChildRow(table, config, editor, base) {
         tr.addClass('shown');
         tdi.first().removeClass('fa-plus-square');
         tdi.first().addClass('fa-minus-square');
+        that.updateHeaderDetails();
     } );
 
     // deselect just hides the edit form and brings up the text display
@@ -163,6 +164,7 @@ function ChildRow(table, config, editor, base) {
             that.closeChild(row);
             that.showChild(row);
         }
+        that.updateHeaderDetails();
     } );
 
     // prevent user select on details control column
