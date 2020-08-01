@@ -3,15 +3,19 @@
     text-align: center;
 }
 
-/* child row management */
+/* child row selection management */
+thead .details-control,
 td.details-control {
-            text-align:center;
-            color:forestgreen;
+    text-align: center;
+    color: forestgreen;
     cursor: pointer;
 }
+thead.allshown th.details-control,
 tr.shown td.details-control {
-    text-align:center;
-    color:red;
+    color: deepskyblue;
+}
+thead.someshown th.details-control {
+    color:grey;
 }
 
 /* childrow display */

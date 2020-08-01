@@ -22,6 +22,18 @@
 var childrow_childbase = {};
 
 /**
+ * initial rendering of + in column for expanding child row, for fontawesome child row handling
+ *
+ * @returns {string} - i tag with classes fa fa-plus-square
+ */
+function render_plus() {
+     // see http://live.datatables.net/bihawepu/1/edit
+     // from https://datatables.net/examples/api/row_details.html bindrid comment
+    return '<i class="fa fa-plus-square" aria-hidden="true"></i>';
+}
+
+
+/**
  * Child row management for a table
  *
  * @param {dataTable} table - dataTables instance of the table for which this child row is maintained
@@ -46,9 +58,9 @@ function ChildRow(table, config, editor, base) {
     that.config = config;
     that.base = base;
 
-    // clicking +/- displays the data
+    // clicking +/- in a row displays the row's data
     that.table.on('click', 'td.details-control', function (e) {
-        if (that.debug) {console.log(new Date().toISOString() + ' click event');}
+        if (that.debug) {console.log(new Date().toISOString() + ' click row details control event');}
 
         // don't let this bubble to an outer table in the case of recursive child rows
         if ( $(this).closest('table').attr('id') != $(that.table.table().node()).attr('id') ) {
@@ -74,7 +86,46 @@ function ChildRow(table, config, editor, base) {
             tdi.first().removeClass('fa-plus-square');
             tdi.first().addClass('fa-minus-square');
         }
+        that.updateHeaderDetails();
     } );
+
+    // clicking +/- in the header displays all rows' data
+    // see https://datatables.net/forums/discussion/comment/125858/#Comment_125858
+    $(that.table.table().header()).on('click', 'th.details-control', function (e) {
+        if (that.debug) {console.log(new Date().toISOString() + ' click header details control event');}
+
+        // if all shown or some shown, close all that are open
+        var thead = $(that.table.header())
+        var thi = thead.find("i.fa");
+        if (thead.hasClass('allshown') || thead.hasClass('someshown')) {
+            var rows = that.table.rows();
+            for (var i=0; i<rows[0].length; i++) {
+                var rowndx = rows[0][i];
+                if (that.table.row(rowndx).child.isShown()) {
+                    var tr = $(that.table.row(rowndx).node());
+                    var tdi = tr.find("i.fa");
+                    tdi.first().trigger('click');
+                }
+            }
+            // thead.removeClass('allshown someshown');
+            // thi.first().removeClass('fa-minus-square');
+            // thi.first().addClass('fa-plus-square');
+
+        // none shown, so show all
+        } else {
+            var rows = that.table.rows();
+            for (var i=0; i<rows[0].length; i++) {
+                var rowndx = rows[0][i];
+                var tr = $(that.table.row(rowndx).node());
+                var tdi = tr.find("i.fa");
+                tdi.first().trigger('click');
+            }
+            // thead.addClass('allshown');
+            // thi.first().removeClass('fa-plus-square');
+            // thi.first().addClass('fa-minus-square');
+        }
+        that.updateHeaderDetails();
+    })
 
     // set up events
     // selecting will open the child row if it's not already open
@@ -121,6 +172,31 @@ function ChildRow(table, config, editor, base) {
             e.preventDefault();
         }
     });
+}
+
+/**
+ * update the shown class and indicator for the header for this table
+ */
+ChildRow.prototype.updateHeaderDetails = function() {
+    var that = this;
+    var thead = $(that.table.header())
+    var thi = thead.find("i.fa");
+    var rows = that.table.rows();
+    var shown = $( that.table.table().node()).find('tr.shown');
+
+    thead.removeClass('allshown someshown');
+    thi.first().removeClass('fa-plus-square fa-minus-square fa-square');
+
+    if (shown.length == 0) {
+        thi.first().addClass('fa-plus-square');
+    } else if (shown.length == rows[0].length) {
+        thead.addClass('allshown');
+        thi.first().addClass('fa-minus-square');
+    } else {
+        thead.addClass('someshown');
+        thi.first().addClass('fa-square');
+    }
+
 }
 
 /**
