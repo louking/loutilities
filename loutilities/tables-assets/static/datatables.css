@@ -93,3 +93,8 @@ thead.someshown th.details-control {
     padding: 0 6px;
 }
 
+/* shrink to fit, see hack at https://stackoverflow.com/a/43615091/799921 */
+.shrink-to-fit {
+    width:0.1%;
+    white-space: nowrap;
+}

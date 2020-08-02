@@ -32,6 +32,9 @@ function render_plus() {
     return '<i class="fa fa-plus-square" aria-hidden="true"></i>';
 }
 
+function render_grip() {
+    return '<i class="fa fa-grip-horizontal" aria-hidden="true"></i>';
+}
 
 /**
  * Child row management for a table
@@ -215,6 +218,13 @@ ChildRow.prototype.getTableId = function(row, tablename) {
     return '#childrow-table-' + tablemeta.tableid;
 }
 
+/**
+ * get the tablemeta for this table
+ *
+ * @param row
+ * @param tablename
+ * @returns {tablemeta}
+ */
 ChildRow.prototype.getTableMeta = function(row, tablename) {
     var rowdata = row.data();
     var tablemeta = null;
@@ -230,6 +240,7 @@ ChildRow.prototype.getTableMeta = function(row, tablename) {
     }
     return tablemeta;
 }
+
 /**
  * show tables for this row
  *
@@ -450,6 +461,11 @@ ChildRow.prototype.hideChild = function(row) {
     row.child.hide();
 };
 
+/**
+ * open the editor for this row
+ *
+ * @param row
+ */
 ChildRow.prototype.editChild = function(row) {
     var that = this;
     if (that.debug) {console.log(new Date().toISOString() + ' editChild()');}
