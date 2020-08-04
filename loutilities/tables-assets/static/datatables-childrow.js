@@ -78,16 +78,10 @@ function ChildRow(table, config, editor, base) {
             // This row is already open - close it, close editor if open
             that.hideChild(row);
             that.closeChild(row);
-            tr.removeClass('shown');
-            tdi.first().removeClass('fa-minus-square');
-            tdi.first().addClass('fa-plus-square');
         }
         else {
             // Open this row
             that.showChild(row);
-            tr.addClass('shown');
-            tdi.first().removeClass('fa-plus-square');
-            tdi.first().addClass('fa-minus-square');
         }
         that.updateHeaderDetails();
     } );
@@ -110,9 +104,6 @@ function ChildRow(table, config, editor, base) {
                     tdi.first().trigger('click');
                 }
             }
-            // thead.removeClass('allshown someshown');
-            // thi.first().removeClass('fa-minus-square');
-            // thi.first().addClass('fa-plus-square');
 
         // none shown, so show all
         } else {
@@ -123,52 +114,66 @@ function ChildRow(table, config, editor, base) {
                 var tdi = tr.find("i.fa");
                 tdi.first().trigger('click');
             }
-            // thead.addClass('allshown');
-            // thi.first().removeClass('fa-plus-square');
-            // thi.first().addClass('fa-minus-square');
         }
         that.updateHeaderDetails();
-    })
+    });
 
     // set up events
-    // selecting will open the child row if it's not already open
+
+    // edit button will open the child row if it's not already open
     // if it's already open need to hide the text display and bring up the edit form
-    that.table.on('select.dt', function (e, dt, type, indexes) {
-        // // check if triggered by this datatable
-        // if (dt.context[0].sTableId !== that.table.context[0].sTableId) return;
+    if (that.editor) {
+        that.editor.on('postEditChildRowRefresh', function (e, json, dt, node, config) {
+            // // check if triggered by this datatable
+            // if (dt.context[0].sTableId !== that.table.context[0].sTableId) return;
 
-        if (that.debug) {console.log(new Date().toISOString() + ' select.dt event type = ' + type + ' indexes = ' + indexes);}
-        var row = that.table.row( indexes );
-        var tr = $(row.node());
-        var tdi = tr.find("i.fa");
+            if (that.debug) {
+                console.log(new Date().toISOString() + ' postEditChildRowRefresh ');
+            }
 
-        if ( row.child.isShown() ) {
-            // This row is already open - close it first
-            that.hideChild(row);
-        };
-        that.editChild(row);
-        tr.addClass('shown');
-        tdi.first().removeClass('fa-plus-square');
-        tdi.first().addClass('fa-minus-square');
-        that.updateHeaderDetails();
-    } );
+            // if error, display message and return
+            if (json.error) {
+                // this is application specific
+                // not sure if there's a generic way to find the current editor instance
+                that.editor.error('ERROR retrieving row from server:<br>' + json.error);
+                return;
+            }
 
-    // deselect just hides the edit form and brings up the text display
-    that.table.on('deselect.dt', function (e, dt, type, indexes) {
-        // // check if triggered by this datatable
-        // if (dt.context[0].sTableId !== that.table.context[0].sTableId) return;
+            // assumes only one row can be selected
+            var row = that.table.row({selected:true});
+            var tr = $(row.node());
+            var tdi = tr.find("i.fa");
 
-        if (that.debug) {console.log(new Date().toISOString() + ' deselect.dt event type = ' + type + ' indexes = ' + indexes);}
-        // var tr = editor.s.modifier;
-        // var row = that.table.row( tr );
-        var row = that.table.row( indexes );
-        var tr = $(row.node());
-        if (row.child.isShown()) {
-            that.closeChild(row);
-            that.showChild(row);
-        }
-        that.updateHeaderDetails();
-    } );
+            if (row.child.isShown()) {
+                // This row is already open - close it first
+                that.hideChild(row);
+            }
+
+            that.editChild(row);
+
+            that.updateHeaderDetails();
+        });
+    }
+
+    // submit closes the edit form and brings up the text display
+    if (that.editor) {
+        that.editor.on('submitComplete.dt', function (e, json, data, action) {
+            if (that.debug) {
+                console.log(new Date().toISOString() + ' submitComplete.dt event, action = ' + action);
+            }
+            if (action !== 'edit') {
+                return;
+            }
+            var modifier = that.editor.modifier();
+            var row = that.table.row(modifier);
+            var tr = $(row.node());
+            if (row.child.isShown()) {
+                that.closeChild(row);
+                that.showChild(row);
+            }
+            that.updateHeaderDetails();
+        });
+    }
 
     // prevent user select on details control column
     that.table.on('user-select.dt', function (e, dt, type, cell, originalEvent) {
@@ -184,6 +189,8 @@ function ChildRow(table, config, editor, base) {
  */
 ChildRow.prototype.updateHeaderDetails = function() {
     var that = this;
+    if (that.debug) {console.log(new Date().toISOString() + ' updateHeaderDetails() ');}
+
     var thead = $(that.table.header())
     var thi = thead.find("i.fa");
     var rows = that.table.rows();
@@ -202,6 +209,24 @@ ChildRow.prototype.updateHeaderDetails = function() {
         thi.first().addClass('fa-square');
     }
 
+}
+
+ChildRow.prototype.updateRowDetails = function(row) {
+    var that = this;
+    if (that.debug) {console.log(new Date().toISOString() + ' updateRowDetails() ');}
+
+    var tr = row.node();
+    var tdi = $(tr).find('i.fa').first();
+
+    $(tr).removeClass('shown');
+    tdi.removeClass('fa-plus-square fa-minus-square');
+    if (row.child.isShown()) {
+        tdi.addClass('fa-minus-square');
+        $(tr).addClass('shown');
+    } else {
+        tdi.addClass('fa-plus-square');
+    }
+    that.updateHeaderDetails();
 }
 
 /**
@@ -342,10 +367,11 @@ ChildRow.prototype.showTables = function(row, showedit) {
                 }
 
                 // buttons for datatable need to point at this editor
-                // TODO: need to determine if 'edit' or 'editRefresh is appropriate, based on configuration
+                // TODO: need to determine if 'edit' or 'editChildRowRefresh is appropriate, based on configuration
+                // TODO: also need to determine what buttons should be set up, based on configuration
                 buttons = [
                     {extend:'create', editor:childrowtablemeta.editor},
-                    {extend:'editRefresh', editor:childrowtablemeta.editor},
+                    {extend:'editChildRowRefresh', editor:childrowtablemeta.editor},
                     {extend:'remove', editor:childrowtablemeta.editor}
                 ];
             }
@@ -439,6 +465,7 @@ ChildRow.prototype.showChild = function(row) {
     var rowdata = row.data();
     rowdata._showedit = false;
     row.child(env.render(that.template, rowdata)).show();
+    that.updateRowDetails(row);
 
     // show tables
     that.showTables(row, rowdata._showedit);
@@ -453,12 +480,11 @@ ChildRow.prototype.hideChild = function(row) {
     var that = this;
     if (that.debug) {console.log(new Date().toISOString() + ' hideChild()');}
 
-    var id = row.id();
-
     // remove table(s) and editor(s)
     that.destroyTables(row);
 
     row.child.hide();
+    that.updateRowDetails(row);
 };
 
 /**
@@ -474,22 +500,30 @@ ChildRow.prototype.editChild = function(row) {
     var env = new nunjucks.Environment();
     var rowdata = row.data();
     rowdata._showedit = true;
-    // todo: create table(s) and add to rowdata
     row.child(env.render(that.template, rowdata)).show();
+    that.updateRowDetails(row);
 
     that.editor
         .title('Edit')
         .buttons([
             {
-                "label": "Save",
-                "fn": function () {
+                "text": "Save",
+                "action": function () {
                     that.editor.submit();
+                    that.closeChild(row);
+                }
+            },
+            {
+                "text": "Cancel",
+                "action": function() {
+                    that.closeChild(row);
                 }
             }
         ])
         .edit(row); // in https://datatables.net/forums/discussion/62880
 
-    // todo: add event handlers to make 'dirty' class to force saving later
+    // // save current values so we can verify change on close
+    // that.savedvalues = JSON.stringify(that.editor.get());
 
     // show tables
     that.showTables(row, rowdata._showedit);
@@ -510,4 +544,5 @@ ChildRow.prototype.closeChild = function(row) {
     that.destroyTables(row);
 
     row.child.hide();
+    that.updateRowDetails(row);
 };

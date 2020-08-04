@@ -29,8 +29,8 @@ function restore_editor_group(e, data, action, xhr) {
     this.ajax(this.groups_staticconfig);
 }
 function set_editor_event_handlers(ed) {
-    // need on 'preEditRefresh' to translate interest for editRefresh button
-    ed.on( 'preEditRefresh', translate_editor_group);
+    // need on 'preEditRefresh' to translate interest for editRefresh editChildRowRefresh buttons
+    ed.on( 'preEditRefresh preEditChildRowRefresh', translate_editor_group);
     // need on 'preSubmit' to translate interest for resubmission of form, e.g., after error occurs
     ed.on( 'preSubmit', translate_editor_group);
     // need on 'open' to translate interest for file uploads, as there's no 'preSubmit' for these

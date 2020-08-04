@@ -212,6 +212,24 @@ def get_request_data(form):
     # return decoded result
     return data
 
+def rest_url_for(endpoint, urlargs={}, **kwargs):
+    """
+    get the REST url for an endpoint, with optional arguments
+
+    :param endpoint:  endpoint to be supplied to url_for
+    :param urlargs: dict with arguments to be added to url
+    :param kwargs: url_for keyword arguments
+    :return:
+    """
+    url = url_for(endpoint, **kwargs)
+    # for some reason, url_for sometimes give /rest url and sometimes doesn't
+    while url[-5:] == '/rest':
+        url = url[0:-5]
+    url += '/rest'
+    if urlargs:
+        url += '?' + urlencode(urlargs)
+    return url
+
 # monkey patch yadcf_range_number search method
 def alt_yadcf_range_number(expr, value):
     v_from, v_to = value.split('-yadcf_delim-')
@@ -1019,6 +1037,10 @@ class CrudApi(MethodView):
                     'url':  '{}/rest/{}'.format(url_for(self.endpoint, **self.endpointvalues),'_id_'),
                 },
                 'editRefresh': {
+                    'type': 'PUT',
+                    'url':  '{}/rest'.format(url_for(self.endpoint, **self.endpointvalues)),
+                },
+                'editChildRowRefresh': {
                     'type': 'PUT',
                     'url':  '{}/rest'.format(url_for(self.endpoint, **self.endpointvalues)),
                 },

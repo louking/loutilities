@@ -60,12 +60,13 @@ function firstDataTableScrollAdjust() {
 }
 
 function jsDataTableScrollAdjust() {
-    if(_dt_table) {
-        var height = jsGetDataTableHeightPx() + "px";
-        $('.dataTables_scrollBody:has(#datatable)').css('max-height', height);
-        $('.DTFC_LeftBodyLiner').css('max-height', height);
-        _dt_table.draw();
-    }
+    return;
+    // if(_dt_table) {
+    //     var height = jsGetDataTableHeightPx() + "px";
+    //     $('.dataTables_scrollBody:has(#datatable)').css('max-height', height);
+    //     $('.DTFC_LeftBodyLiner').css('max-height', height);
+    //     _dt_table.draw();
+    // }
 }
 
 /**
@@ -203,7 +204,7 @@ function datatables(data, buttons, options, files) {
     var button_options = [];
     for (i=0; i<buttons.length; i++) {
         button = buttons[i];
-        if ($.inArray(button, ['create', 'edit', 'editRefresh', 'remove']) >= 0) {
+        if ($.inArray(button, ['create', 'edit', 'editRefresh', 'editChildRowRefresh', 'remove']) >= 0) {
             button_options.push({extend:button, editor:editor});
         } else {
             // convert button actions to javascript, // kludge for conversion from python

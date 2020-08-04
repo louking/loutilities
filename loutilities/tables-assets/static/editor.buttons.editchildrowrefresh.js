@@ -1,14 +1,27 @@
-$.fn.dataTable.ext.buttons.editRefresh = {
+/**
+ * extend buttons with 'editChildRowRefresh'
+ * generates preEditChildRowRefresh before start
+ * generates postEditChildRowRefresh when ajax completes, after refreshing row in table
+ *
+ * @type {{extend: string, action: $.fn.dataTable.ext.buttons.editChildRowRefresh.action, text: string}}
+ */
+$.fn.dataTable.ext.buttons.editChildRowRefresh = {
     extend: 'edit',
     text: 'Edit',
     action: function (e, dt, node, config) {
         var that = this;
-        this.processing( true );
+
+        // this puts spinner on the edit button until the form is about to open
+        // see dataTables.editor.js _buttons.edit ( $.extend( _buttons, {edit: ... }) )
+        that.processing( true );
+        config.editor.one('preOpen', function() {
+           that.processing( false );
+        });
 
         // Get currently selected row ids
         var selectedRows = dt.rows({selected:true}).ids();
 
-        config.editor._event( 'preEditRefresh', [dt, config.editor.s.action, node, config, selectedRows] )
+        config.editor._event( 'preEditChildRowRefresh', [dt, config.editor.s.action] )
 
         // Ajax request to refresh the data for those ids
         $.ajax( {
@@ -29,18 +42,12 @@ $.fn.dataTable.ext.buttons.editRefresh = {
                         // shouldn't use DT_RowId because of rowId configuration possibility
                         dt.row('#' + json.data[i][dt.init().rowId]).data(json.data[i]);
                     }
-                    dt.draw(false);
+                    // this seems to cause the parent table to close the row being edited
+                    // dt.draw(false);
                 }
 
-                // Trigger the original edit button's action
-                $.fn.dataTable.ext.buttons.edit.action.call(that, e, dt, node, config);
-
-                // if error, display message - application specific
-                if (json.error) {
-                    // this is application specific
-                    // not sure if there's a generic way to find the current editor instance
-                    config.editor.error('ERROR retrieving row from server:<br>' + json.error);
-                }
+                config.editor._event( 'postEditChildRowRefresh', [json, dt, node, config] );
+                // triggered function is required to show child row and open edit window
             }
         } );
     }
