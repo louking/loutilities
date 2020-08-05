@@ -995,8 +995,12 @@ class CrudApi(MethodView):
             'rowId': self.idSrc,
             'select': 'single' if not self.multiselect else 'os',
             'ordering': True,
-            'order': [1,'asc']
         }
+
+        # track col name to col index, for 'order' option preprocessing
+        name2index = {}
+
+        # get column options
         for column in self.clientcolumns:
             # skip rows that are editor only
             if 'edonly' in column: continue
@@ -1017,10 +1021,30 @@ class CrudApi(MethodView):
             dtcolumn.update(dtspecific)
             dt_options['columns'].append(dtcolumn)
 
+            # track col name to col index, for 'order' option preprocessing
+            if 'name' in dtcolumn:
+                name2index[dtcolumn['name']] = len(dt_options['columns']) - 1
+
         dt_options['serverSide'] = self.serverside
 
         # maybe user had their own ideas on what options are needed for table
         dt_options.update(self.dtoptions)
+
+        # preprocess 'order' option, if present, converting {string}:name to index
+        if 'order' in dt_options:
+            for ordcol in dt_options['order']:
+                if isinstance(ordcol[0], str):
+                    try:
+                        colname,seltype = ordcol[0].split(':')
+                        if seltype != 'name':
+                            raise ValueError
+                    except ValueError:
+                        raise ParameterError('order option "index" must be int or of form "colname:name": {}'.format(ordcol[0]))
+
+                    if colname in name2index:
+                        ordcol[0] = name2index[colname]
+                    else:
+                        raise ParameterError('order option name not found: {}'.format(colname))
 
         return dt_options
 
