@@ -118,7 +118,11 @@ function ChildRow(table, config, editor, base) {
         that.updateHeaderDetails();
     });
 
-    // set up events
+    // sometimes DataTables draws the table which changes the row configuration, so need to
+    // update the header details
+    that.table.on('draw.dt', function(e, settings) {
+        that.updateHeaderDetails();
+    });
 
     // edit button will open the child row if it's not already open
     // if it's already open need to hide the text display and bring up the edit form
@@ -161,15 +165,23 @@ function ChildRow(table, config, editor, base) {
             if (that.debug) {
                 console.log(new Date().toISOString() + ' submitComplete.dt event, action = ' + action);
             }
+
+            // we only care about edit submits
             if (action !== 'edit') {
                 return;
             }
+
+            // take no action if this was a row reorder. normal submit should only be single row
             var modifier = that.editor.modifier();
+            if (modifier.length > 1) {
+                return;
+            }
+
+            // not sure this is necessary, as after the submit there's a draw which seems to close the row
             var row = that.table.row(modifier);
             var tr = $(row.node());
             if (row.child.isShown()) {
                 that.closeChild(row);
-                that.showChild(row);
             }
             that.updateHeaderDetails();
         });
