@@ -75,15 +75,16 @@ function ChildRow(table, config, editor, base) {
         var row = that.table.row( tr );
 
         if ( row.child.isShown() ) {
-            // This row is already open - close it, close editor if open
+            // This row is already open - close it, close editor if open, abort if close error
+            if ( ! that.closeChild(row) ) {
+                return;
+            }
             that.hideChild(row);
-            that.closeChild(row);
         }
         else {
             // Open this row
             that.showChild(row);
         }
-        that.updateHeaderDetails();
     } );
 
     // clicking +/- in the header displays all rows' data
@@ -181,6 +182,9 @@ function ChildRow(table, config, editor, base) {
             var row = that.table.row(modifier);
             var tr = $(row.node());
             if (row.child.isShown()) {
+                // successful save, don't need savedvalues any more
+                if (that.debug) {console.log(new Date().toISOString() + ' submitComplete.dt: removing savedvalues');}
+                delete that.savedvalues;
                 that.closeChild(row);
             }
             that.updateHeaderDetails();
@@ -345,6 +349,27 @@ ChildRow.prototype.showTables = function(row, showedit) {
                 // create child row editor
                 childrowtablemeta.editor = new $.fn.dataTable.Editor(edopts);
 
+                // get confirmation when navigating away from changed edit forms,
+                // for editors on tables which don't have child row
+                // TODO: this code isn't working - see https://github.com/louking/members/issues/173
+                childrowtablemeta.editor
+                    .on( 'open', function () {
+                        // Store the values of the fields on open
+                        childrowtablemeta.savedvalues = JSON.stringify( childrowtablemeta.editor.get() );
+
+                        childrowtablemeta.editor.on( 'preClose', function ( e ) {
+                            // On close, check if the values have changed and ask for closing confirmation if they have
+                            if ( childrowtablemeta.savedvalues !== JSON.stringify( childrowtablemeta.editor.get() ) ) {
+                                var confirmed = confirm( 'You have unsaved changes. Are you sure you want to exit?' );
+                                return confirmed;
+                            }
+                        } )
+                    } )
+                    .on( 'postCreate postEdit close', function () {
+                        childrowtablemeta.editor.off( 'preClose' );
+                        delete childrowtablemeta.savedvalues;
+                    } );
+
                 // set up special event handlers for group management, if requested
                 if (register_group_for_editor) {
                     if (that.config.group) {
@@ -378,14 +403,8 @@ ChildRow.prototype.showTables = function(row, showedit) {
                     });
                 }
 
-                // buttons for datatable need to point at this editor
-                // TODO: need to determine if 'edit' or 'editChildRowRefresh is appropriate, based on configuration
-                // TODO: also need to determine what buttons should be set up, based on configuration
-                buttons = [
-                    {extend:'create', editor:childrowtablemeta.editor},
-                    {extend:'editChildRowRefresh', editor:childrowtablemeta.editor},
-                    {extend:'remove', editor:childrowtablemeta.editor}
-                ];
+                // annotate buttons as appropriate
+                buttons = get_button_options(tableconfig.args.buttons, childrowtablemeta.editor)
             }
             // add requested datatable column options
             if (tableconfig.args.columns && tableconfig.args.columns.datatable) {
@@ -418,7 +437,7 @@ ChildRow.prototype.showTables = function(row, showedit) {
             childrowtablemeta.table = table
                 // don't let select / deselect propogate to the parent table
                 // from https://datatables.net/forums/discussion/comment/175517/#Comment_175517
-                .on('select.dt deselect.dt', function (e) {
+                .on('select.dt deselect.dt draw.dt', function (e) {
                     e.stopPropagation();
                 })
                 .DataTable(dtopts);
@@ -508,6 +527,17 @@ ChildRow.prototype.editChild = function(row) {
     var that = this;
     if (that.debug) {console.log(new Date().toISOString() + ' editChild()');}
 
+    // On new edit, check if the values have changed and ask for closing confirmation if they have
+    if (that.debug) {console.log(new Date().toISOString() + ' editChild(): checking savedvalues');}
+    if ( that.savedvalues  ) {
+        // try closing the row being edited, user may abort at this point
+        if ( ! that.closeChild(that.editrow) ) {
+            // turn off processing (found in loutilities/tables-assets/static/editor.buttons.editchildrowrefresh.js
+            that.editor._event( 'preOpen', [])
+            return;
+        }
+    }
+
     // see see https://datatables.net/examples/api/row_details.html, https://datatables.net/blog/2019-01-11
     var env = new nunjucks.Environment();
     var rowdata = row.data();
@@ -522,7 +552,6 @@ ChildRow.prototype.editChild = function(row) {
                 "text": "Save",
                 "action": function () {
                     that.editor.submit();
-                    that.closeChild(row);
                 }
             },
             {
@@ -534,8 +563,11 @@ ChildRow.prototype.editChild = function(row) {
         ])
         .edit(row); // in https://datatables.net/forums/discussion/62880
 
-    // // save current values so we can verify change on close
-    // that.savedvalues = JSON.stringify(that.editor.get());
+    // save current values so we can verify change on close
+    if (that.debug) {console.log(new Date().toISOString() + ' editChild(): saving savedvalues');}
+    that.savedvalues = JSON.stringify(that.editor.get());
+    that.editrow = row;
+
 
     // show tables
     that.showTables(row, rowdata._showedit);
@@ -550,11 +582,25 @@ ChildRow.prototype.closeChild = function(row) {
     var that = this;
     if (that.debug) {console.log(new Date().toISOString() + ' closeChild()');}
 
-    var rowdata = row.data();
+    // On close, check if the values have changed and ask for closing confirmation if they have
+    if (that.debug) {console.log(new Date().toISOString() + ' closeChild(): checking savedvalues');}
+    if ( that.savedvalues && that.savedvalues !== JSON.stringify(that.editor.get()) ) {
+        if ( ! confirm( 'You have unsaved changes. Are you sure you want to exit?' ) ) {
+            // abort!
+            if (that.debug) {console.log(new Date().toISOString() + ' closeChild(): cancelling close');}
+            return false;
+        } else {
+            if (that.debug) {console.log(new Date().toISOString() + ' closeChild(): removing savedvalues');}
+            delete that.savedvalues;
+        }
+    }
 
     // remove table(s) and editor(s)
     that.destroyTables(row);
 
     row.child.hide();
     that.updateRowDetails(row);
+
+    // successful
+    return true;
 };

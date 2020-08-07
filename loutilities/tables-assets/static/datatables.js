@@ -108,6 +108,34 @@ function jsGetDataTableHeightPx() {
 }
 
 /**
+ * get the button options, correctly annotated with indicated editor
+ *
+ * @param buttons - list of editor actions 'create', 'edit', 'editRefresh', 'editChildRowRefresh', 'remove'
+ *          or other button configuration.
+ *          See https://datatables.net/reference/option/buttons and https://datatables.net/reference/option/buttons.buttons
+ * @param editor - editor to annotate action with
+ * @returns {[{extend:button, editor: editor}, {buttons.buttons fields}, ...]}
+ */
+function get_button_options(buttons, editor) {
+    var button_options = [];
+    for (i=0; i<buttons.length; i++) {
+        button = buttons[i];
+        if ($.inArray(button, ['create', 'edit', 'editRefresh', 'editChildRowRefresh', 'remove']) >= 0) {
+            button_options.push({extend:button, editor:editor});
+        } else {
+            // convert button actions to javascript, // kludge for conversion from python
+            if (button.hasOwnProperty('action')) {
+                button.action = eval(button.action)
+            }
+
+            button_options.push(button);
+        }
+    }
+
+    return button_options;
+}
+
+/**
  * configure dataTables for table with id=datatable
  *
  * @param data - list of objects for rendering or url for ajax retrieval of similar object
@@ -201,21 +229,7 @@ function datatables(data, buttons, options, files) {
     buttons = checkeval(buttons);
 
     // set up buttons, special care for editor buttons
-    var button_options = [];
-    for (i=0; i<buttons.length; i++) {
-        button = buttons[i];
-        if ($.inArray(button, ['create', 'edit', 'editRefresh', 'editChildRowRefresh', 'remove']) >= 0) {
-            button_options.push({extend:button, editor:editor});
-        } else {
-            // convert button actions to javascript, // kludge for conversion from python
-            if (button.hasOwnProperty('action')) {
-                button.action = eval(button.action)
-            }
-
-            button_options.push(button);
-        }
-    }
-
+    var button_options = get_button_options(buttons, editor);
     $.extend(options.dtopts, {buttons:button_options});
 
     // handle rowReorder if requested; if no editor, disable rowReorder

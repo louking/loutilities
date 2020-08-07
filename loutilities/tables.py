@@ -535,6 +535,10 @@ class CrudChildElement():
             table - CrudApi table instance
             type - CHILDROW_TYPE_TABLE
             args -
+                buttons - list of editor actions 'create', 'edit', 'editRefresh', 'editChildRowRefresh', 'remove'
+                    or other button configuration.
+                    See https://datatables.net/reference/option/buttons and
+                    https://datatables.net/reference/option/buttons.buttons
                 columns (optional)
                     datatable - { col.data : {attributes to merge}, ... }
                     editor    - { col.name : {attributes to merge}, ... }
@@ -568,7 +572,10 @@ class CrudChildElement():
             args['dtopts'] = self.table.getdtoptions()
             args['edopts'] = self.table.getedoptions()
             args['cropts'] = self.table.getchildrowoptions()
-            args['buttons'] = self.table.buttons
+            # don't override caller buttons, else pick up from the table default
+            if 'buttons' not in args:
+                args['buttons'] = self.table.buttons
+
             # remove server based column control as this has been configured by the base table
             # and we don't want to try to pass that to the client
             # add data2col lookup
@@ -833,9 +840,9 @@ class CrudApi(MethodView):
         self.childtables = {}
         if self.childrowoptions:
             childelementargs = self.childrowoptions.get('childelementargs', [])
-            for args in childelementargs:
-                self.childelements.append(CrudChildElement(**args))
-                self.childtables[args['name']] = args
+            for ceargs in childelementargs:
+                self.childelements.append(CrudChildElement(**ceargs))
+                self.childtables[ceargs['name']] = ceargs
 
     def register(self):
         # name for view is last bit of fully named endpoint
