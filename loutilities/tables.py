@@ -230,6 +230,23 @@ def rest_url_for(endpoint, urlargs={}, **kwargs):
         url += '?' + urlencode(urlargs)
     return url
 
+def page_url_for(endpoint, urlargs={}, _external=False, **kwargs):
+    """
+    get the page url for an endpoint, with optional arguments
+
+    :param endpoint:  endpoint to be supplied to url_for
+    :param urlargs: dict with arguments to be added to url
+    :param kwargs: url_for keyword arguments
+    :return:
+    """
+    url = url_for(endpoint, _external=_external, **kwargs)
+    # for some reason, url_for sometimes give /rest url and sometimes doesn't
+    while url[-5:] == '/rest':
+        url = url[0:-5]
+    if urlargs:
+        url += '?' + urlencode(urlargs)
+    return url
+
 # monkey patch yadcf_range_number search method
 def alt_yadcf_range_number(expr, value):
     v_from, v_to = value.split('-yadcf_delim-')
