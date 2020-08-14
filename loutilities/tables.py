@@ -307,6 +307,22 @@ def getattrdeep(obj, attr):
     else:
         return getattrdeep(getattr(obj, attrbranches[0]), '.'.join(attrbranches[1:]))
 
+def setattrdeep(obj, attr, val):
+    '''
+    set an attribute which might be keyed with dotted notation
+
+    :param obj: possibly multilevel object
+    :param attr: key attribute, possible dotted notation
+    :param val: value to set
+    '''
+    attrbranches = attr.split('.')
+    # we're at the end of the branches, just return the value
+    if len(attrbranches) == 1:
+        setattr(obj, attr, val)
+    # drill down further
+    else:
+        setattrdeep(getattr(obj, attrbranches[0]), '.'.join(attrbranches[1:]), val)
+
 class DataTablesEditor():
     '''
     handle CRUD request from dataTables Editor
@@ -369,7 +385,7 @@ class DataTablesEditor():
             if hasattr(self.dbmapping[dbattr], '__call__'):
                 callback = self.dbmapping[dbattr]
                 try:
-                    setattr(dbrow, dbattr, callback(inrow))
+                    setattrdeep(dbrow, dbattr, callback(inrow))
                 # maybe inrow attribute wasn't found, e.g., inline edit mode
                 except KeyError:
                     pass
@@ -378,9 +394,9 @@ class DataTablesEditor():
             else:
                 key = self.dbmapping[dbattr]
                 if key in inrow:
-                    setattr(dbrow, dbattr, inrow[key])
-                    if self.null2emptystring and getattr(dbrow, dbattr) == '':
-                        setattr(dbrow, dbattr, None)
+                    setattrdeep(dbrow, dbattr, inrow[key])
+                    if self.null2emptystring and getattrdeep(dbrow, dbattr) == '':
+                        setattrdeep(dbrow, dbattr, None)
                 else:
                     # ignore -- leave dbrow unchanged for this dbattr
                     pass
@@ -1682,14 +1698,13 @@ class DteDbRelationship():
                     queryfilter = itemvalue
                     # queryfilter = {self.valuefield : itemvalue}
                     thisitem = self.fieldmodel.query.filter_by(**queryfilter).one()
-                    items.append(thisitem)
                 # operation through "via" model to access bind table
                 else:
                     # note self.viafilter must be or return dict
                     queryfilter = self.viafilter() if callable(self.viafilter) else self.viafilter
                     queryfilter[self.viafield] = itemvalue[self.valuefield]
                     thisitem = self.viamodel.query.filter_by(**queryfilter).one()
-                    items.append(thisitem)
+                items.append(thisitem)
             return items
         else:
             itemvalue = formrow[self.formfield] if formrow[self.formfield] else None
@@ -2230,15 +2245,15 @@ class DbCrudApi(CrudApi):
                             columndt_args.update(**_columndt_args)
                             self.servercolumns.append(ColumnDT(**columndt_args))
                             if submodel not in self.joins:
-                                print('DbCrudApi: self {} joining {}'.format(args['model'], submodel))
+                                # print('DbCrudApi: self {} joining {}'.format(args['model'], submodel))
                                 self.joins.append(submodel)
 
                             # db processing section
-                        ## save handler, set data to db using handler set function
-                        ## for now, make this a noop, and readonly. See loutilities.tables.DataTablesEditor.set_dbrow()
-                        # self.dbmapping[dbattr] = thisreln.set        #TODO: doesn't work
-                        self.dbmapping[dbattr] = '__readonly__'  # won't be found so no db update to this field will be made
-                        col['type'] = 'readonly'  # force column to be readonly on form
+                            ## save handler, set data to db using handler set function
+                            ## for now, make this a noop, and readonly. See loutilities.tables.DataTablesEditor.set_dbrow()
+                            # self.dbmapping[dbattr] = thisreln.set        #TODO: doesn't work
+                            self.dbmapping[dbattr] = '__readonly__'  # won't be found so no db update to this field will be made
+                            col['type'] = 'readonly'  # force column to be readonly on form
 
                     else:
                         raise ParameterError('can\'t handle more than 2 levels of dbattr yet')
@@ -2310,7 +2325,7 @@ class DbCrudApi(CrudApi):
                         if type(sqla_expr) == InstrumentedAttribute:
                             subsubmodel = sqla_expr.class_
                             if subsubmodel not in self.joins:
-                                print('DbCrudApi: self {} joining {}'.format(args['model'], subsubmodel))
+                                # print('DbCrudApi: self {} joining {}'.format(args['model'], subsubmodel))
                                 self.joins.append(subsubmodel)
 
                     # db processing section
@@ -2673,7 +2688,7 @@ class DbCrudApi(CrudApi):
         else:
             # filter applies to self.model
             query = self.db.session.query().select_from(self.model).filter_by(**self.queryparams).filter(*self.queryfilters)
-            # add required joins (determined in __init__
+            # add required joins (determined in __init__)
             for j in self.joins:
                 query = query.join(j)
 
