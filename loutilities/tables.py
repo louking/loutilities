@@ -343,6 +343,9 @@ class DataTablesEditor():
         self.formmapping = formmapping
         self.null2emptystring = null2emptystring
 
+        # can update this via self.set_response_hook(function(responserow))
+        self.response_hook = lambda responserow: None
+
     def get_response_data(self, dbentry):
         '''
         set form values based on database model object
@@ -370,6 +373,7 @@ class DataTablesEditor():
                 if self.null2emptystring and data[key]==None:
                     data[key] = ''
 
+        self.response_hook(data)
         return data
 
     def set_dbrow(self, inrow, dbrow):
@@ -381,6 +385,10 @@ class DataTablesEditor():
         '''
 
         for dbattr in self.dbmapping:
+            # detect special value for type: readonly
+            if self.dbmapping[dbattr] == '__readonly__':
+                continue
+
             # call the function to fill dbrow.<dbattr>
             if hasattr(self.dbmapping[dbattr], '__call__'):
                 callback = self.dbmapping[dbattr]
@@ -401,6 +409,18 @@ class DataTablesEditor():
                     # ignore -- leave dbrow unchanged for this dbattr
                     pass
 
+
+    def set_response_hook(self, response_hook):
+        """
+        set function which updates response data just before get_response_data returns
+
+        ..note::
+            only works for serverside=False
+
+        :param response_hook: function(responserow)
+        :return: None
+        """
+        self.response_hook = response_hook
 
 class TablesCsv(MethodView):
     '''
@@ -2219,6 +2239,11 @@ class DbCrudApi(CrudApi):
 
             # no special treatment is the norm
             if not treatment:
+                # make sure mapping doesn't get executed if readonly
+                if col.get('type', None) == 'readonly':
+                    # special value detected in set_dbrow before setattr attempted
+                    self.dbmapping[dbattr] = '__readonly__'
+
                 # some special processing to check for subrecords, unless there's a function
                 if not callable(dbattr):
                     branches = dbattr.split('.')
@@ -2252,8 +2277,6 @@ class DbCrudApi(CrudApi):
                             ## save handler, set data to db using handler set function
                             ## for now, make this a noop, and readonly. See loutilities.tables.DataTablesEditor.set_dbrow()
                             # self.dbmapping[dbattr] = thisreln.set        #TODO: doesn't work
-                            self.dbmapping[dbattr] = '__readonly__'  # won't be found so no db update to this field will be made
-                            col['type'] = 'readonly'  # force column to be readonly on form
 
                     else:
                         raise ParameterError('can\'t handle more than 2 levels of dbattr yet')
