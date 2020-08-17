@@ -564,6 +564,7 @@ ChildRow.prototype.editChild = function(row) {
         .edit(row); // in https://datatables.net/forums/discussion/62880
 
     // save current values so we can verify change on close
+    // requires Editor 1.9.5 (or patch to editor.jqueryui.js (editor.jqueryui.patch-discussion-63653.js)
     if (that.debug) {console.log(new Date().toISOString() + ' editChild(): saving savedvalues');}
     that.savedvalues = JSON.stringify(that.editor.get());
     that.editrow = row;
@@ -587,12 +588,17 @@ ChildRow.prototype.closeChild = function(row) {
     if ( that.savedvalues && that.savedvalues !== JSON.stringify(that.editor.get()) ) {
         if ( ! confirm( 'You have unsaved changes. Are you sure you want to exit?' ) ) {
             // abort!
-            if (that.debug) {console.log(new Date().toISOString() + ' closeChild(): cancelling close');}
+            if (that.debug) {
+                console.log(new Date().toISOString() + ' closeChild(): cancelling close');
+            }
             return false;
-        } else {
-            if (that.debug) {console.log(new Date().toISOString() + ' closeChild(): removing savedvalues');}
-            delete that.savedvalues;
         }
+    }
+
+    // closing so we need to remove savedvalues
+    if ( that.savedvalues ) {
+        if (that.debug) {console.log(new Date().toISOString() + ' closeChild(): removing savedvalues');}
+        delete that.savedvalues;
     }
 
     // remove table(s) and editor(s)

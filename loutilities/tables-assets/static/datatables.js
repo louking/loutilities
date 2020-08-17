@@ -200,6 +200,25 @@ function datatables(data, buttons, options, files) {
         $.extend(options.editoropts,{table:'#datatable'})
         editor = new $.fn.dataTable.Editor ( options.editoropts );
 
+        // adapted from https://editor.datatables.net/examples/api/confirmClose
+        // requires Editor 1.9.5 (or patch to editor.jqueryui.js (editor.jqueryui.patch-discussion-63653.js)
+        var openVals;
+        editor
+            .on( 'open', function () {
+                // Store the values of the fields on open
+                openVals = JSON.stringify( editor.get() );
+
+                editor.on( 'preClose', function ( e ) {
+                    // On close, check if the values have changed and ask for closing confirmation if they have
+                    if ( openVals !== JSON.stringify( editor.get() ) ) {
+                        return confirm( 'You have unsaved changes. Are you sure you want to exit?' );
+                    }
+                } );
+            } )
+            .on( 'postCreate postEdit close', function () {
+                editor.off( 'preClose' );
+            } );
+
         if (options.updateopts !== undefined) {
             for (i=0; i<options.updateopts.length; i++) {
                 updateopt = options.updateopts[i]
