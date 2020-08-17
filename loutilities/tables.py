@@ -316,7 +316,7 @@ def setattrdeep(obj, attr, val):
     :param val: value to set
     '''
     attrbranches = attr.split('.')
-    # we're at the end of the branches, just return the value
+    # we're at the end of the branches, just set the value
     if len(attrbranches) == 1:
         setattr(obj, attr, val)
     # drill down further
