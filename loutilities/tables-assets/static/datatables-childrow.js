@@ -37,6 +37,69 @@ function render_grip() {
 }
 
 /**
+ * check tables to see if unsaved changes
+ *
+ * @param base - childrow base from which to work
+ * @param row - row
+ * @param debug - true if debug required
+ * @returns {boolean} - true if ok to remove tables for this row
+ */
+function checkTables(base, row, debug) {
+    if (debug) {console.log(new Date().toISOString() + ' checkTables()');}
+
+    // assume all is ok
+    var oktoclose = true;
+
+    // check table(s) and editor(s) if they exist
+    var id = row.id();
+    if (base[id]) {
+        $.each(base[id], function (tablename, rowtablemeta) {
+            // drill down if needed
+            var tablenames = Object.keys(base[id]);
+            for (var i=0; i<tablenames.length; i++) {
+                var tablename = tablenames[i];
+                var childbase = base[id][tablename].childbase;
+                if (childbase) {
+                    var rowids = Object.keys(childbase);
+                    for (j=0; j<rowids.length; j++) {
+                        var rowid = rowids[j];
+                        var thisrow = base[id][tablename].table.row('#' + rowid);
+                        if ( ! checkTables(childbase, thisrow, debug)) {
+                            if (debug) {
+                                console.log(new Date().toISOString() + ' checkTables(): cancelling close (from lower level)');
+                            }
+                            oktoclose = false;
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            // check this row
+            if (rowtablemeta.editor) {
+                var editor = rowtablemeta.editor;
+                // note at this level savedvalues is kept in editor class
+                if (editor.savedvalues) {
+                    if (editor.savedvalues !== JSON.stringify(editor.get())) {
+                        if (!confirm('You have unsaved changes. Are you sure you want to exit?')) {
+                            // abort!
+                            if (debug) {
+                                console.log(new Date().toISOString() + ' checkTables(): cancelling close');
+                            }
+                            oktoclose = false;
+                        }
+                        // break out of jquery $.each regardless of response to confirm
+                        return false;
+                    }
+                }
+            }
+        });
+    }
+
+    return oktoclose;
+}
+
+/**
  * Child row management for a table
  *
  * @param {dataTable} table - dataTables instance of the table for which this child row is maintained
@@ -351,23 +414,28 @@ ChildRow.prototype.showTables = function(row, showedit) {
 
                 // get confirmation when navigating away from changed edit forms,
                 // for editors on tables which don't have child row
-                // TODO: this code isn't working - see https://github.com/louking/members/issues/173
                 childrowtablemeta.editor
-                    .on( 'open', function () {
-                        // Store the values of the fields on open
-                        childrowtablemeta.savedvalues = JSON.stringify( childrowtablemeta.editor.get() );
+                    .on( 'open', function (e, mode, action) {
+                        // this is Editor
+                        var childeditor = this;
 
-                        childrowtablemeta.editor.on( 'preClose', function ( e ) {
+                        // Store the values of the fields on open (store in editor space)
+                        childeditor.savedvalues = JSON.stringify( childeditor.get() );
+
+                        childeditor.on( 'preClose', function ( e ) {
                             // On close, check if the values have changed and ask for closing confirmation if they have
-                            if ( childrowtablemeta.savedvalues !== JSON.stringify( childrowtablemeta.editor.get() ) ) {
+                            if ( childeditor.savedvalues !== JSON.stringify( childeditor.get() ) ) {
                                 var confirmed = confirm( 'You have unsaved changes. Are you sure you want to exit?' );
                                 return confirmed;
                             }
                         } )
                     } )
                     .on( 'postCreate postEdit close', function () {
-                        childrowtablemeta.editor.off( 'preClose' );
-                        delete childrowtablemeta.savedvalues;
+                        // this is Editor
+                        var childeditor = this;
+
+                        childeditor.off( 'preClose' );
+                        delete childeditor.savedvalues;
                     } );
 
                 // set up special event handlers for group management, if requested
@@ -582,6 +650,11 @@ ChildRow.prototype.editChild = function(row) {
 ChildRow.prototype.closeChild = function(row) {
     var that = this;
     if (that.debug) {console.log(new Date().toISOString() + ' closeChild()');}
+
+    // check tables to see if there are any changed rows. This returns false if we need to abort
+    if ( ! checkTables(that.base, row, that.debug) ) {
+        return false;
+    }
 
     // On close, check if the values have changed and ask for closing confirmation if they have
     if (that.debug) {console.log(new Date().toISOString() + ' closeChild(): checking savedvalues');}
