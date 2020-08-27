@@ -235,6 +235,11 @@ function ChildRow(table, config, editor, base) {
                 return;
             }
 
+            // don't close if error occurred
+            if (json.error) {
+                return;
+            }
+
             // take no action if this was a row reorder. normal submit should only be single row
             var modifier = that.editor.modifier();
             if (modifier.length > 1) {
