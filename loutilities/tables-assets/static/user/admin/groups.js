@@ -13,7 +13,7 @@ function translate_editor_group(e, data, action) {
         var urlsplit = newconfig[action].url.split('?');
         var urlparams = allUrlParams();
 
-        // skip path. This allows for somewhat embarrasing case of multiple ? in the string
+        // skip path. This allows for somewhat embarrassing case of multiple ? in the string
         // note these override original url parameters
         for (var i=1; i<urlsplit.length; i++) {
             var params = deparam(urlsplit[i]);
@@ -57,6 +57,17 @@ function register_group_for_editor(groupname, groupselectselector, ed) {
     set_editor_event_handlers(ed);
 }
 
+// gives access to url from within url function inside of translate_datatable_group()
+var dt_url_hooks = [];
+/**
+ * add a hook which is called from anonymous function within translate_datatable_group()
+ *
+ * @param fn - function fn is passed url and returns possibly updated url, i.e., newurl = fn(url)
+ */
+function dt_add_url_hook(fn) {
+    dt_url_hooks.push(fn);
+}
+
 var dt_groupname = null;
 var dt_groupselectselector = null;
 var dt_lastjson = null;
@@ -79,10 +90,19 @@ function translate_datatable_group(url) {
             // note use of lodash _.replace
             ajaxurl = _.replace(decodeURIComponent(url), _.replace('<{groupname}>', '{groupname}', dt_groupname), group);
         }
-        // WARNING: nonstandard/nonpublic use of settings information
-        var dt = settings.oApi;
+
         // tack on current url query parameters
         ajaxurl += '?' + setParams(allUrlParams());
+
+        // apply url hooks
+        for (var i=0; i<dt_url_hooks.length; i++) {
+            var fn = dt_url_hooks[i];
+            ajaxurl = fn(ajaxurl);
+        }
+
+        // WARNING: nonstandard/nonpublic use of settings information
+        var dt = settings.oApi;
+
         // adapted from jquery.dataTables.js _fnBuildAjax; _fn functions are from dataTables
         $.ajax({
             "url": ajaxurl,
@@ -111,7 +131,6 @@ function translate_datatable_group(url) {
         });
     }
 }
-
 
 // see https://stackoverflow.com/a/18660968/799921
 function link_is_external(link_element) {
