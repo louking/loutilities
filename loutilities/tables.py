@@ -2336,15 +2336,13 @@ class DbCrudApi(CrudApi):
                     # table modifies getter to handle associated values
                     self.formmapping[formfield] = thisreln.get
 
-                    # server side tables adds ColumnDT for page paint (untested)
+                    # server side tables adds ColumnDT for page paint
                     if args['serverside']:
                         sqla_expr = thisreln.sqla_expr()
-                        # louking / members  # 152 (search for this to find required matching code)
+                        # louking / members  #152 (search for this to find required matching code)
                         self.servercolumns += thisreln.col_dt_list(**_columndt_args)
 
                         # need to add join of this relationship
-                        # if type(sqla_expr) == InstrumentedAttribute and sqla_expr.class_ not in self.joins:
-                        #     self.joins.append(sqla_expr.class_)
                         if type(sqla_expr) == InstrumentedAttribute:
                             subsubmodel = sqla_expr.class_
                             if subsubmodel not in self.joins:
@@ -2711,9 +2709,10 @@ class DbCrudApi(CrudApi):
         else:
             # filter applies to self.model
             query = self.db.session.query().select_from(self.model).filter_by(**self.queryparams).filter(*self.queryfilters)
+            # query = self.model.query.filter_by(**self.queryparams).filter(*self.queryfilters)
             # add required joins (determined in __init__)
             for j in self.joins:
-                query = query.join(j)
+                query = query.outerjoin(j)
 
             args = request.args.to_dict()
             rowTable = DataTables(args, query, self.servercolumns)
@@ -2724,6 +2723,10 @@ class DbCrudApi(CrudApi):
             # louking/members#152 (search for this to find required matching code
             # TODO: only handles one level deep - should we make this recursive?
             for row in output['data']:
+                # # replace _placeholder with id of record. Not sure why this happens but when we switched
+                # # the query to be self.model..., a record was returned rather than id
+                # if '_placeholder' in row:
+                #     row['_placeholder'] = row['_placeholder'].id
                 delfields = []
                 addfields = {}
                 for field in row:
