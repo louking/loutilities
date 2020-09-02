@@ -92,7 +92,7 @@ def is_jsonable(x):
     try:
         json.dumps(x)
         return True
-    except (TypeError, OverflowError):
+    except (TypeError, OverflowError) as e:
         return False
 
 
@@ -104,7 +104,11 @@ def copyopts(opts):
     :param opts: dict or scalar
     :return: json serializable dict or scalar
     '''
-    if isinstance(opts, dict):
+    if isinstance(opts, list):
+        newopts = []
+        for i in opts:
+            newopts.append(copyopts(i))
+    elif isinstance(opts, dict):
         newopts = {}
         for f in opts:
             newopts[f] = copyopts(opts[f])
@@ -637,6 +641,7 @@ class CrudChildElement():
             for thiscol in self.table.clientcolumns:
                 copycol = copyopts(thiscol)
                 copycol.pop('_ColumnDT_args', None)
+                copycol.pop('onclause', None)
                 columns.append(copycol)
                 data2col[copycol['data']] = copycol
             args['clientcolumns'] = columns
@@ -1106,6 +1111,9 @@ class CrudApi(MethodView):
                     else:
                         raise ParameterError('order option name not found: {}'.format(colname))
 
+        # deep copy, taking care not to include non-jsonable values
+        dt_options = copyopts(dt_options)
+
         return dt_options
 
     def getedoptions(self):
@@ -1169,6 +1177,9 @@ class CrudApi(MethodView):
         # maybe user had their own ideas on what options are needed for editor
         ed_options.update(self.edoptions)
         if debug: current_app.logger.debug('getedoptions(): ed_options={}'.format(ed_options))
+
+        # deep copy, taking care not to include non-jsonable values
+        ed_options = copyopts(ed_options)
 
         return ed_options
 
@@ -1604,6 +1615,8 @@ class DteDbRelationship():
     * nullable - set to True if item can give null (unselected) return, default False (only applies for usellist=False)
     * queryparams - dict containing parameters for query to determine options, or callable which returns such a dict
 
+    * onclause - sqlalchemy expression: if there is ambiguous relationship between records, this is used as part of
+        outerjoin() to clarify the relationship. E.g., Motion.seconder_id == LocalUser.id
 
     Basic Use:
 
@@ -1674,6 +1687,7 @@ class DteDbRelationship():
                     searchbox=False,
                     nullable=False,
                     queryparams= {},
+                    onclause=None,
                     )
         args.update(kwargs)
 
@@ -1847,6 +1861,8 @@ class DteDbSubrec():
     * model - model comprises the subrec
     * dbfield - field in model which is used to be displayed to the user
     * formfield - field name on form associated with this db field
+    * onclause - sqlalchemy expression: if there is ambiguous relationship between records, this is used as part of
+        outerjoin() to clarify the relationship. E.g., Motion.seconder_id == LocalUser.id
 
     e.g.,
         class Parent(Base):
@@ -1873,6 +1889,7 @@ class DteDbSubrec():
                     field=None,
                     subfield=None,
                     formfield=None,
+                    onclause=None,
                     )
         args.update(kwargs)
 
@@ -2261,7 +2278,16 @@ class DbCrudApi(CrudApi):
                         submodelname = branches[0]
                         submodel = getattr(args['model'], submodelname).prop.entity.class_
                         subfield = branches[1]
-                        thisreln = DteDbSubrec(model=submodel, field=submodelname, subfield=subfield, formfield=formfield)
+                        onclause = None
+                        if 'onclause' in col:
+                            onclause = col['onclause']
+                        thisreln = DteDbSubrec(
+                            model=submodel,
+                            field=submodelname,
+                            subfield=subfield,
+                            formfield=formfield,
+                            onclause=onclause,
+                        )
                         self.formmapping[formfield] = thisreln.get
 
                         # server side tables adds ColumnDT for page paint
@@ -2271,7 +2297,12 @@ class DbCrudApi(CrudApi):
                             self.servercolumns.append(ColumnDT(**columndt_args))
                             if submodel not in self.joins:
                                 # print('DbCrudApi: self {} joining {}'.format(args['model'], submodel))
-                                self.joins.append(submodel)
+                                thisjoin = submodel
+                                if type(thisreln.onclause) != type(None):
+                                    thisjoin = {'model': submodel, 'onclause': thisreln.onclause}
+                                if thisjoin not in self.joins:
+                                    # print('DbCrudApi: self {} joining {}'.format(args['model'], subsubmodel))
+                                    self.joins.append(thisjoin)
 
                             # db processing section
                             ## save handler, set data to db using handler set function
@@ -2345,9 +2376,12 @@ class DbCrudApi(CrudApi):
                         # need to add join of this relationship
                         if type(sqla_expr) == InstrumentedAttribute:
                             subsubmodel = sqla_expr.class_
-                            if subsubmodel not in self.joins:
+                            thisjoin = subsubmodel
+                            if type(thisreln.onclause) != type(None):
+                                thisjoin = {'model': subsubmodel, 'onclause': thisreln.onclause}
+                            if thisjoin not in self.joins:
                                 # print('DbCrudApi: self {} joining {}'.format(args['model'], subsubmodel))
-                                self.joins.append(subsubmodel)
+                                self.joins.append(thisjoin)
 
                     # db processing section
                     ## save handler, set data to db using handler set function
@@ -2709,15 +2743,28 @@ class DbCrudApi(CrudApi):
         else:
             # filter applies to self.model
             query = self.db.session.query().select_from(self.model).filter_by(**self.queryparams).filter(*self.queryfilters)
-            # query = self.model.query.filter_by(**self.queryparams).filter(*self.queryfilters)
+
             # add required joins (determined in __init__)
             for j in self.joins:
-                query = query.outerjoin(j)
+                if isinstance(j, dict):
+                    model = j['model']
+                    onclause = j['onclause']
+                else:
+                    model = j
+                    onclause = None
+                if type(onclause) != type(None):
+                    query = query.outerjoin(model, onclause)
+                else:
+                    query = query.outerjoin(model)
 
             args = request.args.to_dict()
             rowTable = DataTables(args, query, self.servercolumns)
 
             output = rowTable.output_result()
+
+            if 'error' in output:
+                self._error = output['error']
+                raise ParameterError(self._error)
 
             # kludge? to take items in object notation, and make into object
             # louking/members#152 (search for this to find required matching code
