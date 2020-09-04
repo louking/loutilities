@@ -591,6 +591,7 @@ class CrudChildElement():
             name - name of table
             table - CrudApi table instance
             type - CHILDROW_TYPE_TABLE
+            postcreatehook - (optional) string name of js function(datatables, editor) to be executed after create of table, editor
             args -
                 buttons - list of editor actions 'create', 'edit', 'editRefresh', 'editChildRowRefresh', 'remove'
                     or other button configuration.
@@ -612,13 +613,14 @@ class CrudChildElement():
                     // these are update on top of dtopts from self.table
                     { option: value, ... }
     '''
-    def __init__(self, name=None, type=None, args=None, table=None):
+    def __init__(self, name=None, type=None, args=None, table=None, postcreatehook=None):
         if args is None:
             args = {}
         self.name = name
         self.type = type
         self.args = args
         self.table = table
+        self.postcreatehook = postcreatehook
 
         if type == CHILDROW_TYPE_TABLE and not table:
             raise ParameterError('CrudChildElement: element "{}" missing table argument'.format(name))
@@ -646,6 +648,9 @@ class CrudChildElement():
                 data2col[copycol['data']] = copycol
             args['clientcolumns'] = columns
             args['data2col'] = data2col
+
+            # may be postcreatehook, None if wasn't specified
+            args['postcreatehook'] = self.postcreatehook
 
         else:
             args = self.args

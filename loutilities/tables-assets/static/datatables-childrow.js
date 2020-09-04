@@ -21,6 +21,21 @@
  */
 var childrow_childbase = {};
 
+// save datatable childrow post create hooks
+var childrow_postcreate_hooks = {};
+/**
+ * add a hook which is called after child row datatable, editor created for a childrow table
+ *
+ * @param tablename - {str} name of table
+ * @param fn - after table created, function fn is passed datatable and (optional) editor instance, fn(datatable, [editor])
+ */
+function childrow_add_postcreate_hook(tablename, fn) {
+    if (!childrow_postcreate_hooks.hasOwnProperty(tablename)) {
+        childrow_postcreate_hooks[tablename] = []
+    }
+    childrow_postcreate_hooks[tablename].push(fn);
+}
+
 /**
  * initial rendering of + in column for expanding child row, for fontawesome child row handling
  *
@@ -123,6 +138,20 @@ function ChildRow(table, config, editor, base) {
     that.template = config.template;
     that.config = config;
     that.base = base;
+
+    // set up table postcreate hook, if requested
+    var cekeys = Object.keys(that.config.childelements);
+    for (var i=0; i<cekeys.length; i++) {
+        // variable names assume it's a table, but if it's not we'll skip processing
+        var tablename = cekeys[i];
+        var tableconfig = that.config.childelements[tablename];
+        if (tableconfig.type === '_table') {
+            if (tableconfig.args.postcreatehook) {
+                var postcreatefn = eval(tableconfig.args.postcreatehook);
+                childrow_add_postcreate_hook(tablename, postcreatefn);
+            }
+        }
+    }
 
     // clicking +/- in a row displays the row's data
     that.table.on('click', 'td.details-control', function (e) {
@@ -522,6 +551,13 @@ ChildRow.prototype.showTables = function(row, showedit) {
                 var childsubrow = new ChildRow(childrowtablemeta.table, tableconfig.args.cropts, childrowtablemeta.editor, childrowtablemeta.childbase);
             }
 
+            // fire any childrow_postcreate_hooks hooks
+            if (childrow_postcreate_hooks.hasOwnProperty(tablemeta.name)) {
+                for (var i=0; i<childrow_postcreate_hooks[tablemeta.name].length; i++) {
+                    var fn = childrow_postcreate_hooks[tablemeta.name][i];
+                    fn(childrowtablemeta.table, childrowtablemeta.editor);
+                }
+            }
 
         } else {
             throw 'table missing from config.childelements: ' + tablemeta.name;
