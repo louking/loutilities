@@ -2234,6 +2234,7 @@ class DbCrudApi(CrudApi):
             if debug: current_app.logger.debug('__init__(): col = {}'.format(col))
             # remove readonly fields from dbmapping
             if col.get('type', None) == 'readonly':
+                # this assumes db attribute is named the same as form attribute #25
                 self.dbmapping.pop(col['name'], None)
 
             # need to peel off column dt args before checking col['data'] == None
@@ -2252,6 +2253,7 @@ class DbCrudApi(CrudApi):
 
             # need formfield and dbattr for a couple of things
             formfield = col['data']
+            # this assumes db attribute is named the same as form attribute (may be function) #25
             dbattr = self.formmapping[formfield]
 
             # maybe this column needs to be unique
