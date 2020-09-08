@@ -98,3 +98,11 @@ thead.someshown th.details-control {
     width:0.1%;
     white-space: nowrap;
 }
+
+/* ckeditor customization */
+.ck.ck-editor__editable_inline {
+    border-width: 2px !important;
+    border-style: inset !important;
+    border-color: #767676 #c3c3c3 #c3c3c3 #767676 !important;
+    background-color: white;
+}
