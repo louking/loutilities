@@ -840,10 +840,12 @@ class CrudApi(MethodView):
             to template (no parameters)
     :param validate: editor validation function (action, formdata), result is set to self._fielderrors
     :param multiselect: if True, allow selection of multiple rows, default False
-    :param responsekeys: dict of items to add to editor response, can update in any of the hooks
+    :param responsekeys: dict of items to add to editor response, can update in any of the hooks.
     :param tableidtemplate: (optional) jinja2 template string used to identify this table, merged via
             self.tableid(**context)
 
+    :param createfieldvals: (optional) dict of fields with values for create form {name: val, ...}, or function
+            which returns such a dict
     :param childrowoptions: (optional)
         {
           'template': nunjuck template for display of child row,
@@ -887,6 +889,7 @@ class CrudApi(MethodView):
                     addltemplateargs = {},
                     responsekeys = {},
                     tableidtemplate = '',
+                    createfieldvals = {},
                     childrowoptions = {},
                     )
         args.update(kwargs)
@@ -999,7 +1002,8 @@ class CrudApi(MethodView):
                     'editoropts': self.getedoptions(),
                     'yadcfopts' : self.getyadcfoptions(),
                     'childrow' : self.getchildrowoptions(),
-                    'updateopts': update_options
+                    'updateopts': update_options,
+                    'createfieldvals': self.getcreatefieldvals(),
                 },
                 writeallowed = self.permission(),
                 **self.addltemplateargs
@@ -1206,6 +1210,12 @@ class CrudApi(MethodView):
             val['childelements'][options['name']] = options
 
         return val
+
+    def getcreatefieldvals(self):
+        if callable(self.createfieldvals):
+            return self.createfieldvals()
+        else:
+            return self.createfieldvals
 
     def tableid(self, **context):
         '''
@@ -2780,10 +2790,6 @@ class DbCrudApi(CrudApi):
             # louking/members#152 (search for this to find required matching code
             # TODO: only handles one level deep - should we make this recursive?
             for row in output['data']:
-                # # replace _placeholder with id of record. Not sure why this happens but when we switched
-                # # the query to be self.model..., a record was returned rather than id
-                # if '_placeholder' in row:
-                #     row['_placeholder'] = row['_placeholder'].id
                 delfields = []
                 addfields = {}
                 for field in row:

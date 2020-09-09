@@ -219,6 +219,19 @@ function datatables(data, buttons, options, files) {
                 editor.off( 'preClose' );
             } );
 
+        // if createfieldvals requested, add a handler which initializes fields when create form displayed
+        if (options.createfieldvals !== undefined) {
+            // save for initCreate function
+            editor.createfieldvals = options.createfieldvals;
+            editor.on('initCreate.dt', function(e) {
+                var that = this;
+                $.each(this.createfieldvals, function(field, val) {
+                    that.field(field).val(val);
+                });
+            });
+        }
+
+        // set up to update select options
         if (options.updateopts !== undefined) {
             for (i=0; i<options.updateopts.length; i++) {
                 updateopt = options.updateopts[i]
