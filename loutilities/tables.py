@@ -827,7 +827,8 @@ class CrudApi(MethodView):
     :param filtercoloptions: list of clientcolumns options which are to be filtered out
     :param serverside: set to true to use ajax to get table data
     :param idSrc: idSrc for use by Editor
-    :param buttons: list of buttons for DataTable, from ['create', 'remove', 'edit', 'csv']
+    :param buttons: list of buttons for DataTable, from ['create', 'remove', 'editRefresh', 'edit', 'csv'], or
+            function which returns such a list
     :param pretablehtml: string any html which needs to go before the table
 
     :param scriptfilter: function to filter pagejsfiles and pagecssfiles lists into full path / version lists
@@ -988,6 +989,11 @@ class CrudApi(MethodView):
             # commit database updates and close transaction
             self.commit()
 
+            # calculate buttons
+            buttons = self.buttons
+            if callable(buttons):
+                buttons = buttons()
+
             # render page
             return self.render_template(
                 pagename = self.pagename if not callable(self.pagename) else self.pagename(),
@@ -995,7 +1001,7 @@ class CrudApi(MethodView):
                 pagecssfiles = self.scriptfilter(self.pagecssfiles),
                 tabledata = tabledata,
                 tablefiles = tablefiles,
-                tablebuttons = self.buttons,
+                tablebuttons = buttons,
                 pretablehtml = self.pretablehtml if not callable(self.pretablehtml) else self.pretablehtml(),
                 options = {
                     'dtopts': self.getdtoptions(),
