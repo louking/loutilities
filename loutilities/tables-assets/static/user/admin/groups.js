@@ -139,6 +139,10 @@ function link_is_external(link_element) {
 
 // see https://stackoverflow.com/a/5713807/799921
 function deparam(query){
+  // modified from stackoverflow.com/a/5713807/799921
+  if (query === "") {
+      return {}
+  }
   var setValue = function(root, path, value){
     if(path.length > 1){
       var dir = path.shift();
