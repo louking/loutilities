@@ -60,19 +60,22 @@ def nested2dotted_keys(d):
 def obj2dict(obj):
 #----------------------------------------------------------------------
     # adapted from https://stackoverflow.com/questions/7963762/what-is-the-most-economical-way-to-convert-nested-python-objects-to-dictionaries
-    if not  hasattr(obj,"__dict__"):
-        return obj
-    result = {}
-    for key, val in list(obj.__dict__.items()):
-        if key.startswith("_"):
-            continue
-        element = []
-        if isinstance(val, list):
-            for item in val:
-                element.append(obj2dict(item))
-        else:
+    if isinstance(obj, list):
+        result = []
+        for item in obj:
+            result.append(obj2dict(item))
+
+    elif hasattr(obj, '__dict__'):
+        result = {}
+        for key, val in list(obj.__dict__.items()):
+            if key.startswith("_"):
+                continue
             element = obj2dict(val)
-        result[key] = element
+            result[key] = element
+
+    else:
+        result = obj
+
     return result
 
 ###########################################################################################

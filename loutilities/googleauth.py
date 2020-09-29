@@ -209,7 +209,7 @@ class GoogleAuthService():
         fileid = file.get('id')
         return fileid
 
-    def update_file(self, fileid, contents, doctype, new_revision=False):
+    def update_file(self, fileid, contents, doctype, new_revision=False, filename=None):
         """
         update file in drive folder
 
@@ -220,6 +220,7 @@ class GoogleAuthService():
         :param contents: path for file contents (docx formatted)
         :param doctype: 'html' or 'docx'
         :param new_revision: True to create new revision in file, default False
+        :param filename: (optional) rename file to this name
         :return: metadata for updated file
         """
         # adapted from https://developers.google.com/drive/api/v2/reference/files/update
@@ -227,6 +228,10 @@ class GoogleAuthService():
         file_metadata = self.drive.files().get(fileId=fileid).execute()
         # can't update id
         file_metadata.pop('id')
+
+        # optionally rename file
+        if filename:
+            file_metadata['name'] = filename
 
         # mimetype depends on doctype
         mimetype = _getmimetype(doctype)
