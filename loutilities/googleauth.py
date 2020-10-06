@@ -262,7 +262,7 @@ def _getmimetype(doctype):
     if doctype == 'docx':
         mimetype = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     else:  # html
-        mimetype = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        mimetype = 'text/html'
 
     return mimetype
 
