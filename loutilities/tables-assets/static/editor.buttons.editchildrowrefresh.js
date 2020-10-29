@@ -8,6 +8,7 @@
 $.fn.dataTable.ext.buttons.editChildRowRefresh = {
     extend: 'edit',
     text: 'Edit',
+    name: 'editRefresh',
     action: function (e, dt, node, config) {
         var that = this;
 

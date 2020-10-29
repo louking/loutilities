@@ -136,6 +136,30 @@ function get_button_options(buttons, editor) {
 }
 
 /**
+ * render edit icon, for row editing
+ *
+ * column declaration for CrudApi must be
+ *
+ *      {'data': '',  # needs to be '' else get exception converting options from meetings render_template
+ *       # TypeError: '<' not supported between instances of 'str' and 'NoneType'
+ *       'name': 'edit-control',
+ *       'className': 'edit-control shrink-to-fit',
+ *       'orderable': False,
+ *       'defaultContent': '',
+ *       'label': '',
+ *       'type': 'hidden',  # only affects editor modal
+ *       # this heading title or some other title like "Edit"
+ *       'title': '<i class="fas fa-edit" aria-hidden="true"></i>',
+ *       'render': {'eval': 'render_edit'},
+ *       },
+ *
+ * @returns {string}
+ */
+function render_edit() {
+    return '<i class="fas fa-edit" aria-hidden="true"></i>';
+}
+
+/**
  * configure dataTables for table with id=datatable
  *
  * @param data - list of objects for rendering or url for ajax retrieval of similar object

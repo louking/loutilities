@@ -18,6 +18,19 @@ thead.someshown th.details-control {
     color:grey;
 }
 
+/* edit selection/control management */
+td.edit-control {
+    text-align: center;
+    color: forestgreen;
+    cursor: pointer;
+}
+tr.editing td.edit-control {
+    color: deepskyblue;
+}
+tr.needsedit td.edit-control {
+    color:orangered;
+}
+
 /* childrow display */
 
 /* indent child rows */
