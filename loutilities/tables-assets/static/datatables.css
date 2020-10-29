@@ -97,13 +97,28 @@ tr.needsedit td.edit-control {
     line-height: 1.4em;
 }
 
-
 .childrow-editform p.start-editing {
     padding-top: 7em;
 }
 
 .childrow-display .DTE_Field_Input {
     padding: 0 6px;
+}
+
+/* display border around child row when shown */
+table.dataTable {
+    /* override dataTables.jqueryui, required for tr border */
+    border-collapse: collapse;
+}
+tr.shown {
+    border-top: 1px solid black;
+    border-left: 1px solid black;
+    border-right: 1px solid black;
+}
+tr.shown + tr {
+    border-left: 1px solid black;
+    border-right: 1px solid black;
+    border-bottom: 1px solid black;
 }
 
 /* shrink to fit, see hack at https://stackoverflow.com/a/43615091/799921 */
