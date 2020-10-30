@@ -220,15 +220,6 @@ function ChildRow(table, config, editor, base) {
     // edit button will open the child row if it's not already open
     // if it's already open need to hide the text display and bring up the edit form
     if (that.editor) {
-        // if edit-control clicked, trigger edit button
-        that.table.on('click', 'td.edit-control', function (e) {
-            var tr = $(this).closest('tr');
-            var row = that.table.row( tr );
-            row.select();
-            that.table.buttons('editRefresh:name').trigger();
-            e.stopPropagation();
-        });
-
         // bring up edit view after refresh
         that.editor.on('postEditChildRowRefresh', function (e, json, dt, node, config) {
             // // check if triggered by this datatable

@@ -160,6 +160,37 @@ function render_edit() {
 }
 
 /**
+ * render a fontawesome icon
+ *
+ * @param iconclass - classes of icon, e.g., "fas fa-edit"
+ * @returns {function(): string} - string is rendered text
+ */
+function render_icon(iconclass) {
+    var fn = function() {
+        return '<i class="' + iconclass + '" aria-hidden="true"></i>';
+    }
+    return fn;
+}
+
+/**
+ * create click event handler for indicated datatable, cell
+ * when cell clicked, row is selected and button_name'd button is triggered (pressed)
+ *
+ * @param dt - datatable
+ * @param cell_select - e.g., 'td.colclass'
+ * @param button_name - name attached to datatable button to "press"
+ */
+function onclick_trigger(dt, cell_select, button_name) {
+    dt.on('click', cell_select, function (e) {
+        var tr = $(this).closest('tr');
+        var row = dt.row(tr);
+        row.select();
+        dt.buttons(button_name + ':name').trigger();
+        e.stopPropagation();
+    });
+}
+
+/**
  * configure dataTables for table with id=datatable
  *
  * @param data - list of objects for rendering or url for ajax retrieval of similar object
