@@ -31,6 +31,11 @@ tr.needsedit td.edit-control {
     color:orangered;
 }
 
+/* datatables Editor */
+div.DTE_Field input[type="checkbox"] {
+    vertical-align: middle;
+}
+
 /* childrow display */
 
 /* indent child rows */

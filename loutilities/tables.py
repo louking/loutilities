@@ -644,6 +644,7 @@ class CrudChildElement():
                 copycol = copyopts(thiscol)
                 copycol.pop('_ColumnDT_args', None)
                 copycol.pop('onclause', None)
+                copycol.pop('aliased', None)
                 columns.append(copycol)
                 data2col[copycol['data']] = copycol
             args['clientcolumns'] = columns
@@ -2139,6 +2140,13 @@ class DbCrudApi(CrudApi):
                     'on' : <event>
                     'wrapper' : <wrapper for query response>
                   }
+                {'data': 'name', 'name': 'name', 'label': 'Name',
+                 'type': 'readonly',
+                 '_ColumnDT_args' :
+                     {'sqla_expr': localuser_invites_alias1.name},
+                 'aliased': localuser_invites_alias1,
+                 'onclause': localuser_invites_alias1.id == Invite.user_id,
+                 },
                 },
             ]
             * name - describes the column and is used within javascript
@@ -2167,6 +2175,9 @@ class DbCrudApi(CrudApi):
 
 
             * _ColumnDT_args - dict with keyword arguments passed to ColumnDT for serverside processing
+            * aliased - class resulting from sqlalchemy.orm.aliased()
+            * onclause - expression used to limit outer join, can go with aliased
+                see https://stackoverflow.com/a/46810551/799921
 
         **serverside** - if present table will be displayed through ajax get calls
 
@@ -2303,6 +2314,8 @@ class DbCrudApi(CrudApi):
                         # submodel is one level down
                         submodelname = branches[0]
                         submodel = getattr(args['model'], submodelname).prop.entity.class_
+                        if 'aliased' in col:
+                            submodel = col['aliased']
                         subfield = branches[1]
                         onclause = None
                         if 'onclause' in col:
@@ -2326,7 +2339,15 @@ class DbCrudApi(CrudApi):
                                 thisjoin = submodel
                                 if type(thisreln.onclause) != type(None):
                                     thisjoin = {'model': submodel, 'onclause': thisreln.onclause}
-                                if thisjoin not in self.joins:
+                                addjoin = True
+                                if thisjoin in self.joins:
+                                    addjoin = False
+                                # don't add duplicate submodel join
+                                if isinstance(thisjoin, dict):
+                                    if ((thisjoin['model'], thisjoin['onclause']) in
+                                            [(j['model'], j['onclause']) for j in self.joins if isinstance(j, dict)]):
+                                        addjoin = False
+                                if addjoin:
                                     # print('DbCrudApi: self {} joining {}'.format(args['model'], subsubmodel))
                                     self.joins.append(thisjoin)
 
