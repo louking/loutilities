@@ -716,7 +716,7 @@ def _editormethod(checkaction='', formrequest=True):
                     current_app.logger.warning(cause)
                     return dt_editor_response(error=cause)
 
-                # set up parameters to query (set self.queryparams)
+                # set up parameters to query (set self.queryparams, self.queryfilters)
                 self.beforequery()
 
                 # execute core of method
@@ -937,7 +937,7 @@ class CrudApi(MethodView):
                 self.rollback()
                 self.abort()
 
-            # set up parameters to query (set self.queryparams)
+            # set up parameters to query (set self.queryparams, self.queryfilters)
             self.beforequery()
 
             # peel off any _update options
@@ -1032,7 +1032,7 @@ class CrudApi(MethodView):
                 self.rollback()
                 self.abort()
                 
-            # set up parameters to query (set self.queryparams)
+            # set up parameters to query (set self.queryparams, self.queryfilters)
             self.beforequery()
 
             # get data from database
@@ -1388,7 +1388,7 @@ class CrudApi(MethodView):
 
     def beforequery(self):
         '''
-        update self.queryparams if necessary
+        update self.queryparams, self.queryfilters if necessary
         '''
         pass
 
@@ -2249,7 +2249,8 @@ class DbCrudApi(CrudApi):
 
         # for serverside processing, self.servercolumns is built up from column data
         if args['serverside']:
-            # keep track of needed columns and joins
+            # keep track of needed columns, args, and joins
+            # serverargs is used to simulate Editor query args for editRefresh
             self.servercolumns = []
             self.joins = []
 
@@ -2773,6 +2774,25 @@ class DbCrudApi(CrudApi):
         self.app.add_url_rule('{}/saformjs'.format(self.rule), view_func=self.my_view, methods=['GET', ])
         self.app.add_url_rule('{}/saform'.format(self.rule), view_func=self.my_view, methods=['GET', ])
 
+    def serverquery(self):
+        # filter applies to self.model
+        query = self.db.session.query().select_from(self.model).filter_by(**self.queryparams).filter(*self.queryfilters)
+
+        # add required joins (determined in __init__)
+        for j in self.joins:
+            if isinstance(j, dict):
+                model = j['model']
+                onclause = j['onclause']
+            else:
+                model = j
+                onclause = None
+            if type(onclause) != type(None):
+                query = query.outerjoin(model, onclause)
+            else:
+                query = query.outerjoin(model)
+
+        return query
+
     def open(self):
         '''
         retrieve all the data in the indicated table
@@ -2788,54 +2808,15 @@ class DbCrudApi(CrudApi):
         # server table, this is the output to be returned, nexttablerow() is noop
         # note get_response_data transform is not done - name mapping is in self.servercolumns
         else:
-            # filter applies to self.model
-            query = self.db.session.query().select_from(self.model).filter_by(**self.queryparams).filter(*self.queryfilters)
-
-            # add required joins (determined in __init__)
-            for j in self.joins:
-                if isinstance(j, dict):
-                    model = j['model']
-                    onclause = j['onclause']
-                else:
-                    model = j
-                    onclause = None
-                if type(onclause) != type(None):
-                    query = query.outerjoin(model, onclause)
-                else:
-                    query = query.outerjoin(model)
-
             args = request.args.to_dict()
-            rowTable = DataTables(args, query, self.servercolumns)
-
+            rowTable = DataTables(args, self.serverquery(), self.servercolumns)
             output = rowTable.output_result()
 
             if 'error' in output:
                 self._error = output['error']
                 raise ParameterError(self._error)
 
-            # kludge? to take items in object notation, and make into object
-            # louking/members#152 (search for this to find required matching code
-            # TODO: only handles one level deep - should we make this recursive?
-            for row in output['data']:
-                delfields = []
-                addfields = {}
-                for field in row:
-                    splitobj = field.split('.')
-                    # if there are multiple levels to the fieldname, need to make it into an object
-                    if len(splitobj) > 1:
-                        # this will cause exception if more than two levels; that's ok for now, see todo above
-                        parent, child = splitobj
-                        addfields.setdefault(parent,{})
-                        addfields[parent][child] = row[field]
-                        delfields.append(field)
-                row.update(addfields)
-                for field in delfields:
-                    del row[field]
-
-            # check for errors
-            if 'error' in output:
-                raise ParameterError(output['error'])
-
+            self.objectifyrows(output['data'])
             self.output_result = output
 
     def nexttablerow(self):
@@ -2995,10 +2976,57 @@ class DbCrudApi(CrudApi):
         theseids = ids.split(',')
         responsedata = []
         for thisid in theseids:
-            dbrow = self.model.query.filter_by(id=thisid).one()
-            responsedata.append(self.dte.get_response_data(dbrow))
+            if not self.serverside:
+                dbrow = self.model.query.filter_by(id=thisid).one()
+                responsedata.append(self.dte.get_response_data(dbrow))
+
+            # if serverside, get data from database using same query as page paint, limited by ids
+            else:
+                # set up generic "request args" for DataTables, will be retrieving only one row at a time for the refresh
+                args = {
+                    'columns': [],
+                    'draw': 1,
+                    'start': 0,
+                    'length': -1,
+                    'search': {'value': '', 'regex': False},
+                }
+                rowTable = DataTables(args, self.serverquery().filter(self.model.id==thisid), self.servercolumns)
+                output = rowTable.output_result()
+
+                if 'error' in output:
+                    self._error = output['error']
+                    raise ParameterError(self._error)
+
+                self.objectifyrows(output['data'])
+                responsedata += output['data']
 
         return responsedata
+
+    def objectifyrows(self, rows):
+        '''
+        take items in object notation and make into object
+
+        :param rows: rows on which to operate
+        :return: None
+        '''
+        # kludge? to take items in object notation, and make into object
+        # louking/members#152 (search for this to find required matching code
+        # TODO: only handles one level deep - should we make this recursive?
+        for row in rows:
+            delfields = []
+            addfields = {}
+            for field in row:
+                splitobj = field.split('.')
+                # if there are multiple levels to the fieldname, need to make it into an object
+                if len(splitobj) > 1:
+                    # this will cause exception if more than two levels; that's ok for now, see todo above
+                    parent, child = splitobj
+                    addfields.setdefault(parent, {})
+                    addfields[parent][child] = row[field]
+                    delfields.append(field)
+            row.update(addfields)
+            for field in delfields:
+                del row[field]
 
     def commit(self):
         self.db.session.commit()
