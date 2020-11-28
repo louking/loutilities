@@ -140,7 +140,7 @@ function ChildRow(table, config, editor, base) {
     that.base = base;
 
     // set up table postcreate hook, if requested
-    var cekeys = Object.keys(that.config.childelements);
+    var cekeys = Object.keys(that.config.childelements || []);
     for (var i=0; i<cekeys.length; i++) {
         // variable names assume it's a table, but if it's not we'll skip processing
         var tablename = cekeys[i];
