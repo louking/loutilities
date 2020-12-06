@@ -7,7 +7,7 @@
  *
  * @typedef {Object} ChildRowTableMeta
  * @property {DataTable} table DataTable instance
- * @property {string} tableid css id for table
+ * @property {string} tableidtemplate template for portion of css id for table
  * @property {Editor} [editor] Editor instance associated with table
  * @property {ChildRowMeta} [childbase] recursive childbase for this table
  *
@@ -124,9 +124,11 @@ function checkTables(base, row, debug) {
  * @param {Editor} editor - Editor instance to use for create/open form
  * @param {ChildRowMeta} base - ChildRow data is maintained here; this can be recursively used for child rows within child rows
  *          if base isn't supplied,
+ * @param {id} parentid - id for parent row
+ * @param {string} tablename - name for table, if not supplied, assume 'top'
  * @constructor
  */
-function ChildRow(table, config, editor, base) {
+function ChildRow(table, config, editor, base, parentid, tablename) {
     var that = this;
     that.debug = true;
 
@@ -138,6 +140,8 @@ function ChildRow(table, config, editor, base) {
     that.template = config.template;
     that.config = config;
     that.base = base;
+    that.parentid = parentid;
+    that.tablename = tablename || 'top';
 
     // set up table postcreate hook, if requested
     var cekeys = Object.keys(that.config.childelements || []);
@@ -308,7 +312,7 @@ ChildRow.prototype.updateHeaderDetails = function() {
     var thead = $(that.table.header())
     var thi = thead.find("i.fa");
     var rows = that.table.rows();
-    var shown = $( that.table.table().node()).find('tr.shown');
+    var shown = $( that.table.table().node() ).find('tr.shown');
 
     thead.removeClass('allshown someshown');
     thi.first().removeClass('fa-plus-square fa-minus-square fa-square');
@@ -352,9 +356,59 @@ ChildRow.prototype.updateRowDetails = function(row) {
  */
 ChildRow.prototype.getTableId = function(row, tablename) {
     var that = this;
+    var id = row.id();
+    // var tablemeta = that.getTableMeta(row, tablename);
+    // var env = new nunjucks.Environment();
+    var childrowtablemeta = that.base[id][tablename];
     var rowdata = row.data();
-    var tablemeta = that.getTableMeta(row, tablename);
-    return '#childrow-table-' + tablemeta.tableid;
+    // need to identify this row's parent for table definition. when creating the table, that's the row's id
+    rowdata.tableid = tablename + '-' + id;
+    rowdata.parentid = id;
+    return '#childrow-table-' + nunjucks.renderString(childrowtablemeta.tableidtemplate, rowdata);
+}
+
+/**
+ * get the edit form id for specified row, tablename
+ *
+ * @param row - datatables row
+ * @param tablename - name of table
+ * @returns {string} - hashtagged id for table row
+ */
+ChildRow.prototype.getEditFormId = function(row, tablename) {
+    var that = this;
+    // render templateid from metadata if handling child row table
+    if (that.parentid != 'top') {
+        var id = row.id();
+        var childrowtablemeta = that.base[id][tablename];
+        var rowdata = row.data();
+        // need to identify this row's parent for edit form
+        rowdata.tableid = tablename + '-' + id;
+        rowdata.parentid = that.parentid;
+        return '#childrow-editform-' + nunjucks.renderString(childrowtablemeta.tableidtemplate, rowdata);
+    // this is the main table for the page (must match display: option in datatables.js
+    } else {
+        return '#childrow-editform-top';
+    }
+}
+
+/**
+ * get the edit form id for specified row, tablename
+ *
+ * @param row - datatables row
+ * @param tablename - name of table
+ * @returns {string} - hashtagged id for table row
+ */
+ChildRow.prototype.getDisplayId = function(row, tablename) {
+    var that = this;
+    var id = row.id();
+    // var tablemeta = that.getTableMeta(row, tablename);
+    // var env = new nunjucks.Environment();
+    var childrowtablemeta = that.base[id][tablename];
+    // need to identify this row's parent for edit form - when creating display option, it's the row's id
+    var rowdata = row.data();
+    rowdata.tableid = tablename + '-' + id;
+    rowdata.parentid = id;
+    return '#childrow-editform-' + nunjucks.renderString(childrowtablemeta.tableidtemplate, rowdata);
 }
 
 /**
@@ -403,7 +457,7 @@ ChildRow.prototype.showTables = function(row, showedit) {
             that.base[id][tablemeta.name] = that.base[id][tablemeta.name] || {};
             var childrowtablemeta = that.base[id][tablemeta.name];
 
-            childrowtablemeta.tableid = childrowtablemeta.tableid || that.getTableId(row, tablemeta.name);
+            childrowtablemeta.tableidtemplate = childrowtablemeta.tableidtemplate || tableconfig.tableidtemplate;
 
             var buttons = [];
             var dtopts = _.cloneDeep(tableconfig.args.dtopts);
@@ -434,13 +488,13 @@ ChildRow.prototype.showTables = function(row, showedit) {
                 }
 
                 $.extend(edopts, {
-                    table: childrowtablemeta.tableid
+                    table: that.getTableId(row, tablemeta.name)
                 });
 
                 // configure childrow options for editor if so configured
                 if ( ! $.isEmptyObject( tableconfig.args.cropts ) ) {
                     if (tableconfig.args.cropts.showeditor) {
-                        $.extend(edopts, {display:onPageDisplay('#childrow-editform-' + tablemeta.tableid)})
+                        $.extend(edopts, {display:onPageDisplay(that.getDisplayId(row, tablemeta.name))})
                     }
                 }
 
@@ -486,7 +540,7 @@ ChildRow.prototype.showTables = function(row, showedit) {
 
                 // if inline editing requested, add a handler
                 if (tableconfig.args.inline) {
-                    $( childrowtablemeta.tableid ).on('click', '._inline_edit', function() {
+                    $( that.getTableId(row, tablemeta.name) ).on('click', '._inline_edit', function() {
                         // get inline parameters
                         var colname = childrowtablemeta.editor.fields()[this._DT_CellIndex.column];
                         var inlineopts = tableconfig.args.inline[colname];
@@ -536,7 +590,7 @@ ChildRow.prototype.showTables = function(row, showedit) {
                     select: false
                 });
             };
-            var table = $( childrowtablemeta.tableid );
+            var table = $( that.getTableId(row, tablemeta.name) );
             childrowtablemeta.table = table
                 // don't let select / deselect propogate to the parent table
                 // from https://datatables.net/forums/discussion/comment/175517/#Comment_175517
@@ -549,7 +603,8 @@ ChildRow.prototype.showTables = function(row, showedit) {
             if ( ! $.isEmptyObject( tableconfig.args.cropts ) ) {
                 // sets up child row event handling, and initializes child elements as needed
                 childrowtablemeta.childbase = {}
-                var childsubrow = new ChildRow(childrowtablemeta.table, tableconfig.args.cropts, childrowtablemeta.editor, childrowtablemeta.childbase);
+                var childsubrow = new ChildRow(childrowtablemeta.table, tableconfig.args.cropts,
+                    childrowtablemeta.editor, childrowtablemeta.childbase, row.id(), tablemeta.name);
             }
 
             // fire any childrow_postcreate_hooks hooks
@@ -580,7 +635,7 @@ ChildRow.prototype.destroyTables = function(row) {
     // kill table(s) and editor(s) if they exist
     if (that.base[id]) {
         $.each(that.base[id], function(tablename, rowtablemeta) {
-            var table = $( that.base[id][tablename].tableid );
+            var table = $( that.getTableId(row, tablename) );
             table.detach();
             table.DataTable().destroy();
             if (rowtablemeta.editor) {
@@ -605,6 +660,8 @@ ChildRow.prototype.showChild = function(row) {
     var env = new nunjucks.Environment();
     var rowdata = row.data();
     rowdata._showedit = false;
+    rowdata.tableid = that.tablename + '-' + that.parentid;
+    rowdata.parentid = that.parentid;
     row.child(env.render(that.template, rowdata)).show();
     that.updateRowDetails(row);
 
@@ -652,6 +709,8 @@ ChildRow.prototype.editChild = function(row) {
     var env = new nunjucks.Environment();
     var rowdata = row.data();
     rowdata._showedit = true;
+    rowdata.tableid = that.tablename + '-' + that.parentid;
+    rowdata.parentid = that.parentid;
     row.child(env.render(that.template, rowdata)).show();
     that.updateRowDetails(row);
 

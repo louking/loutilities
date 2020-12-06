@@ -592,6 +592,7 @@ class CrudChildElement():
             table - CrudApi table instance
             type - CHILDROW_TYPE_TABLE
             postcreatehook - (optional) string name of js function(datatables, editor) to be executed after create of table, editor
+            tableidtemplate - template for table id
             args -
                 buttons - list of editor actions 'create', 'edit', 'editRefresh', 'editChildRowRefresh', 'remove'
                     or other button configuration.
@@ -613,12 +614,13 @@ class CrudChildElement():
                     // these are update on top of dtopts from self.table
                     { option: value, ... }
     '''
-    def __init__(self, name=None, type=None, args=None, table=None, postcreatehook=None):
+    def __init__(self, name=None, type=None, args=None, tableidtemplate=None, table=None, postcreatehook=None):
         if args is None:
             args = {}
         self.name = name
         self.type = type
         self.args = args
+        self.tableidtemplate = tableidtemplate
         self.table = table
         self.postcreatehook = postcreatehook
 
@@ -659,6 +661,7 @@ class CrudChildElement():
         return {
             'name': self.name,
             'type': self.type,
+            'tableidtemplate': self.tableidtemplate,
             'args': args
         }
 
@@ -843,6 +846,7 @@ class CrudApi(MethodView):
     :param validate: editor validation function (action, formdata), result is set to self._fielderrors
     :param multiselect: if True, allow selection of multiple rows, default False
     :param responsekeys: dict of items to add to editor response, can update in any of the hooks.
+    :param tableidcontext: (optional) function which returns context for tableidtemplate rendering
     :param tableidtemplate: (optional) jinja2 template string used to identify this table, merged via
             self.tableid(**context)
 
@@ -890,6 +894,7 @@ class CrudApi(MethodView):
                     multiselect = False,
                     addltemplateargs = {},
                     responsekeys = {},
+                    tableidcontext = lambda: {},
                     tableidtemplate = '',
                     createfieldvals = {},
                     childrowoptions = {},
@@ -1228,8 +1233,8 @@ class CrudApi(MethodView):
         '''
         return string from context, suitable for use within table form
 
-        :param context: keyword parameters rendered against template supplied at instantiation via childidtemplate
-            parameter
+        :param context: keyword parameters rendered against template supplied at instantiation via
+            childidtemplate parameter
         :return: string
         '''
         template = Template(self.tableidtemplate)

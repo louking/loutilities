@@ -247,7 +247,7 @@ function datatables(data, buttons, options, files) {
         // configure childrow options for editor if so configured
         if ( ! $.isEmptyObject( options.childrow ) ) {
             if (options.childrow.showeditor) {
-                $.extend(options.editoropts,{display:onPageDisplay('#childrow-editform-')})
+                $.extend(options.editoropts,{display:onPageDisplay('#childrow-editform-top')})
             }
         }
 
@@ -348,7 +348,7 @@ function datatables(data, buttons, options, files) {
     // configure childrow if so configured
     if ( ! $.isEmptyObject( options.childrow ) ) {
         // sets up child row event handling, and initializes child elements as needed
-        var childrow = new ChildRow(_dt_table, options.childrow, editor, childrow_childbase);
+        var childrow = new ChildRow(_dt_table, options.childrow, editor, childrow_childbase, 'top');
     }
 
     // any column filtering required? if so, define the filters
