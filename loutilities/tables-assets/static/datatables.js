@@ -173,6 +173,36 @@ function render_icon(iconclass) {
 }
 
 /**
+ * use in yadcf options as custom_func parameter, along with filter_type = 'date_custom_func'
+ * @param fromdateattr
+ * @param todateattr
+ * @returns {function(filterVal, columnVal, rowValues, stateVal): boolean}
+ */
+function yadcf_between_dates(fromdateattr, todateattr) {
+    function yadcf_between_dates_fn(filterVal, columnVal, rowValues, stateVal) {
+        console.log('filterVal='+filterVal);
+        console.log('columnVal='+columnVal);
+        console.log('rowValues='+rowValues);
+        console.log('stateVal='+stateVal);
+
+        // no filter means return all records
+        if (filterVal === '') {
+          return true;
+        }
+
+        // blank fromdate is from the beginning of time, blank todate is to the end of time
+        if (    (stateVal[fromdateattr] === '' || filterVal >= stateVal[fromdateattr])
+             && (stateVal[todateattr] === ''   || filterVal <= stateVal[todateattr])) {
+            return true;
+
+        } else {
+          return false;
+        }
+    }
+    return yadcf_between_dates_fn;
+}
+
+/**
  * create click event handler for indicated datatable, cell
  * when cell clicked, row is selected and button_name'd button is triggered (pressed)
  *

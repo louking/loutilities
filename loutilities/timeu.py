@@ -64,7 +64,7 @@ def dt2epoch (dt):
     """
     
     # convert to UTC
-    if dt.tzinfo:
+    if hasattr(dt, 'tzinfo') and dt.tzinfo:
         UTC = pytz.timezone('UTC')
         utcdt = dt.astimezone(UTC)
     # if naive, assume UTC

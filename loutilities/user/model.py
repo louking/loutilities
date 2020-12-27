@@ -9,10 +9,24 @@
 ###########################################################################################
 
 # pypi
+# # trying https://alembic.sqlalchemy.org/en/latest/naming.html#integration-of-naming-conventions-into-operations-autogenerate
+# from sqlalchemy import MetaData
+# from sqlalchemy.ext.declarative import declarative_base
+# from flask_sqlalchemy import SQLAlchemy, Model
 from flask_sqlalchemy import SQLAlchemy
 from flask_security import UserMixin, RoleMixin
 
 # set up database - SQLAlchemy() must be done after app.config SQLALCHEMY_* assignments
+# # trying https://alembic.sqlalchemy.org/en/latest/naming.html#integration-of-naming-conventions-into-operations-autogenerate
+# # probably missing the update required in env.py
+# meta = MetaData(naming_convention={
+#         "ix": "ix_%(column_0_label)s",
+#         "uq": "uq_%(table_name)s_%(column_0_name)s",
+#         "ck": "ck_%(table_name)s_%(constraint_name)s",
+#         "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+#         "pk": "pk_%(table_name)s"
+#       })
+# db = SQLAlchemy(model_class=declarative_base(metadata=meta, cls=Model, name='Model'))
 db = SQLAlchemy()
 Table = db.Table
 Column = db.Column

@@ -1,12 +1,3 @@
-###########################################################################################
-#   filters - filters which work with tables-assets/static/filters.css
-#
-#       Date            Author          Reason
-#       ----            ------          ------
-#       06/30/19        Lou King        Create
-#
-#   Copyright 2019 Lou King.  All rights reserved
-###########################################################################################
 '''
 filters - filters which work with tables-assets/static/filters.css
 
@@ -51,24 +42,29 @@ def filterdiv(id, label):
         _class='filter-item',
     )
 
-def filtercontainerdiv():
+def filtercontainerdiv(**kwargs):
     '''
     build div for filter container
+
+    :param kwargs: optional div() keyword arguments
     :return: dominate div
     '''
-    return div(_class='external-filter filter-container')
+    return div(_class='external-filter filter-container', **kwargs)
 
-def yadcfoption(colselector, filterid, filtertype, placeholder=None, width=None, date_format='yyyy-mm-dd', filter_match_mode='contains'):
+def yadcfoption(colselector, filterid, filtertype, placeholder=None, width=None, date_format='yyyy-mm-dd',
+                filter_match_mode='contains', **kwargs):
     '''
     return yadcf option entry for filter
 
     :param colselector: datatables column selector (see https://datatables.net/reference/type/column-selector)
     :param filterid: html id of filter container, specified in filterdiv()
-    :param filtertype: one of 'select', 'multi_select', 'range_date'
+    :param filtertype: one of 'select', 'multi_select', 'range_date',
+            or 'custom_func', 'date_custom_func'
     :param placeholder: (for select2) placeholder for empty filter
     :param width: (for select2) css value for width of filter container
     :param date_format: (for range_date) format for date, default 'yyyy-mm-dd'
     :param filter_match_mode: one of 'contains', 'exact', 'startsWith', default 'contains'
+    :param kwargs: other keyword arguments for yadcf column options
     :return: yadcf option for inclusion in yadcf option array
     '''
     option = {
@@ -76,7 +72,9 @@ def yadcfoption(colselector, filterid, filtertype, placeholder=None, width=None,
         'filter_container_id': filterid,
         'filter_type': filtertype,
         'filter_match_mode': filter_match_mode,
+        'date_format': date_format,
     }
+    option.update(**kwargs)
 
     if filtertype in ['select', 'multi_select']:
         option['select_type'] = 'select2'
@@ -100,8 +98,9 @@ def yadcfoption(colselector, filterid, filtertype, placeholder=None, width=None,
         if filtertype == 'multi_select':
             option['text_data_delimiter'] = ', ',
 
-    elif filtertype == 'range_date':
-        option['date_format'] = date_format
+    # todo: added kwargs to handle date_custom_func, but maybe we should just remove the else clause?
+    elif filtertype in ['range_date', 'custom_func', 'date_custom_func']:
+        pass
 
     else:
         raise ParameterError('filtertype \'{}\' not handled yet'.format(filtertype))

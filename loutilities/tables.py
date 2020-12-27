@@ -1547,6 +1547,22 @@ class DteDbOptionsPickerBase():
         for key in args:
             setattr(self, key, args[key])
 
+    def get_dbrow(self, dbrow_or_id):
+        '''
+        return dbrow for possible dbrow or id
+
+        :param dbrow_or_id: dbrow or id for table row
+        :return: dbrow
+        '''
+        # check if id supplied, if so retrieve dbrow
+        if type(dbrow_or_id) in [int, str]:
+            # normal operation is not through via attr
+            dbrow = self.tablemodel.query().filter_by(id=dbrow_or_id).one()
+
+        else:
+            dbrow = dbrow_or_id
+
+        return dbrow
 
     def set(self, formrow):
         '''
@@ -1630,6 +1646,8 @@ class DteDbRelationship():
     * dbfield - field as used in the database table (not the model -- this is field in tablemodel which has list of
          fieldmodel items)
 
+    * viasubfield - (optional) field which has record which contains options, in this case, dbfield is attr of the subrecord
+
     * viadbattr - (optional) if fieldmodel is in a separate database, the select options of fieldmodel.valuefield
          can be mapped via a local table. Specify the "via" mapping attribute here, e.g., LocalUser.user_id
     * viafilter - (optional) if viadbattr is set, this can be additional filters to add to the local table lookup.
@@ -1708,6 +1726,7 @@ class DteDbRelationship():
                     valuefield='id',
                     formfield=None,
                     dbfield=None,
+                    viasubrecord=None,
                     viadbattr=None,
                     viafilter={},
                     sqlaexpr=None,
@@ -1789,6 +1808,10 @@ class DteDbRelationship():
 
         else:
             dbrow = dbrow_or_id
+
+        # use subrecord if requested
+        if self.viasubrecord:
+            dbrow = getattr(dbrow, self.viasubrecord)
 
         # get from database to form
         if self.uselist:
