@@ -15,8 +15,8 @@
 {% set development = False %}
 {% set sandbox = False %}
 {% set urlparts = request.url.split('/') %}
-{% set hostname = urlparts[2] %}
-{% if not config.DEMO_MODE and (hostname[0:9] == "127.0.0.1" or hostname[0:9] == "localhost" or hostname[0:13] == "dev.localhost") %}
+{% set hostname = urlparts[2].split(':')[0] %}
+{% if not config.DEMO_MODE and (hostname[0:9] == "127.0.0.1" or hostname[-9:] == "localhost") %}
     {% set development = True %}
 {% elif hostname[0:8] == "sandbox." %}
     {% set sandbox = True %}
