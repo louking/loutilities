@@ -108,6 +108,55 @@ function jsGetDataTableHeightPx() {
 }
 
 /**
+ * refresh table data without full reload of page
+ *
+ * Note: this is only for client based table data (serverside = False)
+ *
+ * @param table - table to redraw
+ * @param resturl - url to use to retrieve updated data for table
+ * @param paging - see https://datatables.net/reference/api/draw() (default 'full-reset')
+ */
+function refresh_table_data(table, resturl, paging) {
+    // (dataTables default) ordering and search will be recalculated and the rows redrawn in their new positions.
+    // The paging will be reset back to the first page.
+    if (paging === undefined) {
+        paging = 'full-reset';
+    }
+
+    var rowId = table.settings()[0].rowId;
+
+    // save {rowid: row, } for all current data
+    var currrows = {};
+    var rowndxs = table.rows()[0];
+    for (var i=0; i<rowndxs.length; i++) {
+        var rowndx = rowndxs[i];
+        currrows[table.row(rowndx).id()] = table.row(rowndx);
+    }
+
+    var jqxhr = $.get(resturl, function( respdata ) {
+        for (var i=0; i<respdata.length; i++) {
+            var resprow = respdata[i];
+            // replace row if it exists
+            if (currrows[resprow[rowId]] !== undefined) {
+                table.row('#' + resprow[rowId]).data(resprow);
+                delete currrows[resprow[rowId]];
+            // add row if it is new
+            } else {
+                table.row.add(resprow);
+            }
+        }
+
+        // any remaining rows in currrows need to be deleted
+        $.each(currrows, function(k, v){
+            table.row('#' + k).remove();
+        });
+
+        // redraw
+        table.draw(paging);
+    });
+}
+
+/**
  * get the button options, correctly annotated with indicated editor
  *
  * @param buttons - list of editor actions 'create', 'edit', 'editRefresh', 'editChildRowRefresh', 'remove'
