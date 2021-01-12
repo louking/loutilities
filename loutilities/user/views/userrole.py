@@ -64,17 +64,25 @@ def user_validate(action, formdata):
     return results
 
 class UserCrudApi(DbCrudApiRolePermissions):
-    def editor_method_posthook(self, form):
-        '''
-        send new users a link to set their password
 
-        :param form: edit form
-        :return: None
+    def createrow(self, formdata):
         '''
-        action = get_request_action(form)
-        if action == 'create':
+        createrow is used by create form, may need to also send password reset request to user.
+        comes from tables-assets/static/user/admin/beforedatatables.js user_create_send_notification_button()
+
+        :param formdata: data from form
+        :return:
+        '''
+        # return the row
+        row = super().createrow(formdata)
+
+        # admin may have requested password reset email be sent to the user
+        if 'resetpw' in request.form:
             user = User.query.filter_by(id=self.created_id).one()
             send_reset_password_instructions(user)
+
+        return row
+
     def updaterow(self, thisid, formdata):
         '''
         updaterow is used by edit form, may need to also send password reset request to user.
@@ -150,7 +158,14 @@ class UserView(UserCrudApi):
             validate=user_validate,
             servercolumns=None,  # not server side
             idSrc='rowid',
-            buttons=['create',
+            buttons=[{
+                         'extend': 'create',
+                         'editor': {'eval': 'editor'},
+                         'formButtons': [
+                             {'text': 'Create and Send', 'action': {'eval': 'user_create_send_notification_button'}},
+                             {'text': 'Create', 'action': {'eval': 'submit_button'}},
+                         ]
+                     },
                      {
                          'extend': 'editRefresh',
                          'text': 'Edit',
