@@ -24,10 +24,13 @@ from flask_security.recoverable import send_reset_password_instructions
 # homegrown
 from . import bp
 from loutilities.user.model import db, User, Role, Interest, Application
-from loutilities.tables import DbCrudApiRolePermissions, get_request_action, SEPARATOR
+from loutilities.tables import DbCrudApiRolePermissions, SEPARATOR
 from loutilities.timeu import asctime
 
 ymdtime = asctime('%Y-%m-%d %H:%M:%S')
+
+class ParameterError(Exception):
+    '''raise exception if parameter error'''
 
 ##########################################################################################
 # users endpoint
@@ -64,6 +67,30 @@ def user_validate(action, formdata):
     return results
 
 class UserCrudApi(DbCrudApiRolePermissions):
+    '''
+    extends DbCrudApiRolePermissions to manage user for single sign-on with flask-security
+
+    Additional parameters for this class:
+
+    :param user_datastore: return value from flask_security.SQLAlchemyUserDatastore(db, User, Role), which needs
+        to be called from application using single sign-on
+    '''
+
+    def __init__(self, **kwargs):
+        # the args dict has default values for arguments added by this derived class
+        # caller supplied keyword args are used to update these
+        # all arguments are made into attributes for self by the inherited class
+        args = dict(
+                    user_datastore=None,
+                    )
+        args.update(kwargs)
+
+        # this initialization needs to be done before checking any self.xxx attributes
+        super().__init__(**args)
+
+        # Caller must use local_interest_model
+        if not self.user_datastore:
+            raise ParameterError('user_datastore required')
 
     def createrow(self, formdata):
         '''
@@ -73,13 +100,24 @@ class UserCrudApi(DbCrudApiRolePermissions):
         :param formdata: data from form
         :return:
         '''
-        # return the row
-        row = super().createrow(formdata)
+        # create the user
+        email = formdata['email']
+        name = formdata['name']
+        given_name = formdata['given_name']
+        roles = [Role.query.filter_by(id=id).one() for id in formdata['roles']['id'].split(SEPARATOR)]
+        interests = [Interest.query.filter_by(id=id).one() for id in formdata['interests']['id'].split(SEPARATOR)]
+        newuser = self.user_datastore.create_user(email=email, name=name, given_name=given_name,
+                                                  roles=roles, interests=interests)
+
+        # force id to be set. required for response data and password reset
+        db.session.flush()
+
+        # return the newly created row
+        row = self.dte.get_response_data(newuser)
 
         # admin may have requested password reset email be sent to the user
         if 'resetpw' in request.form:
-            user = User.query.filter_by(id=self.created_id).one()
-            send_reset_password_instructions(user)
+            send_reset_password_instructions(newuser)
 
         return row
 

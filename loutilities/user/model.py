@@ -162,7 +162,7 @@ class User(Base, UserMixin):
     current_login_ip    = Column( String(100) )
     login_count         = Column( Integer )
     active              = Column( Boolean() )
-    fs_uniquifier       = Column( String(UNIQUIFIER_LEN) )
+    fs_uniquifier       = Column( String(UNIQUIFIER_LEN), nullable=False )
     confirmed_at        = Column( DateTime() )
     roles               = relationship('Role', secondary='roles_users',
                           backref=backref('users', lazy='dynamic'))
