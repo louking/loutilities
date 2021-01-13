@@ -18,14 +18,12 @@ roles_common = [
 ]
 
 # members roles
-ROLE_ORGANIZATION_ADMIN = 'organization-admin'
 ROLE_LEADERSHIP_ADMIN = 'leadership-admin'
 ROLE_LEADERSHIP_MEMBER = 'leadership-member'
 ROLE_MEMBERSHIP_ADMIN = 'membership-admin'
 ROLE_MEETINGS_ADMIN = 'meetings-admin'
 ROLE_MEETINGS_MEMBER = 'meetings-member'
 roles_members = [
-    {'name': ROLE_ORGANIZATION_ADMIN, 'description': 'access to organization administration for members application', 'apps':[APP_MEMBERS]},
     {'name': ROLE_LEADERSHIP_ADMIN, 'description': 'access to leadership tasks for members application', 'apps':[APP_MEMBERS]},
     {'name': ROLE_LEADERSHIP_MEMBER, 'description': 'user of leadership tasks for members application', 'apps':[APP_MEMBERS]},
     {'name': ROLE_MEMBERSHIP_ADMIN, 'description': 'access to membership admininstration for members application', 'apps':[APP_MEMBERS]},
