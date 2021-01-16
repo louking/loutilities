@@ -19,13 +19,15 @@ userrole - manage application users and roles
 from validators.slug import slug
 from validators.email import email
 from flask import g, request
+from flask_security import current_user
 from flask_security.recoverable import send_reset_password_instructions
 
 # homegrown
 from . import bp
 from loutilities.user.model import db, User, Role, Interest, Application
-from loutilities.tables import DbCrudApiRolePermissions, SEPARATOR
+from loutilities.tables import DbCrudApiRolePermissions, SEPARATOR, DteDbRelationship
 from loutilities.timeu import asctime
+from ..roles import ROLE_SUPER_ADMIN
 
 ymdtime = asctime('%Y-%m-%d %H:%M:%S')
 
@@ -66,6 +68,75 @@ def user_validate(action, formdata):
 
     return results
 
+class RolesPicker(DteDbRelationship):
+    '''
+    pick Roles, but special processing based on ROLE_SUPER_ADMIN, i.e., if not ROLE_SUPER_ADMIN only present
+    roles allowed for this application
+    '''
+
+    def __init__(self, **kwargs):
+        # the args dict has default values for arguments added by this derived class
+        # caller supplied keyword args are used to update these
+        # all arguments are made into attributes for self by the inherited class
+        args = dict(
+            tablemodel=User,
+            fieldmodel=Role,
+            labelfield='name',
+            formfield='roles',
+            dbfield='roles',
+            uselist=True,
+        )
+        args.update(kwargs)
+
+        # this initialization needs to be done before checking any self.xxx attributes
+        super().__init__(**args)
+
+    def allowed_roles(self):
+        # create a copy so we're not messing with Application record, no more can be configured than current users'
+        allowed_roles = current_user.roles[:]
+        return allowed_roles
+
+    def set(self, formrow):
+        '''
+        if not ROLE_SUPER_ADMIN merge newly set roles with those user can't see
+        '''
+        # these are the roles from the form, but limited to allowed_roles if not ROLE_SUPER_ADMIN
+        resultroles = super().set(formrow)
+        if not current_user.has_role(ROLE_SUPER_ADMIN):
+            theuser = User.query.filter_by(email=formrow['email']).one_or_none()
+            allowed_roles = self.allowed_roles()
+            if theuser:
+                otherroles = [r for r in theuser.roles if r not in allowed_roles]
+                resultroles += otherroles
+        return resultroles
+
+    def get(self, dbrow_or_id):
+        '''
+        if not ROLE_SUPER_ADMIN only return roles allowed for this user
+        '''
+        rv = super().get(dbrow_or_id)
+        rvnames = rv['name'].split(SEPARATOR)
+        rvids = rv['id'].split(SEPARATOR)
+        if not current_user.has_role(ROLE_SUPER_ADMIN):
+            allowed_roles = self.allowed_roles()
+            allowed_role_names = [r.name for r in allowed_roles]
+            allowed_role_ids = [str(r.id) for r in allowed_roles]
+            rv = {
+                'name': SEPARATOR.join([item for item in rvnames if item in allowed_role_names]),
+                'id': SEPARATOR.join([item for item in rvids if item in allowed_role_ids])
+            }
+        return rv
+
+    def options(self):
+        '''limit visible options to what user can see if not ROLE_SUPER_ADMIN'''
+        opts = super().options()
+        if not current_user.has_role(ROLE_SUPER_ADMIN):
+            allowed_roles = self.allowed_roles()
+            allowed_role_ids = [r.id for r in allowed_roles]
+            opts = [o for o in opts if o['value'] in allowed_role_ids]
+        return opts
+
+
 class UserCrudApi(DbCrudApiRolePermissions):
     '''
     extends DbCrudApiRolePermissions to manage user for single sign-on with flask-security
@@ -105,7 +176,12 @@ class UserCrudApi(DbCrudApiRolePermissions):
         name = formdata['name']
         given_name = formdata['given_name']
         roles = [Role.query.filter_by(id=id).one() for id in formdata['roles']['id'].split(SEPARATOR)]
-        interests = [Interest.query.filter_by(id=id).one() for id in formdata['interests']['id'].split(SEPARATOR)]
+        # ROLE_SUPER_ADMIN can set interests
+        if current_user.has_role(ROLE_SUPER_ADMIN):
+            interests = [Interest.query.filter_by(id=id).one() for id in formdata['interests']['id'].split(SEPARATOR)]
+        # non ROLE_SUPER_ADMIN uses currently selected interest for user (interests is not on form)
+        else:
+            interests = [Interest.query.filter_by(interest=g.interest).one()]
         newuser = self.user_datastore.create_user(email=email, name=name, given_name=given_name,
                                                   roles=roles, interests=interests)
 
@@ -120,6 +196,33 @@ class UserCrudApi(DbCrudApiRolePermissions):
             send_reset_password_instructions(newuser)
 
         return row
+
+    def check_superadmin(self, col):
+        '''
+        check if col should be included in display based on user's roles
+
+        :param col: column to check
+        :return: True if column should be included
+        '''
+        rv = True
+        if not current_user.has_role(ROLE_SUPER_ADMIN):
+            supercols = ['interests', 'last_login_at', 'last_login_ip', 'current_login_ip', 'login_count']
+            colname = col['name'].split('.')[0]
+            if colname in supercols:
+                rv = False
+        return rv
+
+    def getdtoptions(self):
+        '''limit columns to those this user is allowed to see'''
+        dtoptions = super().getdtoptions()
+        dtoptions['columns'] = [c for c in dtoptions['columns'] if self.check_superadmin(c)]
+        return dtoptions
+
+    def getedoptions(self):
+        '''limit form fields to those this user is allowed to see'''
+        edoptions = super().getedoptions()
+        edoptions['fields'] = [c for c in edoptions['fields'] if self.check_superadmin(c)]
+        return edoptions
 
     def updaterow(self, thisid, formdata):
         '''
@@ -149,7 +252,7 @@ class UserView(UserCrudApi):
             db=db,
             model=User,
             version_id_col='version_id',  # optimistic concurrency control
-            roles_accepted='super-admin',
+            roles_accepted=ROLE_SUPER_ADMIN,
             template='datatables.jinja2',
             pagename='users',
             endpoint='userrole.users',
@@ -167,8 +270,7 @@ class UserView(UserCrudApi):
                  'className': 'field_req',
                  },
                 {'data': 'roles', 'name': 'roles', 'label': 'Roles',
-                 '_treatment': {'relationship': {'fieldmodel': Role, 'labelfield': 'name', 'formfield': 'roles',
-                                                 'dbfield': 'roles', 'uselist': True}}
+                 '_treatment': {'relationship': {'optionspicker': RolesPicker()}}
                  },
                 {'data': 'interests', 'name': 'interests', 'label': 'Interests',
                  '_treatment': {'relationship': {'fieldmodel': Interest, 'labelfield': 'description',
@@ -248,7 +350,7 @@ class RoleView(DbCrudApiRolePermissions):
                     db = db,
                     model = Role, 
                     version_id_col = 'version_id',  # optimistic concurrency control
-                    roles_accepted = 'super-admin',
+                    roles_accepted = ROLE_SUPER_ADMIN,
                     template = 'datatables.jinja2',
                     pagename = 'roles', 
                     endpoint = 'userrole.roles',
@@ -311,7 +413,7 @@ class InterestView(DbCrudApiRolePermissions):
             db=db,
             model=Interest,
             version_id_col='version_id',  # optimistic concurrency control
-            interests_accepted='super-admin',
+            interests_accepted=ROLE_SUPER_ADMIN,
             template='datatables.jinja2',
             pagename='interests',
             endpoint='userrole.interests',
@@ -372,12 +474,12 @@ def application_validate(action, formdata):
 
     return results
 
-application = DbCrudApiRolePermissions(
+application_view = DbCrudApiRolePermissions(
                     app = bp,   # use blueprint instead of app
                     db = db,
                     model = Application,
                     version_id_col = 'version_id',  # optimistic concurrency control
-                    applications_accepted = 'super-admin',
+                    applications_accepted = ROLE_SUPER_ADMIN,
                     template = 'datatables.jinja2',
                     pagename = 'applications', 
                     endpoint = 'userrole.applications',
@@ -400,5 +502,5 @@ application = DbCrudApiRolePermissions(
                                         'scrollY': True,
                                   },
                     )
-application.register()
+application_view.register()
 
