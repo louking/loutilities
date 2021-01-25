@@ -99,27 +99,30 @@ def init_db(defineowner=True):
     # and we're done, let's accept what we did
     db.session.commit()
 
-scriptdir = dirname(__file__)
-# one level up
-scriptfolder = dirname(scriptdir)
-configdir = join(scriptfolder, 'config')
-configfile = "users.cfg"
-configpath = join(configdir, configfile)
+def main():
+    scriptdir = dirname(__file__)
+    # one level up
+    scriptfolder = dirname(scriptdir)
+    configdir = join(scriptfolder, 'config')
+    configfile = "users.cfg"
+    configpath = join(configdir, configfile)
 
-# create app and get configuration
-app = create_app(Development(configpath), configpath)
+    # create app and get configuration
+    app = create_app(Development(configpath), configpath)
 
-# set up database
-db.init_app(app)
+    # set up database
+    db.init_app(app)
 
-# set up scoped session
-with app.app_context():
-    # turn on logging
-    setlogging()
+    # set up scoped session
+    with app.app_context():
+        # turn on logging
+        setlogging()
 
-    # clear and initialize the user database
-    db.drop_all(bind='users')
-    db.create_all(bind='users')
-    init_db()
-    db.session.commit()
+        # clear and initialize the user database
+        db.drop_all(bind='users')
+        db.create_all(bind='users')
+        init_db()
+        db.session.commit()
 
+if __name__ == '__main__':
+    main()

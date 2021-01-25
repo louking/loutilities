@@ -216,12 +216,12 @@ class ManageLocalTables():
                 # remove from deactivate list; update all fields
                 if (user.id,localinterest.id) in alllocal:
                     localuser = alllocal.pop((user.id,localinterest.id))
-                    for copy_local_user_attr in copy_local_user_attrs:
-                        setattr(localuser, copy_local_user_attr, getattr(user, copy_local_user_attr))
                 # needs to be added
                 else:
-                    newlocal = self.localusermodel(user_id=user.id, interest_id=localinterest.id, active=True)
-                    self.db.session.add(newlocal)
+                    localuser = self.localusermodel(user_id=user.id, interest_id=localinterest.id, active=True)
+                    self.db.session.add(localuser)
+                for copy_local_user_attr in copy_local_user_attrs:
+                    setattr(localuser, copy_local_user_attr, getattr(user, copy_local_user_attr))
 
         # all remaining in alllocal need to be deactivated
         for user_id,interest_id in alllocal:
@@ -243,12 +243,12 @@ class ManageLocalTables():
             # remove from deactivate list; update active status
             if user.id in alllocal:
                 localuser = alllocal.pop(user.id)
-                for copy_local_user_attr in copy_local_user_attrs:
-                    setattr(localuser, copy_local_user_attr, getattr(user, copy_local_user_attr))
             # needs to be added
             else:
-                newlocal = self.localusermodel(user_id=user.id, active=user.active)
-                self.db.session.add(newlocal)
+                localuser = self.localusermodel(user_id=user.id, active=user.active)
+                self.db.session.add(localuser)
+            for copy_local_user_attr in copy_local_user_attrs:
+                setattr(localuser, copy_local_user_attr, getattr(user, copy_local_user_attr))
 
         # all remaining in alllocal need to be deactivated
         for user_id in alllocal:

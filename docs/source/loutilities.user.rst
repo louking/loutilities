@@ -7,7 +7,6 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
-   loutilities.user.scripts
    loutilities.user.views
 
 Submodules
