@@ -157,6 +157,20 @@ function refresh_table_data(table, resturl, paging) {
 }
 
 /**
+ * return a grip for rowReorder function
+ *
+ * @returns {string}
+ */
+function render_grip(data, type, row) {
+    // see https://datatables.net/forums/discussion/comment/187037/#Comment_187037
+    if ( type === 'display' ) {
+        return '<i class="fa fa-grip-horizontal" aria-hidden="true"></i>';
+    }
+    return data;
+}
+
+
+/**
  * get the button options, correctly annotated with indicated editor
  *
  * @param buttons - list of editor actions 'create', 'edit', 'editRefresh', 'editChildRowRefresh', 'remove'

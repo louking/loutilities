@@ -47,10 +47,6 @@ function render_plus() {
     return '<i class="fa fa-plus-square" aria-hidden="true"></i>';
 }
 
-function render_grip() {
-    return '<i class="fa fa-grip-horizontal" aria-hidden="true"></i>';
-}
-
 /**
  * check tables to see if unsaved changes
  *
