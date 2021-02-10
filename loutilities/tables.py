@@ -1660,6 +1660,7 @@ class DteDbRelationship():
     * nullable - set to True if item can give null (unselected) return, default False (only applies for usellist=False)
     * queryparams - dict containing parameters for query to determine options, or callable which returns such a dict
     * queryfilters - list containing filter sql expressions, for query to determine options, or callable which returns such a list
+    * sortkey - function(dbrow) for sorting options list, default sorts by self.labelfield.lower()
 
     * onclause - sqlalchemy expression: if there is ambiguous relationship between records, this is used as part of
         outerjoin() to clarify the relationship. E.g., Motion.seconder_id == LocalUser.id
@@ -1736,6 +1737,7 @@ class DteDbRelationship():
                     queryparams= {},
                     queryfilters= [],
                     onclause=None,
+                    sortkey=None,
                     )
         args.update(kwargs)
 
@@ -1864,9 +1866,12 @@ class DteDbRelationship():
         items = []
         if self.nullable:
             items += [{'label': '<none>', 'value': None}]
-        items += [{'label': getattr(item, self.labelfield), 'value': item.id}
-                  for item in self.fieldmodel.query.filter_by(**queryparams).filter(*queryfilters).all()]
-        items.sort(key=lambda k: k['label'].lower())
+        alldbitems = self.fieldmodel.query.filter_by(**queryparams).filter(*queryfilters).all()
+        if self.sortkey:
+            alldbitems.sort(key=self.sortkey)
+        items += [{'label': getattr(item, self.labelfield), 'value': item.id} for item in alldbitems]
+        if not self.sortkey:
+            items.sort(key=lambda k: k['label'].lower())
         return items
 
     def new_plus_options(self):
