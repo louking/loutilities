@@ -2965,6 +2965,9 @@ class DbCrudApi(CrudApi):
                 self.dte.set_dbrow(formdata, dbrow)
                 if debug: current_app.logger.debug('after edit id={} dbrow={}'.format(thisid, dbrow.__dict__))
 
+                # flush in case of version_id update
+                self.db.session.flush()
+
                 # prepare response
                 thisrow = self.dte.get_response_data(dbrow)
                 return thisrow
