@@ -1,0 +1,39 @@
+{% extends "layout.jinja2" %}
+
+{% block pagename %}
+    {{ pagename }}
+{% endblock pagename %}
+{% block css %}
+    <style>
+        #submit-div {
+            width: 25%;
+        }
+        #select-submit {
+            float: right;
+            margin: 5px;
+        }
+    </style>
+{% endblock %}
+{% block scripts %}
+    <script>
+        $( function() {
+            $('#select-submit').button();
+            var select = $('#select-select');
+            select.select2({{ select2options }});
+            select.val({{ select2val }});
+            select.trigger('change');
+        });
+    </script>
+{% endblock %}
+{% block body %}
+    {{ preselecthtml|safe }}
+    <form id="select-form" class="select-view-form" action="{{ posturl }}", method="post">
+        {% if selectlabel %}
+            <label for="select-select"><b>{{ selectlabel }}</b></label>
+        {% endif %}
+        <select id="select-select" name="select-select"></select><br>
+        <div id="submit-div">
+            <input id="select-submit" type="submit" value="Submit">
+        </div>
+    </form>
+{% endblock %}
