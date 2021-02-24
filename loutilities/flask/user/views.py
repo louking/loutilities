@@ -12,7 +12,7 @@ from . import DbCrudApiInterestsRolePermissions
 
 class NotImplementedError(Exception): pass
 
-class SelectView(DbCrudApiInterestsRolePermissions):
+class SelectInterestsView(DbCrudApiInterestsRolePermissions):
     '''
     create a view with a single select, and a submit button, based on DbCrudApiInterestsRolePermissions for the
     user permissions stuff, otherwise gutted
