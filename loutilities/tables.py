@@ -595,7 +595,7 @@ class CrudChildElement():
             tableidtemplate - template for table id
             args -
                 buttons - list of editor actions 'create', 'edit', 'editRefresh', 'editChildRowRefresh', 'remove'
-                    or other button configuration.
+                    or other button configuration. May be function which returns this list.
                     See https://datatables.net/reference/option/buttons and
                     https://datatables.net/reference/option/buttons.buttons
                 columns (optional)
@@ -629,13 +629,15 @@ class CrudChildElement():
 
     def get_options(self):
         if self.type == CHILDROW_TYPE_TABLE:
-            args = self.args
+            # need to make copy because args['buttons'] may get overwritten if function
+            args = deepcopy(self.args)
             args['dtopts'] = self.table.getdtoptions()
             args['edopts'] = self.table.getedoptions()
             args['cropts'] = self.table.getchildrowoptions()
             # don't override caller buttons, else pick up from the table default
             if 'buttons' not in args:
                 args['buttons'] = self.table.buttons
+            args['buttons'] = args['buttons'] if not callable(args['buttons']) else args['buttons']()
 
             # remove server based column control as this has been configured by the base table
             # and we don't want to try to pass that to the client
