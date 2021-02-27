@@ -199,3 +199,7 @@ function register_group(groupname, groupselectselector, groupargappendselector) 
         location.href = basequery[0] + '?' + $.param(args);
     });
 }
+
+function get_group_val() {
+    return $(dt_groupselectselector).val()
+}

@@ -126,7 +126,7 @@ function checkTables(base, row, debug) {
  */
 function ChildRow(table, config, editor, base, parentid, tablename) {
     var that = this;
-    that.debug = true;
+    that.debug = false;
 
     if (that.debug) {console.log(new Date().toISOString() + ' ChildRow()');}
 
