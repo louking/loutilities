@@ -19,14 +19,19 @@
         $( function() {
             $('#select-submit').button();
             var select = $('#select-select');
-            select.select2({{ select2options }});
-            select.val({{ select2val }});
-            select.trigger('change');
+            {% if not displayonly %}
+                select.select2({{ select2options }});
+                select.val({{ select2val }});
+                select.trigger('change');
+            {% else %}
+                select.text({{ select2val }})
+            {% endif %}
         });
     </script>
 {% endblock %}
 {% block body %}
     {{ preselecthtml|safe }}
+    {% if not displayonly %}
     <form id="select-form" class="select-view-form" action="{{ posturl }}", method="post">
         {% if selectlabel %}
             <label for="select-select"><b>{{ selectlabel }}</b></label>
@@ -36,4 +41,8 @@
             <input id="select-submit" type="submit" value="Submit">
         </div>
     </form>
+    {% else %}
+        <label for="select-select"><b>{{ selectlabel }}</b></label>
+        <span id="select-select" name="select-select"></span>
+    {% endif %}
 {% endblock %}

@@ -23,6 +23,8 @@ class SelectInterestsView(DbCrudApiInterestsRolePermissions):
             can also be a function which returns this parameter
     :param endpoint: endpoint parameter used by flask.url_for()
     :param rule: rule parameter used by flask.add_url_rule() [defaults to '/' + endpoint]
+    :param displayonly: set to True if the form should only be displayed (no submit option), default False
+            can also be a function which returns this parameter
     :param preselecthtml: string any html which needs to go before the select
             can also be a function which returns this parameter
     :param select2options: options for select2 initialization (https://select2.org/configuration/options-api)
@@ -40,7 +42,8 @@ class SelectInterestsView(DbCrudApiInterestsRolePermissions):
                     preselecthtml = '',
                     select2options = {},
                     selectlabel = None,
-                    posturl=lambda: self._pageurl()
+                    posturl=lambda: self._pageurl(),
+                    displayonly=False,
                     )
         args.update(kwargs)
 
@@ -90,6 +93,7 @@ class SelectInterestsView(DbCrudApiInterestsRolePermissions):
             preselecthtml=self.preselecthtml if not callable(self.preselecthtml) else self.preselecthtml(),
             selectlabel=self.selectlabel if not callable(self.selectlabel) else self.selectlabel(),
             posturl=self.posturl if not callable(self.posturl) else self.posturl(),
+            displayonly=self.displayonly if not callable(self.displayonly) else self.displayonly(),
         )
 
     def get(self):
