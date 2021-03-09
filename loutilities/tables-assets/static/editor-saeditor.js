@@ -35,7 +35,7 @@ function SaEditor(options) {
 
     // note we can't initialize here, because there's some chicken/egg problem with initializing ckeditor
     // that.init();
-}
+};
 
 /**
  * Return a function which does action for table button. This needs to be invoked before datatables is initialized.
@@ -84,7 +84,7 @@ SaEditor.prototype.edit_button_hook = function(url) {
         } );
     }
     return fn;
-}
+};
 
 SaEditor.prototype.init = function() {
     var that = this;
@@ -96,7 +96,7 @@ SaEditor.prototype.init = function() {
     // (see https://stackoverflow.com/a/19237302/799921 for ajax hint)
     that.saeditor
         .buttons(that.buttons)
-}
+};
 
 /**
  * return url parameters for SaEditor
