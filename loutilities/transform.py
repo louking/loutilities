@@ -1,19 +1,11 @@
-###########################################################################################
-#   transform - transformation methods
-#
-#   Date        Author      Reason
-#   ----        ------      ------
-#   10/24/16    Lou King    create
-#
-#   Copyright 2016 Lou King
-###########################################################################################
+'''
+transform - transformation methods
+'''
 
 # homegrown
 from .csvu import str2num
 
-###########################################################################################
 class Transform():
-###########################################################################################
     '''
     transform objects using a mapping object
 
@@ -25,18 +17,16 @@ class Transform():
     :param mapping: mapping dict with key for each target attr, value is key in source or function(source)
     :param sourceattr: True if getattr works with source, otherwise uses __getitem__ (as dict)
     :param targetattr: True if setattr works with target, otherwise uses __setitem__ (as dict)
+    :param knownstrings: list of mapping keys for which numeric conversion isn't attempted
     '''
 
-    #----------------------------------------------------------------------
-    def __init__(self, mapping, sourceattr=True, targetattr=True):
-    #----------------------------------------------------------------------
+    def __init__(self, mapping, sourceattr=True, targetattr=True, knownstrings=[]):
         self.mapping = mapping
         self.sourceattr = sourceattr
         self.targetattr = targetattr
+        self.knownstrings = knownstrings
 
-    #----------------------------------------------------------------------
     def transform(self, source, target):
-    #----------------------------------------------------------------------
         '''
         set target values based on source object
 
@@ -60,7 +50,8 @@ class Transform():
                     value = source[sourceattr]
 
             # maybe convert to number or boolean before saving in target
-            if isinstance(value, str):
+            # skip keys which are known to be strings
+            if isinstance(value, str) and key not in self.knownstrings:
                 value = str2num(value)
                 if value in ['false', 'False']:
                     value = False
