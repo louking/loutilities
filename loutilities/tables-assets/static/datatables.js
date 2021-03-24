@@ -199,9 +199,9 @@ function get_button_options(buttons, editor) {
 }
 
 /**
- * render edit icon, for row editing
+ * render a fontawesome icon
  *
- * column declaration for CrudApi must be
+ * column declaration for CrudApi must be similar to
  *
  *      {'data': '',  # needs to be '' else get exception converting options from meetings render_template
  *       # TypeError: '<' not supported between instances of 'str' and 'NoneType'
@@ -213,24 +213,20 @@ function get_button_options(buttons, editor) {
  *       'type': 'hidden',  # only affects editor modal
  *       # this heading title or some other title like "Edit"
  *       'title': '<i class="fas fa-edit" aria-hidden="true"></i>',
- *       'render': {'eval': 'render_edit'},
+ *       'render': {'eval': 'render_icon("fas fa-edit", ["displayicon"])'},
  *       },
  *
- * @returns {string}
+ * @param {string} iconclass - classes of icon, e.g., "fas fa-edit"
+ * @param {string} [hideattr] - attr of row which, if true means the icon should be hidden
+ * @returns {function(data, type, row): string} - string is text to be rendered
  */
-function render_edit() {
-    return '<i class="fas fa-edit" aria-hidden="true"></i>';
-}
-
-/**
- * render a fontawesome icon
- *
- * @param iconclass - classes of icon, e.g., "fas fa-edit"
- * @returns {function(): string} - string is rendered text
- */
-function render_icon(iconclass) {
-    var fn = function() {
-        return '<i class="' + iconclass + '" aria-hidden="true"></i>';
+function render_icon(iconclass, hideattr) {
+    var fn = function(data, type, row) {
+        if (!row[hideattr]) {
+            return '<i class="' + iconclass + '" aria-hidden="true"></i>';
+        } else {
+            return ''
+        }
     }
     return fn;
 }
