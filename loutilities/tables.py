@@ -854,7 +854,7 @@ class CrudApi(MethodView):
 
     :param createfieldvals: (optional) dict of fields with values for create form {name: val, ...}, or function
             which returns such a dict
-    :param childrowoptions: (optional)
+    :param childrowoptions: (optional) the following dict or function which returns this dict
         {
           'template': nunjuck template for display of child row,
           'showeditor': True if editor should be shown in childrow, template must have element with id
@@ -914,7 +914,8 @@ class CrudApi(MethodView):
         self.childelements = []
         self.childtables = {}
         if self.childrowoptions:
-            childelementargs = self.childrowoptions.get('childelementargs', [])
+            childrowoptions = self.childrowoptions() if callable(self.childrowoptions) else self.childrowoptions
+            childelementargs = childrowoptions.get('childelementargs', [])
             for ceargs in childelementargs:
                 self.childelements.append(CrudChildElement(**ceargs))
                 self.childtables[ceargs['name']] = ceargs
@@ -1211,7 +1212,7 @@ class CrudApi(MethodView):
 
     def getchildrowoptions(self):
         # deep copy, taking care not to include non-jsonable values
-        val = copyopts(self.childrowoptions)
+        val = copyopts(self.childrowoptions) if not callable(self.childrowoptions) else self.childrowoptions()
 
         # the original childelementargs config has been converted to self.childelements
         val.pop('childelementargs', None)
