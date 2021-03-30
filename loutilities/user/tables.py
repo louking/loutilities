@@ -4,9 +4,11 @@ tables - support tables for user package under loutilities
 '''
 # standard
 from urllib.parse import urlencode
+from traceback import format_exception_only, format_exc
 
 # pypi
-from flask import g, current_app, url_for
+from flask import g, current_app, url_for, jsonify
+from flask.views import MethodView
 from flask_security import auth_required
 from flask_security import current_user
 from sqlalchemy import Enum
@@ -465,4 +467,103 @@ class AssociationCrudApi(DbCrudApiInterestsRolePermissions):
             setattr(assnrow, self.assnmodelfield, dbrow)
 
         return self.dte.get_response_data(dbrow)
+
+
+class DbPermissionsMethodViewApi(MethodView):
+    """
+    method view which checks permissions, for apis
+
+    :param app: app or blueprint this view belongs to
+    :param db: database object a la sqlalchemy
+    :param roles_accepted: list of roles accepted for this view
+    :param endpoint: endpoint parameter used by flask.url_for()
+    :param rule: rule parameter used by flask.add_url_rule()
+    :param methods: sequence of HTTP methods the url rule applies to
+    """
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+        args = dict(
+            app=None,
+            db=None,
+            roles_accepted=None,
+            endpoint=None,
+            rule=None,
+            methods=None,
+        )
+        args.update(kwargs)
+
+        # make arguments into attributes
+        for key in args:
+            setattr(self, key, args[key])
+
+    def permission(self):
+        '''
+        determine if current user is permitted to use the view
+        '''
+        allowed = False
+
+        # g.interest initialized in <project>.create_app.pull_interest
+        # g.interest contains slug, pull in interest db entry. If not found, no permission granted
+        interest = Interest.query.filter_by(interest=g.interest).one_or_none()
+
+        # need to be logged in, and allowed to use this interest
+        if current_user.is_authenticated and interest and interest in current_user.interests:
+            # check permissions allowed/permitted
+            for role in self.roles_accepted:
+                if current_user.has_role(role):
+                    allowed = True
+                    break
+
+        return allowed
+
+    def get(self):
+        try:
+            if not self.permission():
+                db.session.rollback()
+                cause = 'operation not permitted for user'
+                return jsonify(error=cause)
+
+            response = self.do_get()
+            db.session.commit()
+            return response
+
+        except Exception as e:
+            exc = ''.join(format_exception_only(type(e), e))
+            output_result = {'status': 'fail', 'error': 'exception occurred:<br>{}'.format(exc)}
+            # roll back database updates and close transaction
+            db.session.rollback()
+            current_app.logger.error(format_exc())
+            return jsonify(output_result)
+
+    def do_get(self):
+        raise NotImplementedError
+
+    def post(self):
+        try:
+            if not self.permission():
+                db.session.rollback()
+                cause = 'operation not permitted for user'
+                return jsonify(error=cause)
+
+            response = self.do_post()
+            db.session.commit()
+            return response
+
+        except Exception as e:
+            exc = ''.join(format_exception_only(type(e), e))
+            output_result = {'status': 'fail', 'error': 'exception occurred:<br>{}'.format(exc)}
+            # roll back database updates and close transaction
+            db.session.rollback()
+            current_app.logger.error(format_exc())
+            return jsonify(output_result)
+
+    def do_post(self):
+        raise NotImplementedError
+
+    def register(self):
+        # name for view is last bit of fully named endpoint
+        name = self.endpoint.split('.')[-1]
+
+        self.my_view = self.as_view(name, **self.kwargs)
+        self.app.add_url_rule(self.rule, view_func=self.my_view, methods=self.methods)
 
