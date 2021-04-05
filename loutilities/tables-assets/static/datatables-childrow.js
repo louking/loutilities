@@ -605,8 +605,8 @@ ChildRow.prototype.showTables = function(row, showedit) {
 
             // fire any childrow_postcreate_hooks hooks
             if (childrow_postcreate_hooks.hasOwnProperty(tablemeta.name)) {
-                for (var i=0; i<childrow_postcreate_hooks[tablemeta.name].length; i++) {
-                    var fn = childrow_postcreate_hooks[tablemeta.name][i];
+                for (var pchndx=0; pchndx<childrow_postcreate_hooks[tablemeta.name].length; pchndx++) {
+                    var fn = childrow_postcreate_hooks[tablemeta.name][pchndx];
                     fn(childrowtablemeta.table, childrowtablemeta.editor);
                 }
             }
