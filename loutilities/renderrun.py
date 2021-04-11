@@ -177,7 +177,7 @@ def rendertime(dbtime,precision,useceiling=True):
             rettime = ':' + rettime
         firstthru = False
         rettime = '{0:02d}'.format(thisunit) + rettime
-        remdbtime /= 60
+        remdbtime //= 60
         thisunit = remdbtime%60
         
     while rettime[0] == '0':
