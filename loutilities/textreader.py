@@ -289,7 +289,7 @@ class TextReader():
         # handle txt files
         elif self.ftype in ['csv']:
             if self.intype == 'file':
-                self._CSV = open(filename,'rb')
+                self._CSV = open(filename,'r')
             else:
                 self._CSV = iter(filename)
             self.CSV = csv.reader(self._CSV)

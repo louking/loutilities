@@ -1,26 +1,3 @@
-#!/usr/bin/python
-###########################################################################################
-#   csvwt - write csv from various file types
-#
-#   Date        Author      Reason
-#   ----        ------      ------
-#   02/07/13    Lou King    Create
-#
-#   Copyright 2013 Lou King
-#
-#   Licensed under the Apache License, Version 2.0 (the "License");
-#   you may not use this file except in compliance with the License.
-#   You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-#   Unless required by applicable law or agreed to in writing, software
-#   distributed under the License is distributed on an "AS IS" BASIS,
-#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#   See the License for the specific language governing permissions and
-#   limitations under the License.
-#
-###########################################################################################
 '''
 csvwt - write csv from various file types
 ===================================================
@@ -33,11 +10,10 @@ import tempfile
 import collections
 import os
 from collections import OrderedDict
-import csv
+from csv import DictReader, DictWriter
 
 # pypi
 import xlrd
-import unicodecsv   # standard csv does not handle unicode data
 
 # github
 
@@ -106,7 +82,7 @@ def record2csv(inrecs, mapping, outfile=None):
 
     # create writeable list, csv file
     outreclist = wlist()
-    coutreclist = csv.DictWriter(outreclist, outfields)
+    coutreclist = DictWriter(outreclist, outfields)
     coutreclist.writeheader()
 
     for inrec in inrecs:
@@ -130,7 +106,7 @@ def record2csv(inrecs, mapping, outfile=None):
 
     # write file if desired
     if outfile:
-        with open(outfile,'wb') as out:
+        with open(outfile,'w') as out:
             out.writelines(outreclist)
 
     return outreclist
@@ -220,8 +196,8 @@ class Xls2Csv(Base2Csv):
                 
             # create output csv file and write header
             self.files[name] = '{0}/{1}.csv'.format(self.dir,name)
-            OUT = open(self.files[name], 'wb')
-            writer = unicodecsv.DictWriter(OUT,outhdr)
+            OUT = open(self.files[name], 'w')
+            writer = DictWriter(OUT,outhdr)
             writer.writeheader()
             
             # copy all the rows in the original sheet to the csv file
@@ -310,8 +286,8 @@ class Db2Csv(Base2Csv):
 
         # create output csv file and write header
         self.files[name] = '{0}/{1}.csv'.format(self.dir,name)
-        OUT = open(self.files[name], 'wb')
-        writer = unicodecsv.DictWriter(OUT,outhdr)
+        OUT = open(self.files[name], 'w')
+        writer = DictWriter(OUT,outhdr)
         writer.writeheader()
             
         # copy all the rows in the table to the csv file
