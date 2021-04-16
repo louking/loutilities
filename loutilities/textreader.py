@@ -262,15 +262,25 @@ class TextReader():
                 raise parameterError('Invalid list: must use filetype in {}'.format(VALIDLTYPES))
         
         # handle excel files
-        if self.ftype in ['xls','xlsx']:
-            import xlrd
-            self.workbook = xlrd.open_workbook(filename)
+        if self.ftype in ['xls']:
+            from xlrd import open_workbook
+            self.workbook = open_workbook(filename)
             self.sheet = self.workbook.sheet_by_index(0)    # only first sheet is considered
             self.currrow = 0
             self.nrows = self.sheet.nrows
             self.delimited = True               # rows are already broken into columns
             self.workbook.release_resources()   # sheet is already loaded so we can save memory
             
+        # handle excel files
+        elif self.ftype in ['xlsx']:
+            from openpyxl import load_workbook
+            self.workbook = load_workbook(filename)
+            self.sheet = self.workbook[self.workbook.sheetnames[0]]    # only first sheet is considered
+            self.currrow = 0
+            self.rows = list(self.sheet.rows)
+            self.nrows = len(list(self.sheet.rows))
+            self.delimited = True               # rows are already broken into columns
+
         # handle word files
         elif self.ftype in ['docx']:
             import docx
@@ -313,11 +323,20 @@ class TextReader():
             raise ValueError('I/O operation on a closed file')
         
         # handle excel files
-        if self.ftype in ['xls','xlsx']:
+        if self.ftype in ['xls']:
             if self.currrow >= self.nrows:
                 raise StopIteration
             
             row = self.sheet.row_values(self.currrow)
+            self.currrow += 1
+            return row
+        
+        # handle excel files
+        if self.ftype in ['xlsx']:
+            if self.currrow >= self.nrows:
+                raise StopIteration
+            
+            row = [c.value for c in self.rows[self.currrow]]
             self.currrow += 1
             return row
         

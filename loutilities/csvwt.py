@@ -13,7 +13,8 @@ from collections import OrderedDict
 from csv import DictReader, DictWriter
 
 # pypi
-import xlrd
+from xlrd import open_workbook
+from openpyxl import load_workbook
 
 # github
 
@@ -162,25 +163,64 @@ class Base2Csv():
 class Xls2Csv(Base2Csv):
 ########################################################################
     '''
-    create csv file(s) from xlsx (or xls) sheets
+    create csv file(s) from xlsx sheets
     
     :param filename: name of file to convert
     :param outdir: directory to put output file(s) -- if None, temporary directory is used
     :param hdrmap: maps input header to csv header -- if None, input header is used as csv header
     '''
 
-    #----------------------------------------------------------------------
-    def __init__(self,filename,outdir=None,hdrmap=None):
-    #----------------------------------------------------------------------
-        '''
-        '''
-        
-        # create outdir if necessary, self.out, self.files
-        super().__init__(filename, outdir=outdir)
-        
+    def _handle_xlsx(self, filename, hdrmap=None):
+        """
+        handle xlsx file
+
+        :param filename: xlsx file name
+        :param hdrmap: maps input header to csv header -- if None, input header is used as csv header
+        """
         # go through each sheet, and save as csv file
         # from http://www.gossamer-threads.com/lists/python/python/833610
-        wb = xlrd.open_workbook(filename) 
+        wb = load_workbook(filename) 
+        for name in wb.sheetnames: 
+            sheet = wb[name] 
+            if len(list(sheet.rows)) == 0: continue   # skip empty sheets
+            
+            # get header
+            inhdr = [c.value for c in next(sheet.rows)]
+            if hdrmap is not None:
+                # NOTE: this has the effect of filtering input columns
+                outhdr = [hdrmap[k] for k in hdrmap]
+            else:
+                hdrmap = dict(list(zip(inhdr,inhdr)))
+                outhdr = inhdr
+                
+            # create output csv file and write header
+            self.files[name] = '{0}/{1}.csv'.format(self.dir,name)
+            OUT = open(self.files[name], 'w')
+            writer = DictWriter(OUT,outhdr)
+            writer.writeheader()
+            
+            # copy all the remaining rows in the original sheet to the csv file
+            for row in sheet.iter_rows(min_row=1, values_only=True):
+                inrow = dict(list(zip(inhdr,row)))
+                outrow = {}
+                for incol in inhdr:
+                    if incol in hdrmap:
+                        outrow[hdrmap[incol]] = inrow[incol]
+                writer.writerow(outrow)
+            
+            # we're done with this sheet
+            OUT.close()
+ 
+    def _handle_xls(self, filename, hdrmap=None):
+        """
+        handle xls file
+
+        :param filename: xls file name
+        :param hdrmap: maps input header to csv header -- if None, input header is used as csv header
+        """
+        # go through each sheet, and save as csv file
+        # from http://www.gossamer-threads.com/lists/python/python/833610
+        wb = open_workbook(filename) 
         for name in wb.sheet_names(): 
             sheet = wb.sheet_by_name(name) 
             if sheet.nrows == 0: continue   # skip empty sheets
@@ -211,10 +251,24 @@ class Xls2Csv(Base2Csv):
             
             # we're done with this sheet
             OUT.close()
+
+    def __init__(self, filename, outdir=None, hdrmap=None):
         
-        # and done with the workbook
-        wb.release_resources()
+        # only handle xlsx these days
+
+        # create outdir if necessary, self.out, self.files
+        super().__init__(filename, outdir=outdir)
         
+        ext = filename.split('.')[-1]
+        if ext.lower() == 'xlsx':
+            self._handle_xlsx(filename, hdrmap=hdrmap)
+        
+        elif ext.lower() == 'xls':
+            self._handle_xls(filename, hdrmap=hdrmap)
+        
+        else:
+            raise parameterError(f'invalid extension: {ext}')
+
 ########################################################################
 class Db2Csv(Base2Csv):
 ########################################################################
