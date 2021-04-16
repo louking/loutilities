@@ -1,31 +1,3 @@
-################################################################################
-# timeu -- time methods
-#
-# Author: L King
-#
-# REVISION HISTORY:
-#   12/10/10    L King      Create
-#   12/20/10    L King      Update doc string
-#   03/18/11    L King      Fix some doc strings
-#   12/14/12    L King      Add epoch2localdt
-#   01/21/13    L King      Add excel2dt
-#   02/03/13    L King      Update excel2dt to allow str(int) input, add dt2excel, excel2asc, asc2excel
-#
-#   Copyright 2012,2013 Lou King
-#
-#   Licensed under the Apache License, Version 2.0 (the "License");
-#   you may not use this file except in compliance with the License.
-#   You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-#   Unless required by applicable law or agreed to in writing, software
-#   distributed under the License is distributed on an "AS IS" BASIS,
-#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#   See the License for the specific language governing permissions and
-#   limitations under the License.
-#  
-################################################################################
 """
 timeu -- time methods
 ============================
@@ -41,9 +13,7 @@ import calendar
 import tzlocal
 import pytz
 
-#----------------------------------------------------------------------
 def epoch2dt (epochtime):
-#----------------------------------------------------------------------
     """
     get a datetime object corresponding to an epoch time
     
@@ -53,9 +23,7 @@ def epoch2dt (epochtime):
     
     return datetime.datetime.utcfromtimestamp(epochtime)
 
-#----------------------------------------------------------------------
 def dt2epoch (dt):
-#----------------------------------------------------------------------
     """
     get an epoch time corresponding to a datetime object 
     
@@ -73,9 +41,7 @@ def dt2epoch (dt):
         
     return int(calendar.timegm((utcdt).timetuple()))
 
-#----------------------------------------------------------------------
 def epoch2localdt(epochtime):
-#----------------------------------------------------------------------
     '''
     convert from epoch time to datetime local timezone
     
@@ -88,13 +54,11 @@ def epoch2localdt(epochtime):
     localtime = utc.astimezone(localtz)
     return localtime
     
-#----------------------------------------------------------------------
 def excel2dt (exceltime):
-#----------------------------------------------------------------------
     """
     get an datetime corresonding to an excel floating time
 
-    raises ValueError if invalid exceltime format (must be int or float, or string version of same)
+    raises ValueError if invalid exceltime format (must be datetime, int, or float, or string version of same)
     
     NOTE: only works for dates after 3/1/1900
     see http://www.lexicon.net/sjmachin/xlrd.html for more details
@@ -103,13 +67,17 @@ def excel2dt (exceltime):
     :rtype: datetime.datetime
     """
 
-    # NOTE: __EXCELEPOCH needs to be initialized after asctime class
-    exceltime = float(exceltime)
-    return __EXCELEPOCH + datetime.timedelta(exceltime)
+    # may have come from openpyxl, in which case it's already been converted
+    if isinstance(exceltime, datetime.datetime):
+        return exceltime
+    
+    # this means it probably came from xlrd, and needs to be converted
+    else:
+        # NOTE: __EXCELEPOCH needs to be initialized after asctime class
+        exceltime = float(exceltime)
+        return __EXCELEPOCH + datetime.timedelta(exceltime)
 
-#----------------------------------------------------------------------
 def dt2excel (dt):
-#----------------------------------------------------------------------
     """
     get an excel floating time from datetime
     
@@ -126,9 +94,7 @@ def dt2excel (dt):
     fracdays = seconds / (24*60*60)
     return dif.days + fracdays
 
-#----------------------------------------------------------------------
 def tzdt2utcdt(dt,tzid):
-#----------------------------------------------------------------------
     '''
     convert datetime of timezone id to UTC
     
@@ -146,9 +112,7 @@ def tzdt2utcdt(dt,tzid):
     d_utc = d_tz.astimezone(utc)
     return d_utc
 
-#----------------------------------------------------------------------
 def utcdt2tzdt(dt,tzid):
-#----------------------------------------------------------------------
     '''
     convert UTC datetime to timezone
     
@@ -167,9 +131,7 @@ def utcdt2tzdt(dt,tzid):
     localetime = d_tz.astimezone(tz)
     return localetime
 
-#----------------------------------------------------------------------
 def age(asof,dob):
-#----------------------------------------------------------------------
     '''
     get age as of a date based on birth date
     
@@ -178,9 +140,7 @@ def age(asof,dob):
     '''
     return asof.year - dob.year - int((asof.month, asof.day) < (dob.month, dob.day))
 
-#----------------------------------------------------------------------
 def timesecs(asctime):
-#----------------------------------------------------------------------
     '''
     calculate time in seconds from string time
     
@@ -194,9 +154,7 @@ def timesecs(asctime):
         thistime += float(timefield)
     return thistime
 
-#----------------------------------------------------------------------
 def racetimesecs(asctime, distance, fastpace, slowpace):
-#----------------------------------------------------------------------
     '''
     calculate time in seconds from string time
 
@@ -224,23 +182,17 @@ def racetimesecs(asctime, distance, fastpace, slowpace):
 
     return thistime
 
-########################################################################
 class asctime ():
-########################################################################
     """
     asctime -- provide formatting methods for ascii time format
     
     :param ascformat: time format for ascii conversion.  See http://docs.python.org/2/library/datetime.html#strftime-strptime-behavior for formats
     """
     
-    #----------------------------------------------------------------------
     def __init__(self, ascformat):
-    #----------------------------------------------------------------------
         self.ascformat = ascformat
     
-    #----------------------------------------------------------------------
     def asc2dt (self,asctime):
-    #----------------------------------------------------------------------
         """
         convert ASCII time to datetime object
         
@@ -250,9 +202,7 @@ class asctime ():
 
         return datetime.datetime.strptime(asctime,self.ascformat)
 
-    #----------------------------------------------------------------------
     def dt2asc (self,dt):
-    #----------------------------------------------------------------------
         """
         convert datetime object to ASCII TIME
         
@@ -262,9 +212,7 @@ class asctime ():
 
         return datetime.datetime.strftime(dt,self.ascformat)
     
-    #----------------------------------------------------------------------
     def asc2epoch (self,asctime):
-    #----------------------------------------------------------------------
         """
         convert ASCII time to epoch time
         
@@ -274,9 +222,7 @@ class asctime ():
 
         return dt2epoch(datetime.datetime.strptime(asctime,self.ascformat))
 
-    #----------------------------------------------------------------------
     def epoch2asc (self,epoch):
-    #----------------------------------------------------------------------
         """
         convert epoch time to ASCII time
         
@@ -286,9 +232,7 @@ class asctime ():
 
         return datetime.datetime.strftime(epoch2dt(epoch),self.ascformat)
     
-    #----------------------------------------------------------------------
     def asc2excel (self,asctime):
-    #----------------------------------------------------------------------
         """
         convert ASCII time to excel time
         
@@ -298,9 +242,7 @@ class asctime ():
 
         return dt2excel(datetime.datetime.strptime(asctime,self.ascformat))
 
-    #----------------------------------------------------------------------
     def excel2asc (self,excel):
-    #----------------------------------------------------------------------
         """
         convert excel time to ASCII time
         
