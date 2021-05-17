@@ -51,9 +51,13 @@ def setlogging():
             mailhost = current_app.config['MAIL_SERVER']
         else:
             mailhost = 'localhost'
+        credentials = None
+        if 'MAIL_USERNAME' in current_app.config and 'MAIL_PASSWORD' in current_app.config:
+            credentials = (current_app.config['MAIL_USERNAME'], current_app.config['MAIL_PASSWORD'])
         mail_handler = SMTPHandler(mailhost,
                                    'noreply@steeplechasers.org',
-                                   ADMINS, f'{application} exception encountered')
+                                   ADMINS, f'{application} exception encountered',
+                                   credentials = credentials)
         if 'LOGGING_LEVEL_MAIL' in current_app.config:
             mailloglevel = current_app.config['LOGGING_LEVEL_MAIL']
         else:
