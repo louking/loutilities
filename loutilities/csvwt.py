@@ -276,19 +276,23 @@ class Db2Csv(Base2Csv):
     create csv file(s) from db tables
         
     :param outdir: directory to put output file(s) -- if None, temporary directory is used
+    :param encoding: encoding for csv file, default None (system default)
     '''
 
     #----------------------------------------------------------------------
-    def __init__(self,outdir=None):
+    def __init__(self, outdir=None, encoding=None):
     #----------------------------------------------------------------------
         '''
         '''
         
         # create outdir if necessary, self.out, self.files
         super().__init__('', outdir=outdir)
+
+        # save encoding for csv file open
+        self.encoding = encoding
         
     #----------------------------------------------------------------------
-    def addtable(self,name,session,model,hdrmap=None,**kwargs):
+    def addtable(self, name, session, model, hdrmap=None, **kwargs):
     #----------------------------------------------------------------------
         '''
         insert a new element or update an existing on based on kwargs query
@@ -340,7 +344,7 @@ class Db2Csv(Base2Csv):
 
         # create output csv file and write header
         self.files[name] = '{0}/{1}.csv'.format(self.dir,name)
-        OUT = open(self.files[name], 'w')
+        OUT = open(self.files[name], 'w', encoding=self.encoding)
         writer = DictWriter(OUT,outhdr)
         writer.writeheader()
             
