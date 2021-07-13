@@ -139,3 +139,17 @@ tr.shown + tr {
     border-color: #767676 #c3c3c3 #c3c3c3 #767676 !important;
     background-color: white;
 }
+
+/* select items displayed as tags, matches .select2-container--default .select2-selection--multiple .select2-selection__choice */
+/* see datatables.render_select_as_tags() */
+.tag-display {
+    background-color: #e4e4e4;
+    border: 1px solid #aaa;
+    border-radius: 4px;
+    cursor: default;
+    float: left;
+    margin-right: 5px;
+    margin-top: 5px;
+    padding: 0 5px;
+    white-space: nowrap;    /* added beyond .select2 styling */
+}

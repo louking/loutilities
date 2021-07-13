@@ -167,8 +167,26 @@ function render_grip(data, type, row) {
         return '<i class="fa fa-grip-horizontal" aria-hidden="true"></i>';
     }
     return data;
-}
+};
 
+/**
+ * return function which renders display data as select tags
+ * @param {} separator 
+ */
+function render_select_as_tags () {
+    return function(data, type, row) {
+        if ( type === 'display' ) {
+            var items = data;
+            var displayitems = [];
+            for (var i=0; i<items.length; i++) {
+                var item = items[i];
+                displayitems.push(`<span class=tag-display>${item}</span>`)
+            }
+            return displayitems.join('');
+        }
+        return data;
+    }
+};
 
 /**
  * get the button options, correctly annotated with indicated editor
