@@ -12,6 +12,7 @@
  * @param {button-options[]} [options.buttons=['Submit']] - array of button-options
  * @param {SaEditor~UrlParams} [options.get_urlparams] - callback function which returns object of parameters to
  *      override in url params of ajax url
+ * @param {SaEditor~AfterInit} [options.after_init] - callback function called at end of init()
  * @param {SaEditor~FormValues} options.form_values - return fieldNames object based on json object per
  *      https://editor.datatables.net/reference/api/set(). json is response from ajax call in this.edit_button_hook()
  * @constructor
@@ -23,6 +24,8 @@ function SaEditor(options) {
     that.title = options.title;
     that.fields = options.fields || [];
     that.buttons = options.buttons || ['Submit'];
+    that.after_init = options.after_init || function () {
+    }
     that.get_urlparams = options.get_urlparams || function () {
         return {}
     }
@@ -96,6 +99,9 @@ SaEditor.prototype.init = function() {
     // (see https://stackoverflow.com/a/19237302/799921 for ajax hint)
     that.saeditor
         .buttons(that.buttons)
+
+    // user function called after init
+    that.after_init();
 };
 
 /**
@@ -107,6 +113,12 @@ SaEditor.prototype.init = function() {
  * @param node - parameters for https://datatables.net/reference/option/buttons.buttons.action()
  * @param config - parameters for https://datatables.net/reference/option/buttons.buttons.action()
  * @returns {object} object with url parameters to add override in url params of ajax url
+ */
+
+/**
+ * callback function called at end if init()
+ * 
+ * @callback SaEditor~AfterInit
  */
 
 /**
