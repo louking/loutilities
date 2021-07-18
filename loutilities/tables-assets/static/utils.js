@@ -136,3 +136,25 @@ function renderactive() {
         return value
     }
 }
+
+/**
+ * show error message modal
+ *
+ * @param message - message to display
+ */
+ function showerrorpopup(message) {
+  var error = $('<div>');
+  error.append(message);
+  error.dialog({
+      title: 'Error',
+      modal: false,
+      minWidth: 600,
+      height: 'auto',
+      buttons: {
+          OK: function() {
+              $(this).dialog('close');
+          }
+      }
+  });
+}
+
