@@ -17,7 +17,7 @@ from flask_security import current_user
 class UserFormatter(Formatter):
     # https://flask.palletsprojects.com/en/1.1.x/logging/#injecting-request-information
     def format(self, record):
-        if current_user.is_authenticated:
+        if current_user and current_user.is_authenticated:
             record.user_email = current_user.email
         else:
             record.user_email = 'anonymous'
