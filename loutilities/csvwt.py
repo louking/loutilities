@@ -51,7 +51,7 @@ class _objdict(dict):
             raise AttributeError("No such attribute: " + name)
 
 #----------------------------------------------------------------------
-def record2csv(inrecs, mapping, outfile=None): 
+def record2csv(inrecs, mapping, outfile=None, encoding=None): 
 #----------------------------------------------------------------------
     '''
     convert list of dict or object records to a csv list or file based on a specified mapping
@@ -59,6 +59,7 @@ def record2csv(inrecs, mapping, outfile=None):
     :param inrecs: list of dicts or objects
     :param mapping: OrderedDict {'outfield1':'infield1', 'outfield2':outfunction(inrec), ...} or ['inoutfield1', 'inoutfield2', ...]
     :param outfile: optional output file
+    :param encoding: optional file encoding
     :rtype: lines from output file
     '''
 
@@ -107,7 +108,7 @@ def record2csv(inrecs, mapping, outfile=None):
 
     # write file if desired
     if outfile:
-        with open(outfile,'w') as out:
+        with open(outfile, 'w', newline='', encoding=encoding) as out:
             out.writelines(outreclist)
 
     return outreclist
@@ -122,7 +123,7 @@ class Base2Csv():
     '''
     
     #----------------------------------------------------------------------
-    def __init__(self,filename,outdir=None,hdrmap=None):
+    def __init__(self, filename, outdir=None, hdrmap=None, encoding=None):
     #----------------------------------------------------------------------
         '''
         '''
@@ -135,6 +136,7 @@ class Base2Csv():
         self.dir = outdir
         
         self.files = collections.OrderedDict()
+        self.encoding = encoding
         
     #----------------------------------------------------------------------
     def __del__(self):
@@ -195,7 +197,7 @@ class Xls2Csv(Base2Csv):
                 
             # create output csv file and write header
             self.files[name] = '{0}/{1}.csv'.format(self.dir,name)
-            OUT = open(self.files[name], 'w')
+            OUT = open(self.files[name], 'w', newline='', encoding=self.encoding)
             writer = DictWriter(OUT,outhdr)
             writer.writeheader()
             
@@ -236,7 +238,7 @@ class Xls2Csv(Base2Csv):
                 
             # create output csv file and write header
             self.files[name] = '{0}/{1}.csv'.format(self.dir,name)
-            OUT = open(self.files[name], 'w')
+            OUT = open(self.files[name], 'w', newline='', encoding=self.encoding)
             writer = DictWriter(OUT,outhdr)
             writer.writeheader()
             
@@ -286,9 +288,9 @@ class Db2Csv(Base2Csv):
         '''
         
         # create outdir if necessary, self.out, self.files
-        super().__init__('', outdir=outdir)
+        super().__init__('', outdir=outdir, encoding=encoding)
 
-        # save encoding for csv file open
+        # save encoding for csv file open (is this necessary? we updated Base2Csv to include encoding parameter)
         self.encoding = encoding
         
     #----------------------------------------------------------------------
@@ -344,7 +346,7 @@ class Db2Csv(Base2Csv):
 
         # create output csv file and write header
         self.files[name] = '{0}/{1}.csv'.format(self.dir,name)
-        OUT = open(self.files[name], 'w', encoding=self.encoding)
+        OUT = open(self.files[name], 'w', newline='', encoding=self.encoding)
         writer = DictWriter(OUT,outhdr)
         writer.writeheader()
             
