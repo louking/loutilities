@@ -68,7 +68,7 @@ import os.path
 
 # pypi
 from configparser import ConfigParser
-import pystache
+from ustache import render
 
 # home grown
 from . import version
@@ -120,7 +120,7 @@ def main():
         # read the template and make the substitutions
         TEMPLATE = open(templatefile)
         template = TEMPLATE.read()
-        outstring = pystache.render(template,**substitutions)
+        outstring = render(template,**substitutions)
         TEMPLATE.close()
         
         # check if the file needs to be updated
