@@ -31,6 +31,7 @@ import argparse
 import csv
 
 # pypi
+from charset_normalizer import detect
 
 # github
 
@@ -296,10 +297,13 @@ class TextReader():
                 self.TXT = iter(filename)
             self.delimited = False
             
-        # handle txt files
+        # handle csv files
         elif self.ftype in ['csv']:
             if self.intype == 'file':
-                self._CSV = open(filename, 'r', encoding='utf8', errors='replace')
+                with open(filename, 'rb') as binaryfile:
+                    rawdata = binaryfile.read()
+                detected = detect(rawdata)
+                self._CSV = open(filename, 'r', encoding=detected['encoding'], newline='', errors='replace')
             else:
                 self._CSV = iter(filename)
             self.CSV = csv.reader(self._CSV)
@@ -352,7 +356,7 @@ class TextReader():
 
         # handle txt files
         elif self.ftype in ['txt']:
-            line = next(self.TXT)       # TODO: can this be self.TXT.next() ?
+            line = next(self.TXT)
             line = line.expandtabs(TXTABSIZE)
             if self.delimiters:
                 splitline = self.delimit(line)
