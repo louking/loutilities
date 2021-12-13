@@ -59,7 +59,7 @@ jupyter-console==6.2.0
 jupyter-core==4.6.3
 jupyterlab-pygments==0.1.1
 loutilities==3.4.6.2
-lxml==4.6.3
+lxml==4.6.5
 MarkupSafe==2.0.1
 mistune==0.8.4
 mysqlclient==1.4.6
