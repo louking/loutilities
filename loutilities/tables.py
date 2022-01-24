@@ -26,6 +26,8 @@ from sqlalchemy.types import TypeDecorator
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from datatables import DataTables as BaseDataTables, ColumnDT
 from jinja2 import Template
+from formencode.validators import TimeConverter
+from formencode import Invalid
 
 # homegrown
 from loutilities.nesteddict import NestedDict
@@ -846,6 +848,7 @@ class CrudApi(MethodView):
     :param templateargs: dict of arguments to pass to template - if callable arg function is called before being passed
             to template (no parameters)
     :param validate: editor validation function (action, formdata), result is set to self._fielderrors
+    :param formencode_validator: instance of formencode validator, used for editor validation function as described in validate
     :param multiselect: if True, allow selection of multiple rows, default False
     :param responsekeys: dict of items to add to editor response, can update in any of the hooks.
     :param tableidcontext: (optional) function which returns context for tableidtemplate rendering
@@ -893,6 +896,7 @@ class CrudApi(MethodView):
                     pagecssfiles = [],
                     templateargs = {},
                     validate = lambda action,formdata: [],
+                    formencode_validator = None,
                     multiselect = False,
                     addltemplateargs = {},
                     responsekeys = {},
@@ -909,6 +913,10 @@ class CrudApi(MethodView):
         # make arguments into attributes
         for key in args:
             setattr(self, key, args[key])
+
+        # update self.validate if formencode_validator supplied
+        if self.formencode_validator:
+            self.validate = self._validate_formencode
 
         # set up child element instances
         self.childelements = []
@@ -1072,6 +1080,12 @@ class CrudApi(MethodView):
             # roll back database updates and close transaction
             self.rollback()
             raise
+
+    def _validate_formencode(self, action, formdata):
+        val = DteFormValidate(self.formencode_validator)
+        results = val.validate(formdata)
+        self.formdata = results['python']
+        return results['results']
 
     def getdtoptions(self):
 
@@ -3287,4 +3301,45 @@ def deepupdate(obj, val, newval):
     return thisobj
 
 
+# form validation
+class TimeOptHoursConverter(TimeConverter):
+    use_seconds = True
+    use_ampm=False
+    
+    def _convert_to_python(self, value, state):
+        parts = value.split(':')
+        if len(parts) == 2:
+            value = f'0:{value}'
+        return super()._convert_to_python(value, state)
+        
+
+class DteFormValidate():
+    '''
+    use formencode validator to validate form and convert to python. See http://www.formencode.org/en/latest/index.html
+    
+    :param validator: formencode validator instance
+    '''
+    def __init__(self, validator):
+        self.validator = validator
+    
+    def validate(self, form):
+        '''
+        validate form and convert to python
+        
+        :param form: dict or multidict to be validated (e.g., request.form)
+        :rtype: {'python': <form in python format>, 'results': <results formatted for response to datatables editor>}
+            if no errors, results = [], python included
+            if errors, results = [{'name': <field name>, 'status': <error message for field>}, ...]
+        '''
+        py = None
+        error_dict = {}
+        results = []
+        try:
+            py = self.validator.to_python(form)
+        except Invalid as e:
+            error_dict = e.error_dict
+        for field in error_dict:
+            results.append({'name': field, 'status': error_dict[field].msg})
+
+        return {'python':py, 'results':results}
 
