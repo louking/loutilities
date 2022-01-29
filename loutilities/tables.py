@@ -2332,7 +2332,11 @@ class DbCrudApi(CrudApi):
             # need formfield and dbattr for a couple of things
             formfield = col['data']
             # this assumes db attribute is named the same as form attribute (may be function) #25
-            dbattr = self.formmapping[formfield]
+            dbattr = self.formmapping.get(formfield, None)
+            
+            # if dbattr not found in form mapping, can skip this field. There may be special handling, e.g., in self.nexttablerow()
+            if not dbattr:
+                continue
 
             # maybe this column needs to be unique
             if col.get('_unique', False):
