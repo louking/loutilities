@@ -62,7 +62,7 @@ def user_validate(action, formdata):
             apps |= set(thisrole.applications)
 
     # this app must be one of user's roles
-    if g.loutility not in apps:
+    if formdata['active'] == 'yes' and g.loutility not in apps:
         # need to use name='roles.id' because this field is _treatment:{relationship}
         results.append({'name': 'roles.id', 'status': 'give user at least one role which works for this application'})
 
