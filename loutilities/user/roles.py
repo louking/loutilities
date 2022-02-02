@@ -24,6 +24,7 @@ ROLE_MEMBERSHIP_ADMIN = 'membership-admin'
 ROLE_MEETINGS_ADMIN = 'meetings-admin'
 ROLE_MEETINGS_MEMBER = 'meetings-member'
 ROLE_RACINGTEAM_ADMIN = 'racingteam-admin'
+ROLE_RACINGTEAM_MEMBER = 'racingteam-member'
 roles_members = [
     {'name': ROLE_LEADERSHIP_ADMIN, 'description': 'access to leadership tasks for members application', 'apps':[APP_MEMBERS]},
     {'name': ROLE_LEADERSHIP_MEMBER, 'description': 'user of leadership tasks for members application', 'apps':[APP_MEMBERS]},
@@ -31,6 +32,7 @@ roles_members = [
     {'name': ROLE_MEETINGS_ADMIN, 'description': 'access to meetings administration for members application', 'apps':[APP_MEMBERS]},
     {'name': ROLE_MEETINGS_MEMBER, 'description': 'user of meetings for members application', 'apps':[APP_MEMBERS]},
     {'name': ROLE_RACINGTEAM_ADMIN, 'description': 'access to racingteam administration for members application', 'apps':[APP_MEMBERS]},
+    {'name': ROLE_RACINGTEAM_MEMBER, 'description': 'user of racingteam module for members application', 'apps':[APP_MEMBERS]},
 ]
 
 # routes roles
