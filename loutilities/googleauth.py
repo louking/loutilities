@@ -158,7 +158,8 @@ class GoogleAuthService():
         self.logdebug = logdebug
         self.logerror = logerror
         self.credentials = service_account.Credentials.from_service_account_file(self.service_account_file, scopes=self.scopes)
-        self.drive = build('drive', 'v3', credentials=self.credentials)
+        # see https://stackoverflow.com/a/44518587/799921
+        self.drive = build('drive', 'v3', credentials=self.credentials, cache_discovery=False)
 
     def build(self, googleapi, apiversion):
         """
@@ -168,7 +169,8 @@ class GoogleAuthService():
         :param apiversion: google api version
         :return: google api service object
         """
-        return build(googleapi, apiversion, credentials=self.credentials)
+        # see https://stackoverflow.com/a/44518587/799921
+        return build(googleapi, apiversion, credentials=self.credentials, cache_discovery=False)
 
     def create_file(self, folderid, filename, contents, doctype='html'):
         """
