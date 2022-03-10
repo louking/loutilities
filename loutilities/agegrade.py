@@ -65,10 +65,11 @@ def getagtable(agegradewb):
     from .csvwt import Xls2Csv
 
     c = Xls2Csv(agegradewb)
-    gen2sheet = {'F':'Women','M':'Men'}
+    # note non-binary uses men's age grades
+    gen2sheet = {'F':'Women', 'M':'Men', 'X':'Men'}
     sheets = c.getfiles()
     
-    for gen in ['F','M']:
+    for gen in ['F', 'M', 'X']:
         SHEET = open(sheets[gen2sheet[gen]],'r',newline='')
         sheet = csv.DictReader(SHEET)
         
@@ -195,8 +196,10 @@ class AgeGrade():
         '''
         returns age grade statistics for the indicated age, gender, distance, result time
         
+        NOTE: non-binary gen X currently returns Men's age grade
+        
         :param age: integer age.  If float is supplied, integer portion is used (no interpolation of fractional age)
-        :param gen: gender - M or F
+        :param gen: gender - M, F, X
         :param distmiles: distance (miles)
         :param time: time for distance (seconds)
         
@@ -205,8 +208,8 @@ class AgeGrade():
         
         # check for some input errors
         gen = gen.upper()
-        if gen not in ['F','M']:
-            raise parameterError('gen must be M or F')
+        if gen not in ['F', 'M', 'X']:
+            raise parameterError('gen must be M, F, or X')
 
         # number of meters in a mile
         mpermile = 1609.344     # wavacalc15 has been corrected - now also handles integer distmiles
@@ -275,8 +278,10 @@ class AgeGrade():
         '''
         returns age grade statistics for the indicated age, gender, distance, result time
 
+        NOTE: non-binary gen X currently returns Men's age grade
+
         :param age: integer age.  If float is supplied, integer portion is used (no interpolation of fractional age)
-        :param gen: gender - M or F
+        :param gen: gender - M, F, X
         :param distmiles: distance (miles)
         :param agpc: age grade percentage - between 0 and 100
 
@@ -285,8 +290,8 @@ class AgeGrade():
 
         # check for some input errors
         gen = gen.upper()
-        if gen not in ['F','M']:
-            raise parameterError('gen must be M or F')
+        if gen not in ['F', 'M', 'X']:
+            raise parameterError('gen must be M, F, or X')
 
         # number of meters in a mile -- close enough for this data set
         mpermile = 1609.344
