@@ -147,8 +147,9 @@ class GoogleAuthService():
 
     :param service_account_file: service_account_file.json path
     :param scopes: list of google scopes. see https://developers.google.com/identity/protocols/googlescopes
+    :param loginfo: (optional) info logger function
     :param logdebug: (optional) debug logger function
-    :param logerror: (optional) debug logger function
+    :param logerror: (optional) error logger function
     """
 
     def __init__(self, service_account_file, scopes, loginfo=None, logdebug=None, logerror=None):
@@ -252,6 +253,24 @@ class GoogleAuthService():
         ).execute()
         return file
 
+    def set_permission(self, fid, permission):
+        # see https://developers.google.com/drive/api/v3/manage-sharing
+        def batch_callback(request_id, response, exception):
+            if exception:
+                # Handle error
+                if self.logerror: self.logerror("batch_callback(): permission exception {}".format(exception) )
+                raise PermissionError(exception)
+            else:
+                if self.logdebug: self.logdebug("batch_callback(): permission id {}".format(response.get('id')) )
+
+        batch = self.drive.new_batch_http_request(callback=batch_callback)
+        batch.add(self.drive.permissions().create(
+                fileId=fid,
+                body=permission,
+                fields='id',
+        ))
+        batch.execute()
+        
 def _getmimetype(doctype):
     """
     determine mimetype for specified doctype
