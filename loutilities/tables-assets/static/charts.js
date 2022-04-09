@@ -42,11 +42,13 @@ class Chart {
         that.xascending = that.options.xdirection == 'asc';
         if (that.options.xaxis == 'number') {
             that.xscale = d3.scaleLinear;
+            // note since https://github.com/d3/d3-array/commit/22cdb3f2b1b98593a08907d17c12756404411b1d d must be scalar, not object
+            // see https://github.com/d3/d3-array/issues/249
             that.bisectX = d3.bisector(function (d, x) {
                 if (that.xascending) {
-                    return d.x - x;
+                    return d - x;
                 } else {
-                    return x - d.x;
+                    return x - d;
                 }
             }).left;
 
@@ -67,7 +69,7 @@ class Chart {
             // see https://bl.ocks.org/gordlea/27370d1eea8464b04538e6d8ced39e89
             that.xscale = d3.scaleTime;
             // TODO: take xdirection option into account
-            that.bisectX = d3.bisector(function(d) { return d.x; }).left;
+            that.bisectX = d3.bisector(function(d) { return d; }).left;
             let parseDate = d3.timeParse("%m-%d");
             that.lowx = parseDate(that.options.xrange[0]);
             that.highx = parseDate(that.options.xrange[1]);
@@ -120,10 +122,6 @@ class Chart {
         let colorcycle = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
             '#9467bd', '#8c564b', '#e377c2', '#7f7f7f',
             '#bcbd22', '#17becf'];
-        let color = d3.scaleOrdinal()
-            .range(['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
-                '#9467bd', '#8c564b', '#e377c2', '#7f7f7f',
-                '#bcbd22', '#17becf']);
 
         // get container
         let container = d3.select(that.options.containerselect),
@@ -170,11 +168,14 @@ class Chart {
         }
 
         // seqdata is used to draw the paths so that there is a point for each number in the range
+        // seqdataxvals is used for bisector function
         let seqdata = [];
+        let seqdataxvals = [];
         for (let i = 0; i < that.options.data.length; i++) {
             let label = that.options.data[i].label;
             let checkvalues = _.cloneDeep(that.options.data[i].values);
             let seqvalues = [];
+            seqdataxvals[i] = [];
             let currvalue = 0;
             for (let j = 0; j < that.xrange.length; j++) {
                 let thisx = that.xrange[j];
@@ -185,6 +186,7 @@ class Chart {
                     currvalue = thisitem.value;
                 }
                 seqvalues.push({x: thisx, value: currvalue});
+                seqdataxvals[i].push(thisx);
 
                 // break out after current sequence
                 let lastseq;
@@ -199,7 +201,6 @@ class Chart {
             }
             seqdata.push({label: label, values: seqvalues});
         }
-
 
         // 6. Y scale will use the dataset values
         // force up to next boundary based on ytickincrement
@@ -262,8 +263,10 @@ class Chart {
                 .style("stroke", colormap[i].color)
                 .datum(seqdata[i].values)
                 .attr("class", "line alllabels label-"+label)
-                .attr("d", line);
-
+                .attr("d", line)
+                .style("fill", "none")
+                .style("stroke-width", "2px");
+    
             // assure unique focusid per chart
             let thisfocus = svg.append("g")
                 .attr("class", "focus focuslabel-"+label)
@@ -271,7 +274,9 @@ class Chart {
                 .style("display", "none");
 
             thisfocus.append("circle")
-                .attr("r", 4.5);
+                .attr("r", 4.5)
+                .style("fill", "none")
+                .style("stroke", "steelblue");
 
             thisfocus.append("text")
                 .style("text-anchor", "start")
@@ -310,9 +315,11 @@ class Chart {
 
         let mouseoverlay = svg.append("rect")
             .attr("class", "overlay")
+            .attr("height", height)
             .attr("width", width + that.options.margin.right)
-            .attr("height", height);
-
+            .style("fill", "none")
+            .style("pointer-events", "all");
+      
         let allfocus = d3.selectAll(".focus");
         mouseoverlay
             .on("mouseover", function () {
@@ -334,13 +341,17 @@ class Chart {
             })
             .on("mousemove", mousemove);
 
-        function mousemove() {
-            let x0 = x.invert(d3.mouse(this)[0]);
+        function mousemove(event) {
+            let x0 = x.invert(d3.pointer(event)[0]);
+            // console.log(`x0=${x0}`);
             for (let i = 0; i < seqdata.length; i++) {
-                let j = that.bisectX(seqdata[i].values, x0);
+                // bisectX values need to be same shape as compare value x0. See https://github.com/d3/d3-array/issues/249
+                let j = that.bisectX(seqdataxvals[i], x0);
                 let d;
                 // use d0, d1 if in range
-                if (j < seqdata[i].values.length) {
+                if (j == 0) {
+                    d = seqdata[i].values[0]
+                } else if (j < seqdata[i].values.length) {
                     let d0 = seqdata[i].values[j - 1],
                         d1 = seqdata[i].values[j];
                     d = x0 - d0.x > d1.x - x0 ? d1 : d0;
