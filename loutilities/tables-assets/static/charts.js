@@ -6,18 +6,26 @@ function charts_get_focusid(container, i) {
 }
 
 // line chart
+
+/**
+ * line chart
+ * 
+ *  @param options
+ *    data - [{'label':label, values: [{'x':number, 'value':value}, ... ]}, ... ]
+ *    height - initial height, default 500
+ *    width - initial width, default 960
+ *    margin - 50 OR {top: 50, right: 50, bottom: 50, left: 50} (e.g.), default 40
+ *    containerselect - e.g., '#divname', required
+ *    xaxis - 'date', 'number', default 'number'
+ *    xrange - array [startseq, endseq] seq are numeric, startseq may be higher then endseq
+ *    xdirection - 'asc', 'desc', default 'asc'
+ *    lastseq - optional sequence number to skip after, or {label:lastseq, ... } by label
+ *    chartheader - optional text - if present, printed in the top center of the chart
+ *    ytickincrement - y range is bumped up to next integral multiple of this value, default 1
+ *    yaxislabel - optional text - if present, printed 90 deg rotated, on the left of the char
+ *    statstable - {containerid: e.g., 'divname', headers: [xheader, yheader]}, optional
+ */
 class Chart {
-    // options:
-    //     data - [{'label':label, values: [{'x':number, 'value':value}, ... ]}, ... ]
-    //     margin - 50 OR {top: 50, right: 50, bottom: 50, left: 50} (e.g.), default 40
-    //     containerselect - e.g., 'body', '#divname', default 'body'
-    //     xaxis - 'date', 'number', default 'number'
-    //     xrange - array [startseq, endseq] seq are numeric, startseq may be higher then endseq
-    //     xdirection - 'asc', 'desc', default 'asc'
-    //     lastseq - optional sequence number to skip after, or {label:lastseq, ... } by label
-    //     chartheader - optional text - if present, printed in the top center of the chart
-    //     ytickincrement - y range is bumped up to next integral multiple of this value, default 100
-    //     yaxislabel - optional text - if present, printed 90 deg rotated, on the left of the chart
 
     // extend config based on options
     constructor(options) {
@@ -25,7 +33,9 @@ class Chart {
         that.options = {
             data: null,
             margin: 40,
-            containerselect: 'body',
+            height: 500,
+            width: 960,
+            containerselect: null,
             chartheader: '',
             xaxis: 'number',
             xrange: [0, 100],
@@ -33,8 +43,15 @@ class Chart {
             lastseq: 0,
             yaxislabel: '',
             ytickincrement: 100,
+            statstable: null,
         };
         that.options = Object.assign(that.options, options);
+
+        // first empty containers of any elements we may have placed prior to this
+        d3.selectAll(`${that.options.containerselect} .chart-element`).remove();
+        if (that.options.statstable) {
+            d3.selectAll(`#${that.options.statstable.containerid} .chart-element`).remove();
+        }
 
         // default show all labels
         that.showlabels = [];
@@ -64,6 +81,7 @@ class Chart {
             }
 
             that.focustext = function(d) {return d.x + " " + d.value}
+            that.formatxfortable = function(d) {return d}
 
         } else if (that.options.xaxis == 'date') {
             // see https://bl.ocks.org/gordlea/27370d1eea8464b04538e6d8ced39e89
@@ -98,6 +116,7 @@ class Chart {
 
             let formatDate = d3.timeFormat("%m/%d");
             that.focustext = function(d) {return formatDate(d.x) + " " + d.value}
+            that.formatxfortable = function(d) {return `${formatDate(d)}`}
 
         } else {
             throw 'ERROR: unknown xaxis option value: ' + that.options.xaxis;
@@ -128,17 +147,19 @@ class Chart {
             containerjs = document.querySelector(that.options.containerselect);
 
         // 2. Use the margin convention practice, for container
-        let width = containerjs.clientWidth - that.options.margin.left - that.options.margin.right, // Use the container's width
-            height = containerjs.clientHeight - that.options.margin.top - that.options.margin.bottom, // Use the container's height
+        let width = that.options.width - that.options.margin.left - that.options.margin.right, // Use the container's width
+            height = that.options.height - that.options.margin.top - that.options.margin.bottom, // Use the container's height
             viewbox_width = width + that.options.margin.left + that.options.margin.right,
             viewbox_height = height + that.options.margin.top + that.options.margin.bottom;
 
         // 1. Add the SVG to the page and employ #2
+        // for responsive solution see https://stackoverflow.com/questions/49034455/d3-chart-grows-but-wont-shrink-inside-a-flex-div#comment85075458_49034455
+        // don't use width and height attributes!
         let svg = container.append("svg")
-            .attr("width", width + that.options.margin.left + that.options.margin.right)
-            .attr("height", height + that.options.margin.top + that.options.margin.bottom)
+                .attr("viewBox", "0 0 " + viewbox_width + " " + viewbox_height)
+                .classed("chart-element", true)
             .append("g")
-            .attr("transform", "translate(" + that.options.margin.left + "," + that.options.margin.top + ")");
+                .attr("transform", "translate(" + that.options.margin.left + "," + that.options.margin.top + ")");
 
         // set up scales and ranges
         let x = this.xscale()
@@ -313,6 +334,36 @@ class Chart {
                 return d.label;
             });
 
+        // add stats table to container if requested; don't create table more than once
+        // see https://stackoverflow.com/questions/9857752/correct-way-to-tell-if-my-selection-caught-any-existing-elements
+        if (that.options.statstable && d3.select(`#${that.options.statstable.containerid} table`).size() == 0) {
+            let statscontainer = d3.select(`#${that.options.statstable.containerid}`)
+                .classed("chart-table", true);
+            let statstable = statscontainer.append("table")
+                .attr("class", "focus chart-element")
+                .style("display", "none");
+            let statstablehdr = statstable.append("thead").append("tr");
+            statstablehdr
+                .selectAll("th")
+                .data(that.options.statstable.headers)
+              .enter()
+                .append("th")
+                .text(d => d)
+            let statstablebody = statstable.append("tbody");
+            let statstablerows = statstablebody
+                .selectAll("tr")
+                .data(seqdata)
+              .enter()
+                .append("tr")
+                .attr("class", d => `alllabels label-${d.label}`);
+            let statstablecells = statstablerows.selectAll("td")
+                .data((d) => [d.label, `${that.formatxfortable(d.x)}`, d.value])
+              .enter()
+                .append("td")
+                // .text(d => d)
+                .attr("class", (d, i) => i == 0 ? "label" : i == 1 ? "x TextCenter" : "count TextCenter");
+        }
+
         let mouseoverlay = svg.append("rect")
             .attr("class", "overlay")
             .attr("height", height)
@@ -320,19 +371,25 @@ class Chart {
             .style("fill", "none")
             .style("pointer-events", "all");
       
-        let allfocus = d3.selectAll(".focus");
+        let allfocus = that.options.statstable ? 
+              d3.selectAll(`${that.options.containerselect} .focus, #${that.options.statstable.containerid} .focus`)
+            : d3.selectAll(`${that.options.containerselect} .focus`);
         mouseoverlay
             .on("mouseover", function () {
                 // nothing in list means show all labels
+                // console.log(`entered mouseover for ${that.options.containerselect}`)
                 if (that.showlabels.length == 0) {
                     allfocus.style("display", null);
 
                 // otherwise show just the labels in the list
                 } else {
                     allfocus.style("display", "none");
+                    if (that.options.statstable) {
+                        d3.selectAll(`#${that.options.statstable.containerid} table`).style("display", null)
+                    }
                     for (let i=0; i<that.showlabels.length; i++) {
                         let label = that.showlabels[i];
-                        d3.selectAll('.focuslabel-'+label).style("display", null);
+                        d3.selectAll(`${that.options.containerselect} .focuslabel-${label}`).style("display", null);
                     }
                 }
             })
@@ -362,6 +419,15 @@ class Chart {
                 thisfocus.attr("transform", "translate(" + x(d.x) + "," + y(d.value) + ")");
                 thisfocus.select("text").text(that.focustext(d));
                 // console.log('d.x='+d.x+' d.value='+d.value+' x(d.x)='+x(d.x)+' y(d.value)='+y(d.value));
+
+                // update table if requested
+                if (that.options.statstable) {
+                    let label = seqdata[i].label;
+                    let rowselect = d3.select(`#${that.options.statstable.containerid} .label-${label}`)
+                    rowselect.select(`.label`).text(label)
+                    rowselect.select(`.x`).text(`${that.formatxfortable(d.x)}`)
+                    rowselect.select(`.count`).text(d.value)          
+                }
             }
         }
     }   // draw
@@ -369,7 +435,12 @@ class Chart {
     setshowlabels(labels) {
         let that = this;
         that.showlabels = labels;
-        let alllabels = d3.selectAll(".alllabels");
+
+        let containers = that.options.statstable ? 
+              d3.selectAll(`${that.options.containerselect}, #${that.options.statstable.containerid}`)
+            : d3.selectAll(`${that.options.containerselect}`);
+
+        let alllabels = containers.selectAll(".alllabels");
 
         // nothing in list means show all labels
         if (that.showlabels.length == 0) {
