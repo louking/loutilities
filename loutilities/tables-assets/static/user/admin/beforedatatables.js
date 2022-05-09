@@ -16,3 +16,17 @@ function user_create_send_notification_button() {
         data.resetpw = true;
     })
 }
+
+/**
+ * dismiss form
+ */
+ function dismiss_button() {
+    this.close();
+}
+
+/**
+ * submit form
+ */
+function submit_button() {
+    this.submit();
+}
