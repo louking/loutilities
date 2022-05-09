@@ -1853,8 +1853,16 @@ class DteDbRelationship():
         else:
             # get the attribute if specified
             if getattr(dbrow, self.dbfield):
-                item = {self.labelfield: getattr(getattr(dbrow, self.dbfield), self.labelfield),
-                        self.valuefield: getattr(getattr(dbrow, self.dbfield), self.valuefield)}
+                if not self.viadbattr:
+                    item = {self.labelfield: getattr(getattr(dbrow, self.dbfield), self.labelfield),
+                            self.valuefield: getattr(getattr(dbrow, self.dbfield), self.valuefield)}
+                # operation through "via" model to access bind table
+                # item points at viamodel entry, need to convert to fieldmodel entry
+                else:
+                    recparams = {self.valuefield: getattr(getattr(dbrow, self.dbfield), self.viafield)}
+                    rec = self.fieldmodel.query.filter_by(**recparams).one()
+                    item = {self.labelfield: getattr(rec, self.labelfield), self.valuefield: getattr(rec, self.valuefield)}
+                
                 return item
             # otherwise return None
             else:
