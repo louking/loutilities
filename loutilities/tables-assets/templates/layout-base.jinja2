@@ -77,11 +77,16 @@
     <h1>{{_productname|safe}}
     {% if development %} (development){% endif %}
     {% if sandbox %} (sandbox){% endif %}
-  </h1>
-    <div class=pagename>{{self.pagename()}}</div>
-    {# metanav for login buttons, etc #}
-    {% block metanav %}
-    {% endblock %}
+    </h1>
+    <div class=pagename-metanav>
+        <div class="pagename pagename-div">{{self.pagename()}}
+        </div>
+        <div class=metanav-div>
+            {# metanav for login buttons, etc #}
+            {% block metanav %}
+            {% endblock %}
+        </div>
+    </div>
   </div>
   <noscript>
     <style type="text/css">
