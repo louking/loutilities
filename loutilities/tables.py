@@ -2367,8 +2367,11 @@ class DbCrudApi(CrudApi):
                     if len(branches) == 1:
                         # server side tables adds ColumnDT for page paint
                         if args['serverside']:
-                            columndt_args = {'sqla_expr': getattr(args['model'], dbattr), 'mData':formfield}
+                            columndt_args = {'sqla_expr': getattr(args['model'], dbattr, None), 'mData':formfield}
                             columndt_args.update(**_columndt_args)
+                            # need to check for type(None) because Boolean value of an sqla expression is not defined
+                            if type(columndt_args['sqla_expr']) == type(None):
+                                raise ParameterError('formmapping[dbattr] or _ColumnDT_args[\'sqla_expr\'] must be specified')
                             self.servercolumns.append(ColumnDT(**columndt_args))
 
                     # special processing if db attribute implies subrecord
