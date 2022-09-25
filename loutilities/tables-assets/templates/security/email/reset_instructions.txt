@@ -4,6 +4,6 @@ If your account is new, you will need to reset your password using this link to 
 
 This link will expire in {{ config.SECURITY_RESET_PASSWORD_WITHIN }}.
 
-{{ _('Click the link below to reset your password:') }}
+{{ _fsdomain('Click the link below to reset your password:') }}
 
 {{ reset_link }}

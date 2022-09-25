@@ -39,6 +39,7 @@ setup(
     # installed or upgraded on the target machine
     install_requires = [
           # 'unicodecsv>=0.13.0',
+          'flask-security-too>=4.0.0',
         ],
 
     # include data files as appropriate
