@@ -2168,7 +2168,9 @@ class DbCrudApi(CrudApi):
         db: database object a la sqlalchemy
         model: sqlalchemy model for the table to read/write from
         dbmapping: mapping dict with key for each db field, value is key in form or function(dbentry)
+            NOTE: this cannot be changed after __init__ because a copy is made
         formmapping: mapping dict with key for each form row, value is key in db row or function(form)
+            NOTE: this cannot be changed after __init__ because a copy is made
         queryparams: dict of query parameters relevant to this table to retrieve table or rows (using filter_by())
         queryfilters: list of query criteria relevant to this table to retrieve table or rows (using filter())
         dtoptions: datatables options to override / add
