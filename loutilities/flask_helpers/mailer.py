@@ -25,7 +25,9 @@ def sendmail(subject, fromaddr, toaddr, html, text='', ccaddr=None, replytoaddr=
     :param replytoaddr: optional reply_to address to use, may be list of addresses or comma separated
     :returns: response from flask_mail.send
     '''
-    current_app.logger.info('sendmail(): from={}, to={}, cc={}, subject="{}"'.format(fromaddr, toaddr, ccaddr, subject))
+    stubbed = current_app.config.get('MAIL_SUPPRESS_SEND', current_app.config.get('TESTING', False))
+    stubbed_txt = '[STUBBED] ' if stubbed else ''
+    current_app.logger.info(f'{stubbed_txt}sendmail(): from={fromaddr}, to={toaddr}, cc={ccaddr}, subject="{subject}"')
 
     # get current app's mailer
     mail = current_app.extensions.get('mail')
