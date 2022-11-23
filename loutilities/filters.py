@@ -10,7 +10,7 @@ Usage::
         :
 
     yadcf_options = [
-        yadcffilter(colnum, 'filter1-id', uselist=True, placeholder='Select filter 1')
+        yadcfoption(colnum, 'filter1-id', 'multi_select', uselist=True, placeholder='Select filter 1')
     ]
 
     example = CrudApi(
