@@ -58,8 +58,7 @@ def yadcfoption(colselector, filterid, filtertype, placeholder=None, width=None,
 
     :param colselector: datatables column selector (see https://datatables.net/reference/type/column-selector)
     :param filterid: html id of filter container, specified in filterdiv()
-    :param filtertype: one of 'select', 'multi_select', 'range_date',
-            or 'custom_func', 'date_custom_func'
+    :param filtertype: see https://github.com/vedmack/yadcf/blob/master/src/jquery.dataTables.yadcf.js
     :param placeholder: (for select2) placeholder for empty filter
     :param width: (for select2) css value for width of filter container
     :param date_format: (for range_date) format for date, default 'yyyy-mm-dd'
@@ -97,12 +96,5 @@ def yadcfoption(colselector, filterid, filtertype, placeholder=None, width=None,
 
         if filtertype == 'multi_select':
             option['text_data_delimiter'] = ', ',
-
-    # todo: added kwargs to handle date_custom_func, but maybe we should just remove the else clause?
-    elif filtertype in ['range_date', 'custom_func', 'date_custom_func']:
-        pass
-
-    else:
-        raise ParameterError('filtertype \'{}\' not handled yet'.format(filtertype))
 
     return option
