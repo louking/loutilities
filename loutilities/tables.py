@@ -16,6 +16,7 @@ from urllib.parse import urlencode
 from threading import RLock
 import sys
 import json
+from traceback import format_exception_only, format_exc
 
 # pypi
 import flask
@@ -3443,4 +3444,38 @@ class DteFormValidate():
             results.append({'name': field, 'status': error_dict[field].msg})
 
         return {'python':py, 'results':results}
+
+def apimethod(f):
+    '''
+    decorator for api methods
+
+    :param f: function() containing core of method to execute
+    '''
+    # see http://python-3-patterns-idioms-test.readthedocs.io/en/latest/PythonDecorators.html
+    def wrapped_f(self, *args, **kwargs):
+        try:
+            # verify user can write the data, otherwise abort
+            if not self.permission():
+                self.rollback()
+                cause = 'operation not permitted for user'
+                return jsonify(error=cause)
+
+            # execute core of method
+            return f(self, *args, **kwargs)
+        
+        except Exception as e:
+            output_result = {'status': 'fail'}
+            # abort if errors seen
+            if hasattr(self, '_fielderrors') and self._fielderrors:
+                cause = 'please check indicated fields'
+                output_result.update({'error': cause, 'fieldErrors': self._fielderrors})
+            else:
+                exc = ''.join(format_exception_only(type(e), e))
+                output_result['error'] = 'exception occurred:\n{}'.format(exc)
+                current_app.logger.error(format_exc())
+
+            # roll back database updates and close transaction
+            self.rollback()
+            return jsonify(output_result)
+    return wrapped_f
 
