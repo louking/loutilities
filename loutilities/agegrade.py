@@ -1,27 +1,3 @@
-#!/usr/bin/python
-###########################################################################################
-# agegrade - calculate age grade statistics
-#
-#	Date		Author		Reason
-#	----		------		------
-#       02/17/13        Lou King        Create
-#       03/20/14        Lou King        Moved from runningclub
-#
-#   Copyright 2013,2014 Lou King
-#
-#   Licensed under the Apache License, Version 2.0 (the "License");
-#   you may not use this file except in compliance with the License.
-#   You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-#   Unless required by applicable law or agreed to in writing, software
-#   distributed under the License is distributed on an "AS IS" BASIS,
-#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#   See the License for the specific language governing permissions and
-#   limitations under the License.
-#
-###########################################################################################
 '''
 agegrade - calculate age grade statistics
 ===================================================
@@ -43,9 +19,7 @@ import shutil
 class missingConfiguration(Exception): pass
 class parameterError(Exception): pass
 
-#----------------------------------------------------------------------
 def getagtable(agegradewb):
-#----------------------------------------------------------------------
     '''
     in return data structure:
     
@@ -56,10 +30,25 @@ def getagtable(agegradewb):
     
     :param agegradewb: excel workbook containing age grade factors (e.g., from http://www.howardgrubb.co.uk/athletics/data/wavacalc10.xls)
     
-    :rtype: {'F':{dist:{'OC':openstd,age:factor,age:factor,...},...},'M':{dist:{'OC':openstd,age:factor,age:factor,...},...}}
+    :rtype: dict: {
+            'road: {'F':{dist:{'OC':openstd,age:factor,age:factor,...},...},'M':{dist:{'OC':openstd,age:factor,age:factor,...},...}},
+            'trail: {'F':{dist:{'OC':openstd,age:factor,age:factor,...},...},'M':{dist:{'OC':openstd,age:factor,age:factor,...},...}},
+            }
+
     '''
     
-    agegradedata = {}
+    agegradedata = {
+        'road': {
+            'F': {},
+            'M': {},
+            'X': {},
+        },
+        'track': {
+            'F': {},
+            'M': {},
+            'X': {},
+        },
+    }
     
     # convert the workbook to csv
     from .csvwt import Xls2Csv
@@ -82,9 +71,6 @@ def getagtable(agegradewb):
             except ValueError:
                 pass
         
-        # create gender
-        agegradedata[gen] = {}
-        
         # add each row to data structure, but skip non-running events
         for r in sheet:
             if r['dist(km)'] == '0.0': continue
@@ -92,20 +78,16 @@ def getagtable(agegradewb):
             # dist is rounded to the nearest meter so it can be used as a key
             dist = int(round(float(r['dist(km)'])*1000))
 
-            # kludge to use only road events -- affects distances 5km and beyond (issue #55)
-            # this works because Howard Grubb's spreadsheet has road first, then track for events which matter
-            # as of wavacalc10.xls, includes 5k, 6k, 4M, 8k, 5M, 10k distances
-            if dist in agegradedata[gen]: continue
-            
             # create dist
+            surface = 'road' if r['isRoad'] == 1 else 'track'
             openstd = float(r['OC'])
-            agegradedata[gen][dist] = {'OC':openstd}
+            agegradedata[surface][gen][dist] = {'OC':openstd}
             
             # add each age factor
             for f in sheet.fieldnames:
                 if f in f2age:
                     age = f2age[f]
-                    agegradedata[gen][dist][age] = float(r[f])
+                    agegradedata[surface][gen][dist][age] = float(r[f])
             
             
         SHEET.close()
@@ -113,31 +95,41 @@ def getagtable(agegradewb):
     del c
     return agegradedata
 
-########################################################################
+
 class AgeGrade():
-########################################################################
     '''
     AgeGrade object 
     
-    agegradewb is in format per http://www.howardgrubb.co.uk/athletics/wmalookup06.html
-    if agegradewb parameter is missing, previous configuration is used
-    configuration is created through command line: agegrade.py [-a agworkbook | -c agconfigfile]
+    agegradewb is in format per http://www.howardgrubb.co.uk/athletics/wmalookup15.html (deprecated)
+    if agegradewb parameter is missing, previous configuration is used (deprecated)
+    configuration is created through command line: agegrade.py [-a agworkbook | -c agconfigfile] (deprecated)
     
-    :param agegradewb: excel workbook containing age grade factors
-    :param DEBUG: file handle for debug output
+    :param agegradedata: data structure used by this class
+        {
+            'road: {
+                'F':{dist:{'OC':openstd,age:factor,age:factor,...},...},
+                'M':{dist:{'OC':openstd,age:factor,age:factor,...},...},
+                'X':{dist:{'OC':openstd,age:factor,age:factor,...},...},
+            },
+            'trail: {
+                'F':{dist:{'OC':openstd,age:factor,age:factor,...},...},
+                'M':{dist:{'OC':openstd,age:factor,age:factor,...},...},
+                'X':{dist:{'OC':openstd,age:factor,age:factor,...},...},
+            },
+        }
+    :param agegradewb: (deprecated) excel workbook containing age grade factors
+    :param DEBUG: logger function for debug output
     '''
-    #----------------------------------------------------------------------
-    def __init__(self,agegradewb=None,DEBUG=None):
-    #----------------------------------------------------------------------
+    def __init__(self, agegradedata=None, agegradewb=None, DEBUG=None):
         from .config import CONFIGDIR
         self.DEBUG = DEBUG
 
-        # write header for csv file.  Must match order within self.agegrade if self.DEBUG statement
-        if self.DEBUG:
-            self.DEBUG.write('distmeters,age,gen,openstd,factor,time,agresult,agpercentage\n')
-
+        # use age grade data structure if specified
+        if agegradedata:
+            self.agegradedata = agegradedata
+            
         # use age grade workbook if specified
-        if agegradewb:
+        elif agegradewb:
             self.agegradedata = getagtable(agegradewb)
         
         # otherwise, pick up the data from the configuration
@@ -150,12 +142,11 @@ class AgeGrade():
             self.agegradedata = pickle.load(C)
             C.close()
             
-    #----------------------------------------------------------------------
-    def getfactorstd(self,age,gen,distmeters):
-    #----------------------------------------------------------------------
+    def getfactorstd(self, surface, age, gen, distmeters):
         '''
         interpolate factor and openstd based on distance for this age
         
+        :param surface: 'road' or 'track'
         :param age: integer age.  If float is supplied, integer portion is used (no interpolation of fractional age)
         :param gen: gender - M or F
         :param distmeters: distance (meters)
@@ -171,16 +162,16 @@ class AgeGrade():
         distmeters = round(distmeters)
 
         # find surrounding Xi points, and corresponding Fi, OCi points
-        distlist = sorted(list(self.agegradedata[gen].keys()))
+        distlist = sorted(list(self.agegradedata[surface][gen].keys()))
         lastd = distlist[0]
         for i in range(1,len(distlist)):
             if distmeters <= distlist[i]:
                 x0 = lastd
                 x1 = distlist[i]
-                f0 = self.agegradedata[gen][x0][age]
-                f1 = self.agegradedata[gen][x1][age]
-                oc0 = self.agegradedata[gen][x0]['OC']
-                oc1 = self.agegradedata[gen][x1]['OC']
+                f0 = self.agegradedata[surface][gen][x0][age]
+                f1 = self.agegradedata[surface][gen][x1][age]
+                oc0 = self.agegradedata[surface][gen][x0]['OC']
+                oc1 = self.agegradedata[surface][gen][x1]['OC']
                 break
             lastd = distlist[i]
             
@@ -190,9 +181,7 @@ class AgeGrade():
         
         return factor,openstd
     
-    #----------------------------------------------------------------------
-    def agegrade(self,age,gen,distmiles,time):
-    #----------------------------------------------------------------------
+    def agegrade(self, age, gen, distmiles, time, surface=None, errorlogger=None):
         '''
         returns age grade statistics for the indicated age, gender, distance, result time
         
@@ -202,6 +191,7 @@ class AgeGrade():
         :param gen: gender - M, F, X
         :param distmiles: distance (miles)
         :param time: time for distance (seconds)
+        :param surface: (optional) 'road' or 'track', default 'road'
         
         :rtype: (age performance percentage, age graded result, age grade factor) - percentage is between 0 and 100, result is in seconds
         '''
@@ -223,23 +213,42 @@ class AgeGrade():
         else:
             distmeters = distmiles*mpermile
         
+        # surface might require some adjustment
+        ## if surface not provided, assume road if we have road factors for this distance, else assume track
+        ## this maintains backwards compatibility, or for when caller has no access to what surface a race was run on
+        initialsurface = surface
+        if not surface:
+            minroad = min(list(self.agegradedata['road'][gen].keys()))
+            # need to round distmeters here because dist keys are rounded integers
+            if int(round(distmeters)) >= minroad:
+                surface = 'road'
+            else:
+                surface = 'track'
+
+        ## there are no trail factors, so use road factors if trail requested
+        elif surface == 'trail':
+            surface = 'road'
+        
         # check distance within range.  Make min and max float so exception format specification works
-        distlist = list(self.agegradedata[gen].keys())
+        distlist = list(self.agegradedata[surface][gen].keys())
         minmeters = min(distlist)*1.0
         maxmeters = max(distlist)*1.0
-        if distmeters < minmeters or distmeters > maxmeters:
+        epsilon = 1 # meter fuzziness
+        if distmeters < minmeters-epsilon or distmeters > maxmeters+epsilon:
+            if errorlogger:
+                errorlogger(f'received age={age} gen={gen} distmiles={distmiles} surface={initialsurface} time={time}, used surface={surface}')
             raise parameterError(
                 'distmiles must be between {:0.3f} and {:0.1f}'.format(minmeters / mpermile, maxmeters / mpermile))
 
         # interpolate factor and openstd based on distance for this age
         age = int(age)
         if age in range(5,100):
-            factor,openstd = self.getfactorstd(age,gen,distmeters)
+            factor,openstd = self.getfactorstd(surface, age, gen, distmeters)
         
         # extrapolate for ages < 5
         elif age < 5:
             if True:
-                factor,openstd = self.getfactorstd(5,gen,distmeters)
+                factor,openstd = self.getfactorstd(surface, 5, gen, distmeters)
             
             # don't do extrapolation
             else:
@@ -253,7 +262,7 @@ class AgeGrade():
          # extrapolate for ages > 99
         elif age > 99:
             if True:
-                factor,openstd = self.getfactorstd(99,gen,distmeters)
+                factor,openstd = self.getfactorstd(surface, 99, gen, distmeters)
             
             # don't do extrapolation
             else:    
@@ -268,18 +277,16 @@ class AgeGrade():
         agpercentage = 100*(openstd/factor)/time
         agresult = time*factor
         if self.DEBUG:
-            # order must match header written in self.__init__
-            self.DEBUG.write('{},{},{},{},{},{},{},{}\n'.format(distmeters,age,gen,openstd,factor,time,agresult,agpercentage))
-        return agpercentage,agresult,factor
+            self.DEBUG(f'dist={distmeters} surf={surface} age={age} gen={gen} openstd={openstd} factor={factor} time={time} agresult={agresult} ag%={agpercentage}\n')
+        return agpercentage, agresult, factor
 
-    #----------------------------------------------------------------------
-    def result(self,age,gen,distmiles,agpc):
-    #----------------------------------------------------------------------
+    def result(self,surface, age, gen, distmiles, agpc):
         '''
         returns age grade statistics for the indicated age, gender, distance, result time
 
         NOTE: non-binary gen X currently returns Men's age grade
 
+        :param surface: 'road' or 'track'
         :param age: integer age.  If float is supplied, integer portion is used (no interpolation of fractional age)
         :param gen: gender - M, F, X
         :param distmiles: distance (miles)
@@ -306,7 +313,7 @@ class AgeGrade():
             distmeters = distmiles*mpermile
 
         # check distance within range.  Make min and max float so exception format specification works
-        distlist = list(self.agegradedata[gen].keys())
+        distlist = list(self.agegradedata[surface][gen].keys())
         minmeters = min(distlist)*1.0
         maxmeters = max(distlist)*1.0
         if distmeters < minmeters or distmeters > maxmeters:
@@ -349,9 +356,7 @@ class AgeGrade():
         time = (openstd/factor)/(agpc/100.0)
         return time
 
-#----------------------------------------------------------------------
 def main(): 
-#----------------------------------------------------------------------
     descr = '''
     Update configuration for agegrade.py.  One of --agworkbook or --agconfigfile must be used,
     but not both.
