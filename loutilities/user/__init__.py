@@ -22,9 +22,9 @@ user_messages = {
 
 # login_form for application management
 class UserLoginForm(LoginForm):
-    def validate(self):
+    def validate(self, **kwargs):
         # if some error was detected from standard validate(), we're done
-        if not super().validate():
+        if not super().validate(**kwargs):
             return False
 
         # if all ok otherwise, check roles to verify user allowed for this application
@@ -41,9 +41,9 @@ class UserLoginForm(LoginForm):
 
 # forgot_password for application management
 class UserForgotPasswordForm(ForgotPasswordForm):
-    def validate(self):
+    def validate(self, **kwargs):
         # if some error was detected from standard validate(), we're done
-        if not super().validate():
+        if not super().validate(**kwargs):
             return False
 
         # if all ok otherwise, check roles to verify user allowed for this application
@@ -51,7 +51,7 @@ class UserForgotPasswordForm(ForgotPasswordForm):
         apps = set()
         for thisrole in self.user.roles:
             apps |= set(thisrole.applications)
-        ## disallow login if this app isn't in one of user's roles
+        ## disallow password reset if this app isn't in one of user's roles
         if g.loutility not in apps:
             self.email.errors.append(user_messages['ACCOUNT_NOT_PERMITTED'])
             return False
