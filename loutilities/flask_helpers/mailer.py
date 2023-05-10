@@ -7,7 +7,7 @@ mailer - send email
 # pypi
 from flask import current_app
 from flask_mail import Message
-import mimetypes
+from mimetypes import guess_type
 
 debug = False
 
@@ -46,7 +46,7 @@ def sendmail(subject, fromaddr, toaddr, html, text='', ccaddr=None, replytoaddr=
 
     for attachment in attachments:
         if all(k in attachment for k in ("filename","data")):
-            message.attach(attachment['filename'], mimetypes.guess_type(attachment['filename'])[0],attachment['data']);
+            message.attach(attachment['filename'], guess_type(attachment['filename'])[0],attachment['data']);
  
     mail.send(message)
 
