@@ -42,6 +42,10 @@ def setlogging():
     # set up logging
     ADMINS = current_app.config['EXCEPTION_EMAIL']
     application = current_app.config['APP_LOUTILITY']
+    
+    # support backwards compatibility
+    fromaddr = current_app.config['EXCEPTION_EMAIL_SENDER'] if 'EXCEPTION_EMAIL_SENDER' in current_app.config else 'noreply@steeplechasers.org'
+    
     # to test, set if to True, and change run environment to production
     # if True:
     if not current_app.debug:
@@ -55,7 +59,7 @@ def setlogging():
         if 'MAIL_USERNAME' in current_app.config and 'MAIL_PASSWORD' in current_app.config:
             credentials = (current_app.config['MAIL_USERNAME'], current_app.config['MAIL_PASSWORD'])
         mail_handler = SMTPHandler(mailhost,
-                                   'noreply@steeplechasers.org',
+                                   fromaddr,
                                    ADMINS, f'{application} exception encountered',
                                    credentials = credentials)
         if 'LOGGING_LEVEL_MAIL' in current_app.config:
