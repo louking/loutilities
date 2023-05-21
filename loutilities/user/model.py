@@ -202,7 +202,10 @@ class ManageLocalTables():
         # this detects deletions in User table
 
         alllocal = {}
-        for localuser in self.localusermodel.query.all():
+        # only worry about active entries. corner case exists where interest is deleted, and leaves an
+        # active=False entry with interest_id=None. For that case, later query by user_id, interest_id returns
+        # more than one row, and causes exception. See louking/webmodules#44
+        for localuser in self.localusermodel.query.filter_by(active=True).all():
             alllocal[localuser.user_id, localuser.interest_id] = localuser
 
         for user in User.query.all():
