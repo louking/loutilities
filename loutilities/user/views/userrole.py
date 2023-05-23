@@ -413,7 +413,7 @@ class InterestView(DbCrudApiRolePermissions):
             db=db,
             model=Interest,
             version_id_col='version_id',  # optimistic concurrency control
-            interests_accepted=ROLE_SUPER_ADMIN,
+            roles_accepted=ROLE_SUPER_ADMIN,
             template='datatables.jinja2',
             pagename='interests',
             endpoint='userrole.interests',
@@ -479,7 +479,7 @@ application_view = DbCrudApiRolePermissions(
                     db = db,
                     model = Application,
                     version_id_col = 'version_id',  # optimistic concurrency control
-                    applications_accepted = ROLE_SUPER_ADMIN,
+                    roles_accepted = ROLE_SUPER_ADMIN,
                     template = 'datatables.jinja2',
                     pagename = 'applications', 
                     endpoint = 'userrole.applications',
