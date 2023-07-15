@@ -66,22 +66,22 @@ APP_ROUTES = 'routes'
 APP_SCORES = 'scores'
 APP_ALL = [APP_CONTRACTS, APP_MEMBERS, APP_ROUTES, APP_SCORES]
 
-userinterest_table = Table('users_interests', Base.metadata,
+userinterest_table = Table('users_interests', 
                            Column('user_id', Integer, ForeignKey('user.id')),
                            Column('interest_id', Integer, ForeignKey('interest.id')),
-                           info={'bind_key': 'users'},
+                           bind_key = 'users',
                           )
 
-appinterest_table = Table('apps_interests', Base.metadata,
+appinterest_table = Table('apps_interests', 
                            Column('application_id', Integer, ForeignKey('application.id')),
                            Column('interest_id', Integer, ForeignKey('interest.id')),
-                           info={'bind_key': 'users'},
+                           bind_key = 'users',
                           )
 
-approle_table = Table('apps_roles', Base.metadata,
+approle_table = Table('apps_roles', 
                            Column('application_id', Integer, ForeignKey('application.id')),
                            Column('role_id', Integer, ForeignKey('role.id')),
-                           info={'bind_key': 'users'},
+                           bind_key = 'users',
                           )
 
 class Interest(Base):
@@ -164,7 +164,7 @@ class User(Base, UserMixin):
     active              = Column( Boolean() )
     fs_uniquifier       = Column( String(UNIQUIFIER_LEN), nullable=False )
     confirmed_at        = Column( DateTime() )
-    roles               = relationship('Role', secondary='roles_users',
+    roles               = relationship('Role', secondary=RolesUsers.__table__,
                           backref=backref('users', lazy='dynamic'))
 
     version_id = Column(Integer, nullable=False, default=1)

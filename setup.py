@@ -40,6 +40,7 @@ setup(
     install_requires = [
           # 'unicodecsv>=0.13.0',
           'flask-security-too>=5.0.0',
+          'flask-sqlalchemy>=3.0.5',
         ],
 
     # include data files as appropriate
