@@ -1259,7 +1259,7 @@ class CrudApi(MethodView):
         return template.render(**context)
 
     def get(self):
-        print('request.path = {}'.format(request.path))
+        if debug: print('request.path = {}'.format(request.path))
         if request.path[-5:] != '/rest':
             return self._renderpage()
         else:
@@ -2404,7 +2404,7 @@ class DbCrudApi(CrudApi):
                             columndt_args.update(**_columndt_args)
                             self.servercolumns.append(ColumnDT(**columndt_args))
                             if submodel not in self.joins:
-                                # print('DbCrudApi: self {} joining {}'.format(args['model'], submodel))
+                                # if debug: print('DbCrudApi: self {} joining {}'.format(args['model'], submodel))
                                 thisjoin = submodel
                                 if type(thisreln.onclause) != type(None):
                                     thisjoin = {'model': submodel, 'onclause': thisreln.onclause}
@@ -2417,7 +2417,7 @@ class DbCrudApi(CrudApi):
                                             [(j['model'], j['onclause']) for j in self.joins if isinstance(j, dict)]):
                                         addjoin = False
                                 if addjoin:
-                                    # print('DbCrudApi: self {} joining {}'.format(args['model'], subsubmodel))
+                                    # if debug: print('DbCrudApi: self {} joining {}'.format(args['model'], subsubmodel))
                                     self.joins.append(thisjoin)
 
                             # db processing section
