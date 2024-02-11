@@ -889,6 +889,7 @@ class CrudApi(MethodView):
                     idSrc = 'DT_RowId', 
                     buttons = ['create', 'edit', 'remove', 'csv'],
                     pretablehtml = '',
+                    posttablehtml = '',
                     scriptfilter = lambda filelist: filelist,
                     dtoptions = {},
                     edoptions = {},
@@ -1021,6 +1022,7 @@ class CrudApi(MethodView):
                 tablefiles = tablefiles,
                 tablebuttons = buttons,
                 pretablehtml = self.pretablehtml if not callable(self.pretablehtml) else self.pretablehtml(),
+                posttablehtml = self.posttablehtml if not callable(self.posttablehtml) else self.posttablehtml(),
                 options = {
                     'dtopts': self.getdtoptions(),
                     'editoropts': self.getedoptions(),
