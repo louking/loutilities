@@ -2243,6 +2243,10 @@ class DbCrudApi(CrudApi):
                 see https://stackoverflow.com/a/46810551/799921
 
         **serverside** - if present table will be displayed through ajax get calls
+        **set_yadcf_data** default None, passed to DataTables() -- see DataTables() above for more details
+            function() which sets yadcf_data_x in editor query response; see
+            https://github.com/vedmack/yadcf/blob/master/src/jquery.dataTables.yadcf.js Server-side
+            processing API
 
         **version_id_col** - if present edits to this table are protected using optimistic concurrency control
           * https://docs.sqlalchemy.org/en/13/orm/versioning.html
@@ -2272,6 +2276,7 @@ class DbCrudApi(CrudApi):
                     formmapping={},
                     version_id_col=None,
                     serverside=False,  # duplicated here and in CrudApi because test before super() called
+                    set_yadcf_data=None,
                     queryparams={},
                     queryfilters=[],
                     dtoptions={},
@@ -2879,7 +2884,7 @@ class DbCrudApi(CrudApi):
         # note get_response_data transform is not done - name mapping is in self.servercolumns
         else:
             args = request.args.to_dict()
-            rowTable = DataTables(args, self.serverquery(), self.servercolumns)
+            rowTable = DataTables(args, self.serverquery(), self.servercolumns, set_yadcf_data=self.set_yadcf_data)
             output = rowTable.output_result()
 
             if 'error' in output:
@@ -3063,7 +3068,7 @@ class DbCrudApi(CrudApi):
                     'length': -1,
                     'search': {'value': '', 'regex': False},
                 }
-                rowTable = DataTables(args, self.serverquery().filter(self.model.id==thisid), self.servercolumns)
+                rowTable = DataTables(args, self.serverquery().filter(self.model.id==thisid), self.servercolumns, set_yadcf_data=self.set_yadcf_data)
                 output = rowTable.output_result()
 
                 if 'error' in output:
