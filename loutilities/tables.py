@@ -3125,7 +3125,11 @@ class DbCrudApiRolePermissions(DbCrudApi):
         roles_accepted: None, 'role', ['role1', 'role2', ...] - user must have at least one of the specified roles
         roles_required: None, 'role', ['role1', 'role2', ...] - user must have all of the specified roles
     '''
-    from flask_security import current_user
+    from flask_security import current_user, auth_required
+    
+    # this should be ok because self.permissions() references current_user
+    # backwards compatibility: if self.permissions is overridden, may need to set decorators = []
+    decorators = [auth_required()]
 
     def __init__(self, **kwargs):
         if debug: current_app.logger.debug('DbCrudApiRolePermissions.__init__()')
