@@ -35,7 +35,7 @@ def getitems(filepath, section):
     :param section: section to read items from
     :rtype: OrderedDict containing {key:item, ...} (case is preserved for keys)
     '''
-    config.readfp(open(filepath))
+    config.read_file(open(filepath))
     thisconfig = config.items(section)
     outdict = OrderedDict()
 
