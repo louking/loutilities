@@ -116,7 +116,7 @@ SaEditor.prototype.init = function() {
  */
 
 /**
- * callback function called at end if init()
+ * callback function called at end of init()
  * 
  * @callback SaEditor~AfterInit
  */
