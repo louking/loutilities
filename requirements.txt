@@ -28,6 +28,7 @@ hatchling==1.18.0
 httpcore==0.17.3
 httpx==0.24.1
 hyperlink==21.0.0
+id==1.5.0
 idna==3.4
 importlib-metadata==4.12.0
 itsdangerous==2.1.2
@@ -37,11 +38,11 @@ keyring==23.9.3
 MarkupSafe==2.1.1
 more-itertools==8.14.0
 numpy==2.0.1
-packaging==23.1
+packaging==25.0
 passlib==1.7.4
 pathspec==0.11.1
 pexpect==4.8.0
-pkginfo==1.8.3
+pkginfo==1.12.1.2
 platformdirs==3.8.1
 pluggy==1.2.0
 ptyprocess==0.7.0
@@ -63,7 +64,7 @@ tomli==2.0.1
 tomli_w==1.0.0
 tomlkit==0.11.8
 trove-classifiers==2023.7.6
-twine==4.0.1
+twine==6.1.0
 typing_extensions==4.8.0rc1
 urllib3==1.26.12
 userpath==1.8.0

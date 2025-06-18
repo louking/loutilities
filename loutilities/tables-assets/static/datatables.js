@@ -107,6 +107,10 @@ function jsGetDataTableHeightPx() {
     return retHeightPx;
 }
 
+// hold for 90 seconds max -- maybe this can be reduced in real system
+// requires mutex-promise.js
+let rtd_mutex = new MutexPromise('datatables-refresh_table_data', {timeout: 90000})
+
 /**
  * refresh table data without full reload of page
  *
@@ -117,43 +121,61 @@ function jsGetDataTableHeightPx() {
  * @param paging - see https://datatables.net/reference/api/draw() (default 'full-reset')
  */
 function refresh_table_data(table, resturl, paging) {
-    // (dataTables default) ordering and search will be recalculated and the rows redrawn in their new positions.
-    // The paging will be reset back to the first page.
-    if (paging === undefined) {
-        paging = 'full-reset';
-    }
+    // manage rows in the table
+    let currrows = {};
 
-    var rowId = table.settings()[0].rowId;
-
-    // save {rowid: row, } for all current data
-    var currrows = {};
-    var rowndxs = table.rows()[0];
-    for (var i=0; i<rowndxs.length; i++) {
-        var rowndx = rowndxs[i];
-        currrows[table.row(rowndx).id()] = table.row(rowndx);
-    }
-
-    var jqxhr = $.get(resturl, function( respdata ) {
-        for (var i=0; i<respdata.length; i++) {
-            var resprow = respdata[i];
-            // replace row if it exists
-            if (currrows[resprow[rowId]] !== undefined) {
-                table.row('#' + resprow[rowId]).data(resprow);
-                delete currrows[resprow[rowId]];
-            // add row if it is new
-            } else {
-                table.row.add(resprow);
+    // grab lock
+    // console.log('acquiring lock');
+    return rtd_mutex.promise()
+        .then(function(mutex) {
+            mutex.lock();
+            // (dataTables default) ordering and search will be recalculated and the rows redrawn in their new positions.
+            // The paging will be reset back to the first page.
+            if (paging === undefined) {
+                paging = 'full-reset';
             }
-        }
 
-        // any remaining rows in currrows need to be deleted
-        $.each(currrows, function(k, v){
-            table.row('#' + k).remove();
+            // save {rowid: row, } for all current data
+            // console.log('copying table')
+            let rowndxs = table.rows()[0];
+            for (let i=0; i<rowndxs.length; i++) {
+                let rowndx = rowndxs[i];
+                currrows[table.row(rowndx).id()] = table.row(rowndx);
+            }
+
+            return $.get(resturl)
+        })
+        .then(function( respdata ) {
+            let rowId = table.settings()[0].rowId;
+
+            for (let i=0; i<respdata.length; i++) {
+                let resprow = respdata[i];
+                // replace row if it exists
+                if (currrows[resprow[rowId]] !== undefined) {
+                    table.row('#' + resprow[rowId]).data(resprow);
+                    delete currrows[resprow[rowId]];
+                // add row if it is new
+                } else {
+                    table.row.add(resprow);
+                }
+            }
+
+            // any remaining rows in currrows need to be deleted
+            $.each(currrows, function(k, v){
+                table.row('#' + k).remove();
+            });
+
+            // redraw
+            // console.log('drawing table');
+            table.draw(paging);
+            // console.log('releasing lock');
+            rtd_mutex.unlock();
+        })
+        .catch(function(e){
+            // console.log('releasing lock due to exception');
+            rtd_mutex.unlock();
+            throw e;
         });
-
-        // redraw
-        table.draw(paging);
-    });
 }
 
 /**
@@ -257,10 +279,10 @@ function render_icon(iconclass, hideattr) {
  */
 function yadcf_between_dates(fromdateattr, todateattr) {
     function yadcf_between_dates_fn(filterVal, columnVal, rowValues, stateVal) {
-        console.log('filterVal='+filterVal);
-        console.log('columnVal='+columnVal);
-        console.log('rowValues='+rowValues);
-        console.log('stateVal='+stateVal);
+        // console.log('filterVal='+filterVal);
+        // console.log('columnVal='+columnVal);
+        // console.log('rowValues='+rowValues);
+        // console.log('stateVal='+stateVal);
 
         // no filter means return all records
         if (filterVal === '') {
