@@ -260,7 +260,8 @@ class ManageLocalTables():
 
     def _updateinterest(self):
         # don't try to update before table exists
-        if not db.engine.has_table(self.localinteresttable): return
+        inspect = self.db.inspect(self.db.engine)
+        if not inspect.has_table(self.localinteresttable): return
 
         # alllocal will be used to determine what localinterest model rows need to be deleted
         # this detects deletions in Interest table
