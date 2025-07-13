@@ -196,7 +196,8 @@ class ManageLocalTables():
 
     def _updateuser_byinterest(self):
         # don't try to update before table exists
-        if not db.engine.has_table(self.localusertable): return
+        inspect = self.db.inspect(self.db.engine)
+        if not inspect.has_table(self.localinteresttable): return
 
         # alllocal will be used to determine what localuser model rows need to be deactivated
         # this detects deletions in User table
@@ -233,7 +234,8 @@ class ManageLocalTables():
 
     def _updateuser_only(self):
         # don't try to update before table exists
-        if not db.engine.has_table(self.localusertable): return
+        inspect = self.db.inspect(self.db.engine)
+        if not inspect.has_table(self.localinteresttable): return
 
         # alllocal will be used to determine what localuser model rows need to be deactivated
         # this detects deletions in User table
