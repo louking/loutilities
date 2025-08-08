@@ -2086,6 +2086,7 @@ class DteDbDependent():
     * depmodelfield - field in dependent model which are displayed to user
     * depvaluefield - field in dependent model which is used as value for select and to retrieve record, passed on Editor interface
         default 'id' - needs to be a key for model record
+    * sortkey - function(dbrow) for sorting options list, default sorts by self.labelfield.lower()
 
     e.g.,
         class Parent(Base):
@@ -2126,6 +2127,7 @@ class DteDbDependent():
                     depmodelfield=None,
                     depformfield=None,
                     depvaluefield='id',
+                    sortkey=None,
                     )
         args.update(kwargs)
 
@@ -2153,6 +2155,9 @@ class DteDbDependent():
             # retrieve all dependent rows which refer to val
             query = {self.depmodelref: val}
             dbopts = self.depmodel.query.filter_by(**query).all()
+
+            if self.sortkey:
+                dbopts.sort(key=self.sortkey)
 
             # add these to the options
             for dbopt in dbopts:
