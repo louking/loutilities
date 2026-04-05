@@ -47,6 +47,6 @@ Version is defined only in `loutilities/version.py`. Bump it there; `setup.py` r
 
 ## Code Style
 
-- Header comments use the Date/Author/Reason table format
+- Docstring at the top of each file
 - Standard import order: standard → pypi → homegrown
 - `debug = False` flag pattern used for optional debug logging
