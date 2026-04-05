@@ -164,7 +164,7 @@ class SqlalchemyHelpersTest(unittest.TestCase):
         del currinst.id
         del currinst._sa_instance_state
         del newinst._sa_instance_state
-        self.assertEquals(newinst.__dict__, currinst.__dict__)
+        self.assertEqual(newinst.__dict__, currinst.__dict__)
 
     def test_insert_or_update_insert(self):
         oldrecords = self.populate_severalattrs(5)
@@ -197,4 +197,4 @@ class SqlalchemyHelpersTest(unittest.TestCase):
         del currinst.id
         del currinst._sa_instance_state
         del newinst._sa_instance_state
-        self.assertEquals(newinst.__dict__, currinst.__dict__)
+        self.assertEqual(newinst.__dict__, currinst.__dict__)
