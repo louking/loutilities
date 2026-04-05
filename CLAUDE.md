@@ -10,7 +10,7 @@ Python utility library providing shared helpers for Lou King's Flask/SQLAlchemy 
 ## Environment
 
 - **Python/pip**: `venv/Scripts/python.exe` / `venv/Scripts/pip`
-- **Python version**: 3.9 (venv)
+- **Python version**: 3.12 (venv)
 - **Key dependencies**: Flask 2.2, SQLAlchemy 2.x, Flask-Security-Too 5.x, Flask-SQLAlchemy 3.x
 
 ## Running Tests
