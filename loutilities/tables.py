@@ -1095,7 +1095,13 @@ class CrudApi(MethodView):
         # DataTables options string, data: and buttons: are passed separately
         # self.dtoptions can update what we come up with
         dt_options = {
-            'dom': '<"H"lBpfr>t<"F"i>',
+            # 'dom': '<"H"lBpfr>t<"F"i>',
+            'layout':{
+                'topStart': ['pageLength', 'buttons'],
+                'topEnd': ['search', 'paging'],
+                'bottomStart': ['info'],
+                'bottomEnd': None,
+                },
             'columns': [
             ],
             'rowId': self.idSrc,
