@@ -6,7 +6,9 @@
 /* fixes right-aligned column headers: inline labels don't right-align wrapped lines */
 /* datatables 2.x doesn't bold header labels by default */
 /* width used to wrap lines */
-table.dataTable .dt-column-title label {
+table.dataTable span.dt-column-title,
+table.dataTable span.dt-column-title label
+{
     display: block;
     width: 100%;
     font-weight: bold;
