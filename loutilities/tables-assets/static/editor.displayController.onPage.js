@@ -12,14 +12,12 @@
  * @returns {string} - name of created editor form
  */
 function onPageDisplay ( elm ) {
-    // from https://editor.datatables.net/plug-ins/display-controller/editor.onPage
-    // also see https://editor.datatables.net/examples/plug-ins/displayController.html
     var name = 'onPage'+Math.random();
     var Editor = $.fn.dataTable.Editor;
     var emptyInfo;
     // jqueryui standalone display controller
     var sadisplay = Editor.display.jqueryui;
-
+ 
     Editor.display[name] = $.extend( true, {}, Editor.models.display, {
         // Create the HTML mark-up needed the display controller
         init: function ( editor ) {
@@ -29,7 +27,7 @@ function onPageDisplay ( elm ) {
             // emptyInfo = $(elm).html();
             return Editor.display[name];
         },
-
+ 
         // Show the form
         open: function ( editor, form, callback ) {
             if (editor.mode() == 'create') {
@@ -42,13 +40,13 @@ function onPageDisplay ( elm ) {
             } else {
                 $(elm).children().detach();
                 $(elm).append( form );
-
-                if ( callback ) {
-                    callback();
+ 
+            if ( callback ) {
+                callback();
                 }
             }
         },
-
+ 
         // Hide the form
         close: function ( editor, callback ) {
             // close jqueryui if it's open
@@ -56,12 +54,16 @@ function onPageDisplay ( elm ) {
 
             $(elm).children().detach();
             // $(elm).html( emptyInfo );
-
+ 
             if ( callback ) {
                 callback();
             }
+        },
+ 
+        node: function () {
+            return elm;
         }
     } );
-
+ 
     return name;
 }
