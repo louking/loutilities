@@ -12,6 +12,8 @@
  * @returns {string} - name of created editor form
  */
 function onPageDisplay ( elm ) {
+    // from https://editor.datatables.net/plug-ins/display-controller/editor.onPage
+    // also see https://editor.datatables.net/examples/plug-ins/displayController.html
     var name = 'onPage'+Math.random();
     var Editor = $.fn.dataTable.Editor;
     var emptyInfo;
