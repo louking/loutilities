@@ -29,6 +29,7 @@ setup(
 #    include_package_data = True,
     scripts = [
         'loutilities/agegrade.py',
+        'loutilities/anonymize_db.py',
         'loutilities/apikey.py',
         'loutilities/applytemplate.py',
         'loutilities/filtercsv.py',
@@ -41,6 +42,7 @@ setup(
           # 'unicodecsv>=0.13.0',
           'flask-security-too>=5.5.0',
           'flask-sqlalchemy>=3.0.5',
+          'pyyaml',
         ],
 
     # include data files as appropriate
@@ -59,6 +61,7 @@ setup(
     entry_points = {
         'console_scripts': [
             'agegrade = loutilities.agegrade:main',
+            'anonymize_db = loutilities.anonymize_db:main',
             'apikey = loutilities.apikey:main',
             'applytemplate = loutilities.applytemplate:main',
             'filtercsv = loutilities.filtercsv:main',
