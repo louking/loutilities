@@ -50,3 +50,9 @@ Version is defined only in `loutilities/version.py`. Bump it there; `setup.py` r
 - Docstring at the top of each file
 - Standard import order: standard → pypi → homegrown
 - `debug = False` flag pattern used for optional debug logging
+
+## DataTables Buttons/Editor Integration Gotcha
+
+`get_button_options()` in `tables-assets/static/datatables.js` auto-attaches the shared `editor:` reference to a button **only when the button is passed as the literal string** `'create'`/`'edit'`/`'editRefresh'`/`'editChildRowRefresh'`/`'remove'`. A consuming app's Python `buttons=[...]` list often needs to override one of these standard actions with an object instead — e.g. `{'extend': 'create', 'enabled': False, 'attr': {'title': '...'}}` to render a conditionally-disabled create button. Passing that object form used to skip the `editor:` annotation entirely (it fell through to the plain pass-through `else` branch), leaving `config.editor === null` inside DataTables' own built-in `create`/`edit`/etc. button text functions (e.g. `config.editor.i18n(...)`) — a `Cannot read properties of null (reading 'i18n')` crash at DataTables Buttons init, not at click time, so the whole table failed to render.
+
+**Fix**: `get_button_options()` now also checks object-form buttons for `extend` matching one of those same action names, and injects `editor:editor` unless the object already supplies its own `editor` (preserving the pattern used for a custom `extend: 'selected'` button bound to its own saeditor instance). Any consuming app extending a standard editor action with extra config (disabled state, custom text/attr, etc.) gets this for free — no need to pass `editor` explicitly unless intentionally binding to a different editor instance.

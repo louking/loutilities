@@ -221,14 +221,24 @@ function render_select_as_tags () {
  */
 function get_button_options(buttons, editor) {
     var button_options = [];
+    var editor_actions = ['create', 'edit', 'editRefresh', 'editChildRowRefresh', 'remove'];
     for (i=0; i<buttons.length; i++) {
         button = buttons[i];
-        if ($.inArray(button, ['create', 'edit', 'editRefresh', 'editChildRowRefresh', 'remove']) >= 0) {
+        if ($.inArray(button, editor_actions) >= 0) {
             button_options.push({extend:button, editor:editor});
         } else {
             // convert button actions to javascript, // kludge for conversion from python
             if (button.hasOwnProperty('action')) {
                 button.action = eval(button.action)
+            }
+
+            // a button configuration object which extends one of the standard editor actions
+            // (e.g., {extend:'create', enabled:false} to render a disabled create button) still
+            // needs the shared editor annotated, same as the plain string form above -- unless it
+            // already brings its own editor (e.g., a custom saeditor for a 'selected' extend)
+            if (button.hasOwnProperty('extend') && $.inArray(button.extend, editor_actions) >= 0
+                && !button.hasOwnProperty('editor')) {
+                button.editor = editor;
             }
 
             button_options.push(button);
