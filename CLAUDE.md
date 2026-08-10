@@ -9,17 +9,17 @@ Python utility library providing shared helpers for Lou King's Flask/SQLAlchemy 
 
 ## Environment
 
-- **Python/pip**: `venv/Scripts/python.exe` / `venv/Scripts/pip`
-- **Python version**: 3.12 (venv)
-- **Key dependencies**: Flask 2.2, SQLAlchemy 2.x, Flask-Security-Too 5.x, Flask-SQLAlchemy 3.x
+- **Python/pip**: `.venv/bin/python` / `.venv/bin/pip`
+- **Python version**: 3.14 (.venv)
+- **Key dependencies**: Flask 3.x, SQLAlchemy 2.x, Flask-Security-Too 5.x, Flask-SQLAlchemy 3.x
 
 ## Running Tests
 
-pytest is not installed in the venv. Install it before running tests:
+pytest is not installed in the venv by default. Install it before running tests:
 
 ```bash
-venv/Scripts/pip install pytest faker
-venv/Scripts/python -m pytest tests/
+.venv/bin/pip install pytest faker
+.venv/bin/python -m pytest tests/
 ```
 
 Tests use SQLite in-memory databases (`create_engine('sqlite://')`).
