@@ -10,16 +10,8 @@
         {
             "label": "push to pypi",
             "type": "shell",
-            "command": "source .venv/bin/activate && python -m build && twine upload dist/loutilities-${input:packageVersion}.tar.* dist/loutilities-${input:packageVersion}-*.*",
+            "command": "source .venv/bin/activate && VERSION=$(python -c \"from loutilities import version; print(version.__version__)\") && python -m build && twine upload dist/loutilities-$VERSION.tar.* dist/loutilities-$VERSION-*.*",
             "problemMatcher": []
-        }
-    ],
-
-    "inputs": [
-        {
-            "id": "packageVersion",
-            "type": "promptString",
-            "description": "Enter version string",
         }
     ]
 }
