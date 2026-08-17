@@ -203,10 +203,13 @@ class ManageLocalTables():
         # this detects deletions in User table
 
         alllocal = {}
-        # only worry about active entries. corner case exists where interest is deleted, and leaves an
-        # active=False entry with interest_id=None. For that case, later query by user_id, interest_id returns
+        # include both active and inactive entries, else a row that was deactivated on a prior update()
+        # call falls out of this set, isn't found as "remove from deactivate list" below, and gets
+        # reinserted as a duplicate. See louking/loutilities#103
+        # interest_id IS NULL rows are still excluded: corner case exists where interest is deleted, and
+        # leaves an entry with interest_id=None. For that case, later query by user_id, interest_id returns
         # more than one row, and causes exception. See louking/webmodules#44
-        for localuser in self.localusermodel.query.filter_by(active=True).all():
+        for localuser in self.localusermodel.query.filter(self.localusermodel.interest_id.isnot(None)).all():
             alllocal[localuser.user_id, localuser.interest_id] = localuser
 
         for user in User.query.all():
