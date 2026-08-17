@@ -18,6 +18,7 @@ import os
 import tempfile
 import unittest
 import uuid
+from unittest.mock import patch
 
 # pypi
 from flask import Flask
@@ -124,6 +125,49 @@ class ManageLocalTablesTest(unittest.TestCase):
 
         orphans = LocalUser.query.filter_by(user_id=user.id, interest_id=None).all()
         self.assertEqual(len(orphans), 2)
+
+    def test_update_without_lockfile_does_not_lock(self):
+        # default behavior (no lockfile given) must stay unserialized, matching every
+        # caller before this parameter existed -- see louking/contracts#578.
+        user = self.create_user(active=True)
+
+        with patch('loutilities.user.model.InterProcessLock') as MockLock:
+            mlt = ManageLocalTables(db, APPNAME, LocalUser, LocalInterest, hasuserinterest=True)
+            mlt.update()
+
+        MockLock.assert_not_called()
+        rows = LocalUser.query.filter_by(user_id=user.id).all()
+        self.assertEqual(len(rows), 1)
+
+    def test_update_with_lockfile_wraps_work_in_lock(self):
+        # regression test for louking/contracts#578: concurrently booting gunicorn
+        # workers each independently ran the select-then-insert in
+        # _updateuser_byinterest(), so each found no existing row for a new user and
+        # inserted its own duplicate. update() must hold a lock around its whole body
+        # (interest sync, user sync, and the commit) when given a lockfile.
+        user = self.create_user(active=True)
+        lockfile = '/tmp/test-loutilities-managelocaltables.lock'
+        calls = []
+
+        class RecordingLock:
+            def __init__(self, path):
+                calls.append(('init', path))
+            def __enter__(self):
+                calls.append(('enter',))
+            def __exit__(self, *exc_info):
+                calls.append(('exit',))
+
+        with patch('loutilities.user.model.InterProcessLock', RecordingLock):
+            mlt = ManageLocalTables(db, APPNAME, LocalUser, LocalInterest, hasuserinterest=True,
+                                     lockfile=lockfile)
+            mlt.update()
+
+        self.assertEqual(calls[0], ('init', lockfile))
+        self.assertEqual(calls[1], ('enter',))
+        self.assertEqual(calls[-1], ('exit',))
+        # and the work inside the lock still ran correctly
+        rows = LocalUser.query.filter_by(user_id=user.id).all()
+        self.assertEqual(len(rows), 1)
 
 
 if __name__ == '__main__':

@@ -40,6 +40,7 @@ setup(
     # installed or upgraded on the target machine
     install_requires = [
           # 'unicodecsv>=0.13.0',
+          'fasteners',
           'flask-security-too>=5.5.0',
           'flask-sqlalchemy>=3.0.5',
           'pyyaml',

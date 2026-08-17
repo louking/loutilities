@@ -8,11 +8,15 @@
 #   Copyright 2020 Lou King.  All rights reserved
 ###########################################################################################
 
+# standard
+import contextlib
+
 # pypi
 # # trying https://alembic.sqlalchemy.org/en/latest/naming.html#integration-of-naming-conventions-into-operations-autogenerate
 # from sqlalchemy import MetaData
 # from sqlalchemy.ext.declarative import declarative_base
 # from flask_sqlalchemy import SQLAlchemy, Model
+from fasteners import InterProcessLock
 from flask_sqlalchemy import SQLAlchemy
 from flask_security import UserMixin, RoleMixin
 
@@ -173,7 +177,7 @@ class User(Base, UserMixin):
     }
 
 class ManageLocalTables():
-    def __init__(self, db, appname, localusermodel, localinterestmodel, hasuserinterest=False):
+    def __init__(self, db, appname, localusermodel, localinterestmodel, hasuserinterest=False, lockfile=None):
         '''
         operations on localuser model for callers of User model
 
@@ -183,6 +187,12 @@ class ManageLocalTables():
         :param localinterestmodel: model class for Interest, in the slave database
         :param hasuserinterest: (optional) if localusermodel has interest_id field, the users are copied for
                                            each interest used by appname, default False
+        :param lockfile: (optional) path to a file used to serialize update() across concurrent
+                          processes sharing a filesystem (e.g., multiple gunicorn workers each
+                          calling update() at boot). Without this, concurrent callers can each
+                          find no existing row for a new (user_id, interest_id) and insert their
+                          own duplicate -- see louking/contracts#578. Default None runs update()
+                          unserialized, matching behavior before this parameter existed.
         '''
         self.db = db
         self.localusermodel = localusermodel
@@ -191,6 +201,7 @@ class ManageLocalTables():
         self.hasuserinterest = hasuserinterest
         self.localinterestmodel = localinterestmodel
         self.localinteresttable = localinterestmodel.__table__.name
+        self.lockfile = lockfile
 
         self.application = Application.query.filter_by(application=appname).one()
 
@@ -293,12 +304,14 @@ class ManageLocalTables():
         '''
         keep localuser and localinterest tables consistent with external db User table
         '''
-        # interests need to be created before users
-        self._updateinterest()
-        db.session.flush()
+        lock = InterProcessLock(self.lockfile) if self.lockfile else contextlib.nullcontext()
+        with lock:
+            # interests need to be created before users
+            self._updateinterest()
+            db.session.flush()
 
-        if self.hasuserinterest:
-            self._updateuser_byinterest()
-        else:
-            self._updateuser_only()
-        self.db.session.commit()
+            if self.hasuserinterest:
+                self._updateuser_byinterest()
+            else:
+                self._updateuser_only()
+            self.db.session.commit()
