@@ -1,0 +1,25 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+        {
+            "type": "Live Preview",
+            "workspacePath": "/home/lking/projects/loutilities",
+            "problemMatcher": [],
+            "label": "Live Preview: Run Server"
+        },
+        {
+            "label": "push to pypi",
+            "type": "shell",
+            "command": "source .venv/bin/activate && python -m build && twine upload dist/loutilities-${input:packageVersion}.tar.* dist/loutilities-${input:packageVersion}-*.*",
+            "problemMatcher": []
+        }
+    ],
+
+    "inputs": [
+        {
+            "id": "packageVersion",
+            "type": "promptString",
+            "description": "Enter version string",
+        }
+    ]
+}

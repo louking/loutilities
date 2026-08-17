@@ -128,6 +128,14 @@ dmypy.json
 config/
 user/config/
 
+# VS Code / Cursor (must come after the blanket *.json rule above, since
+# gitignore uses last-match-wins)
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
 # external javascript
 js/
 
