@@ -80,7 +80,7 @@ trove-classifiers==2023.7.6
 twine==6.1.0
 typing_extensions==4.16.0
 tzdata==2026.1
-urllib3==1.26.12
+urllib3==2.8.0
 userpath==1.8.0
 virtualenv==20.23.1
 webencodings==0.5.1
