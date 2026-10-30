@@ -10,7 +10,7 @@ colorama==0.4.5
 commonmark==0.9.1
 cryptography==45.0.7
 distlib==0.3.6
-dnspython==2.2.1
+dnspython==2.9.0
 docutils==0.19
 editables==0.4
 email-validator==2.3.0
